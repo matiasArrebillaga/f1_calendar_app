@@ -8,10 +8,12 @@ from workers.session_worker import SessionWorker
 
 class EventDetailView(QWidget):
     volver = Signal()
-    COLOR_PRIMERO = QColor("#54190a")   # gris claro
-    COLOR_SEGUNDO = QColor("#313333") 
-    COLOR_TERCERO = QColor("#524a03") 
-    COLOR_TOP10 = QColor("#524a03") #
+    COLOR_PRIMERO = QColor("#6e7009")   # gris claro
+    COLOR_SEGUNDO = QColor("#585F5F") 
+    COLOR_TERCERO = QColor("#61391E") 
+    COLOR_TOP10 = QColor("#181D69")
+    COLOR_Q1 = QColor("#700909") 
+    COLOR_Q2 = QColor("#805515")
     def __init__(self):
         super().__init__()
 

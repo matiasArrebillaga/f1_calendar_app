@@ -1,9 +1,15 @@
 import fastf1
+import pandas as pd
 from PySide6.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout, QComboBox, QLabel
+from PySide6.QtGui import QColor
 from PySide6.QtCore import Signal
 
 class CalendarView(QWidget):
     evento_seleccionado = Signal(int)
+
+    COLOR_PASADO = QColor("#54190a")   # gris claro
+    COLOR_FUTURO = QColor("#313333") 
+    COLOR_PROXIMA = QColor("#524a03")  # celeste claro
 
     def __init__(self):
         super().__init__()
@@ -41,12 +47,23 @@ class CalendarView(QWidget):
         self.tabla.setHorizontalHeaderLabels(columnas)
         self.tabla.setRowCount(len(self.calendario))
 
-        for fila, (_, evento) in enumerate(self.calendario.iterrows()):
+        hoy = pd.Timestamp.now()
+
+        fechas_futuras = self.calendario[self.calendario['EventDate'] >= hoy]
+        indice_proxima = fechas_futuras.index.min() if not fechas_futuras.empty else None
+
+        for fila, (indice_pandas, evento) in enumerate(self.calendario.iterrows()):
+            if indice_pandas == indice_proxima:
+                color = self.COLOR_PROXIMA
+            elif evento['EventDate'] < hoy:
+                color = self.COLOR_PASADO
+            else:
+                color = self.COLOR_FUTURO
+
             for col, nombre_col in enumerate(columnas):
                 item = QTableWidgetItem(str(evento[nombre_col]))
+                item.setBackground(color)
                 self.tabla.setItem(fila, col, item)
-
-        self.tabla.resizeColumnsToContents()
 
     def _on_double_click(self, fila, columna):
         self.evento_seleccionado.emit(fila)

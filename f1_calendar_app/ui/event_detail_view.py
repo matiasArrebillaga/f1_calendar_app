@@ -2,11 +2,16 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem
 )
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor
+import pandas as pd
 from workers.session_worker import SessionWorker
 
 class EventDetailView(QWidget):
     volver = Signal()
-
+    COLOR_PRIMERO = QColor("#54190a")   # gris claro
+    COLOR_SEGUNDO = QColor("#313333") 
+    COLOR_TERCERO = QColor("#524a03") 
+    COLOR_TOP10 = QColor("#524a03") #
     def __init__(self):
         super().__init__()
 
@@ -71,17 +76,39 @@ class EventDetailView(QWidget):
             self.estado.setText("Esta sesión todavía no tiene resultados.")
             return
 
-        columnas = ['Position', 'Abbreviation', 'TeamName']
+        columnas = ['Position', 'Abbreviation', 'FullName', 'TeamName',
+                    'GridPosition', 'Status', 'Points', 'Time']
+        etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo', 'Largada', 'Estado', 'Pts', 'Tiempo']
+
         self.tabla_resultados.setColumnCount(len(columnas))
-        self.tabla_resultados.setHorizontalHeaderLabels(columnas)
+        self.tabla_resultados.setHorizontalHeaderLabels(etiquetas)
         self.tabla_resultados.setRowCount(len(resultados))
 
         for fila, (_, row) in enumerate(resultados.iterrows()):
             for col, nombre_col in enumerate(columnas):
-                item = QTableWidgetItem(str(row[nombre_col]))
+                valor = row.get(nombre_col)
+                texto = self._formatear_valor(nombre_col, valor)
+                item = QTableWidgetItem(texto)
                 self.tabla_resultados.setItem(fila, col, item)
 
         self.tabla_resultados.resizeColumnsToContents()
 
+    def _formatear_valor(self, nombre_col, valor):
+        if pd.isna(valor):
+            return "—"
+
+        if nombre_col in ('Position', 'GridPosition', 'Points'):
+            return str(int(valor))
+
+        if nombre_col == 'Time':
+            total_segundos = valor.total_seconds()
+            horas = int(total_segundos // 3600)
+            minutos = int((total_segundos % 3600) // 60)
+            segundos = total_segundos % 60
+            if horas > 0:
+                return f"{horas}:{minutos:02d}:{segundos:06.3f}"
+            return f"{minutos}:{segundos:06.3f}"
+
+        return str(valor)
     def on_error(self, mensaje):
         self.estado.setText(f"Error al cargar: {mensaje}")

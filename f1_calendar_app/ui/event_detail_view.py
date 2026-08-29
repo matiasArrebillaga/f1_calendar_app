@@ -8,10 +8,10 @@ from workers.session_worker import SessionWorker
 
 class EventDetailView(QWidget):
     volver = Signal()
-    COLOR_PRIMERO = QColor("#6e7009")   # gris claro
-    COLOR_SEGUNDO = QColor("#585F5F") 
-    COLOR_TERCERO = QColor("#61391E") 
-    COLOR_TOP10 = QColor("#181D69")
+    COLOR_PRIMERO = QColor("#EFBF04")   # gris claro
+    COLOR_SEGUNDO = QColor("#c0c0c0") 
+    COLOR_TERCERO = QColor("#815931") 
+    COLOR_TOP10 = QColor("#394E88")
     COLOR_Q1 = QColor("#700909") 
     COLOR_Q2 = QColor("#805515")
     def __init__(self):
@@ -60,20 +60,19 @@ class EventDetailView(QWidget):
                     lambda checked, y=year, g=gp, c=codigo: self.cargar_sesion(y, g, c)
                 )
                 self.layout_sesiones.addWidget(boton)
-
     def cargar_sesion(self, year, gp, codigo_sesion):
         self.estado.setText("Cargando...")
         self.tabla_resultados.setRowCount(0)
+        self.codigo_sesion = codigo_sesion
 
         self.worker = SessionWorker(year, gp, codigo_sesion)
         self.worker.terminado.connect(self.on_sesion_cargada)
         self.worker.error.connect(self.on_error)
         self.worker.start()
-
     def on_sesion_cargada(self, sesion):
         self.estado.setText("")
         resultados = sesion.results
-
+        
         if resultados is None or resultados.empty:
             self.estado.setText("Esta sesión todavía no tiene resultados.")
             return
@@ -81,19 +80,46 @@ class EventDetailView(QWidget):
         columnas = ['Position', 'Abbreviation', 'FullName', 'TeamName',
                     'GridPosition', 'Status', 'Points', 'Time']
         etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo', 'Largada', 'Estado', 'Pts', 'Tiempo']
-
+    
         self.tabla_resultados.setColumnCount(len(columnas))
         self.tabla_resultados.setHorizontalHeaderLabels(etiquetas)
         self.tabla_resultados.setRowCount(len(resultados))
 
+        es_clasificacion = self.codigo_sesion in ('Q', 'SQ')
+
         for fila, (_, row) in enumerate(resultados.iterrows()):
+            color = self._color_por_posicion(row.get('Position'), es_clasificacion)
+
             for col, nombre_col in enumerate(columnas):
                 valor = row.get(nombre_col)
                 texto = self._formatear_valor(nombre_col, valor)
                 item = QTableWidgetItem(texto)
+                if color is not None:
+                    item.setBackground(color)
+                    item.setForeground(QColor("white"))  # legibilidad sobre fondos oscuros
                 self.tabla_resultados.setItem(fila, col, item)
 
         self.tabla_resultados.resizeColumnsToContents()
+    def _color_por_posicion(self, posicion, es_clasificacion):
+        if pd.isna(posicion):
+            return None
+        posicion = int(posicion)
+
+        if posicion == 1:
+            return self.COLOR_PRIMERO
+        if posicion == 2:
+            return self.COLOR_SEGUNDO
+        if posicion == 3:
+            return self.COLOR_TERCERO
+        if posicion <= 10:
+            return self.COLOR_TOP10
+
+        if es_clasificacion:
+            if posicion <= 15:
+                return self.COLOR_Q2
+            return self.COLOR_Q1
+
+        return None    
 
     def _formatear_valor(self, nombre_col, valor):
         if pd.isna(valor):

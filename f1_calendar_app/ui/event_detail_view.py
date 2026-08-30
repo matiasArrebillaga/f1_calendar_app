@@ -16,8 +16,9 @@ class EventDetailView(QWidget):
     COLOR_Q2 = QColor("#805515")
     def __init__(self):
         super().__init__()
-
+        
         self.titulo = QLabel()
+        self.titulo.setObjectName("titulo")        
         self.layout_sesiones = QVBoxLayout()
         self.estado = QLabel()
         self.tabla_resultados = QTableWidget()
@@ -86,9 +87,10 @@ class EventDetailView(QWidget):
         self.tabla_resultados.setRowCount(len(resultados))
 
         es_clasificacion = self.codigo_sesion in ('Q', 'SQ')
+        total_pilotos = len(resultados)
 
         for fila, (_, row) in enumerate(resultados.iterrows()):
-            color = self._color_por_posicion(row.get('Position'), es_clasificacion)
+            color = self._color_por_posicion(row.get('Position'), es_clasificacion, total_pilotos)
 
             for col, nombre_col in enumerate(columnas):
                 valor = row.get(nombre_col)
@@ -100,7 +102,7 @@ class EventDetailView(QWidget):
                 self.tabla_resultados.setItem(fila, col, item)
 
         self.tabla_resultados.resizeColumnsToContents()
-    def _color_por_posicion(self, posicion, es_clasificacion):
+    def _color_por_posicion(self, posicion, es_clasificacion, total_pilotos):
         if pd.isna(posicion):
             return None
         posicion = int(posicion)
@@ -115,11 +117,12 @@ class EventDetailView(QWidget):
             return self.COLOR_TOP10
 
         if es_clasificacion:
-            if posicion <= 15:
+            limite_q2 = 16 if total_pilotos >= 22 else 15
+            if posicion <= limite_q2:
                 return self.COLOR_Q2
             return self.COLOR_Q1
 
-        return None    
+        return None  
 
     def _formatear_valor(self, nombre_col, valor):
         if pd.isna(valor):

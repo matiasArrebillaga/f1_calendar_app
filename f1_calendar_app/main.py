@@ -34,6 +34,10 @@ class MainWindow(QMainWindow):
 
 
 app = QApplication(sys.argv)
+
+with open("style.qss", "r") as f:
+    app.setStyleSheet(f.read())
+
 ventana = MainWindow()
 ventana.show()
 app.exec()

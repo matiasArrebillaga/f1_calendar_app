@@ -11,7 +11,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("F1 Calendar App")
-        self.resize(900, 600)
+        self.resize(1200, 700)
 
         self.calendar_view = CalendarView()
         self.detail_view = EventDetailView()

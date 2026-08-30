@@ -57,3 +57,7 @@ QHeaderView::section {
     border: none;
     font-weight: bold;
 }
+QPushButton:disabled {
+    background-color: #3a3a3a;
+    color: #888888;
+}

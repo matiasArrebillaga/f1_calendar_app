@@ -1,54 +1,89 @@
 import fastf1
 import pandas as pd
-from PySide6.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout, QComboBox, QLabel
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QScrollArea, QGridLayout
+)
 from PySide6.QtGui import QColor
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
+
+from ui.calendar_event_card import CalendarEventCard
 
 class CalendarView(QWidget):
     evento_seleccionado = Signal(int)
 
-    COLOR_PASADO = QColor("#54190a")   # gris claro
-    COLOR_FUTURO = QColor("#313333") 
-    COLOR_PROXIMA = QColor("#524a03")  # celeste claro
+    COLOR_PASADO = QColor("#54190a")
+    COLOR_FUTURO = QColor("#313333")
+    COLOR_PROXIMA = QColor("#524a03")
+
+    COLUMNAS_GRID = 5
+    ANIO_MIN = 2018
+    ANIO_MAX = 2026
 
     def __init__(self):
         super().__init__()
         self.calendario = None
+        self.anio_actual = 2026
 
-        self.selector_anio = QComboBox()
-        self.selector_anio.addItems([str(a) for a in range(2018, 2027)])
-        self.selector_anio.setCurrentText("2026")
+        self.boton_anio_anterior = QPushButton("<")
+        self.boton_anio_siguiente = QPushButton(">")
+        self.label_anio = QLabel(str(self.anio_actual))
+        self.label_anio.setAlignment(Qt.AlignCenter)
+        self.label_anio.setFixedWidth(60)
 
-        self.tabla = QTableWidget()
+        self.boton_anio_anterior.setFixedWidth(36)
+        self.boton_anio_siguiente.setFixedWidth(36)
 
         layout_superior = QHBoxLayout()
-        layout_superior.addWidget(QLabel("Año:"))
-        layout_superior.addWidget(self.selector_anio)
         layout_superior.addStretch()
+        layout_superior.addWidget(self.boton_anio_anterior)
+        layout_superior.addWidget(self.label_anio)
+        layout_superior.addWidget(self.boton_anio_siguiente)
+        layout_superior.addStretch()
+
+        self.contenedor_grid = QWidget()
+        self.grid = QGridLayout()
+        self.contenedor_grid.setLayout(self.grid)
+
+        self.scroll = QScrollArea()
+        self.scroll.setWidget(self.contenedor_grid)
+        self.scroll.setWidgetResizable(True)
 
         layout = QVBoxLayout()
         layout.addLayout(layout_superior)
-        layout.addWidget(self.tabla)
+        layout.addWidget(self.scroll)
         self.setLayout(layout)
 
-        self.tabla.cellDoubleClicked.connect(self._on_double_click)
-        self.selector_anio.currentTextChanged.connect(self._on_anio_cambiado)
+        self.boton_anio_anterior.clicked.connect(self._anio_anterior)
+        self.boton_anio_siguiente.clicked.connect(self._anio_siguiente)
 
-        self.cargar_calendario(2026)
+        self._actualizar_botones()
+        self.cargar_calendario(self.anio_actual)
 
-    def _on_anio_cambiado(self, texto_anio):
-        self.cargar_calendario(int(texto_anio))
+    def _anio_anterior(self):
+        if self.anio_actual > self.ANIO_MIN:
+            self.anio_actual -= 1
+            self.label_anio.setText(str(self.anio_actual))
+            self._actualizar_botones()
+            self.cargar_calendario(self.anio_actual)
 
+    def _anio_siguiente(self):
+        if self.anio_actual < self.ANIO_MAX:
+            self.anio_actual += 1
+            self.label_anio.setText(str(self.anio_actual))
+            self._actualizar_botones()
+            self.cargar_calendario(self.anio_actual)
+
+    def _actualizar_botones(self):
+        self.boton_anio_anterior.setEnabled(self.anio_actual > self.ANIO_MIN)
+        self.boton_anio_siguiente.setEnabled(self.anio_actual < self.ANIO_MAX)
     def cargar_calendario(self, year):
         self.calendario = fastf1.get_event_schedule(year)
 
-        columnas = ['RoundNumber', 'EventName', 'Country', 'EventDate']
-        self.tabla.setColumnCount(len(columnas))
-        self.tabla.setHorizontalHeaderLabels(columnas)
-        self.tabla.setRowCount(len(self.calendario))
+        while self.grid.count():
+            item = self.grid.takeAt(0)
+            item.widget().deleteLater()
 
         hoy = pd.Timestamp.now()
-
         fechas_futuras = self.calendario[self.calendario['EventDate'] >= hoy]
         indice_proxima = fechas_futuras.index.min() if not fechas_futuras.empty else None
 
@@ -60,10 +95,9 @@ class CalendarView(QWidget):
             else:
                 color = self.COLOR_FUTURO
 
-            for col, nombre_col in enumerate(columnas):
-                item = QTableWidgetItem(str(evento[nombre_col]))
-                item.setBackground(color)
-                self.tabla.setItem(fila, col, item)
+            tarjeta = CalendarEventCard(fila, evento, color)
+            tarjeta.clickeada.connect(self.evento_seleccionado.emit)
 
-    def _on_double_click(self, fila, columna):
-        self.evento_seleccionado.emit(fila)
+            fila_grid = fila // self.COLUMNAS_GRID
+            col_grid = fila % self.COLUMNAS_GRID
+            self.grid.addWidget(tarjeta, fila_grid, col_grid)

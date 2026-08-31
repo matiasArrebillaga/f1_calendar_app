@@ -1,9 +1,11 @@
+from datetime import datetime
 import fastf1
 import pandas as pd
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QScrollArea, QGridLayout
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
+    QScrollArea, QGridLayout
 )
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIntValidator
 from PySide6.QtCore import Signal, Qt
 
 from ui.calendar_event_card import CalendarEventCard
@@ -16,19 +18,21 @@ class CalendarView(QWidget):
     COLOR_PROXIMA = QColor("#524a03")
 
     COLUMNAS_GRID = 5
-    ANIO_MIN = 2018
-    ANIO_MAX = 2026
+    ANIO_MIN = 1950
+    ANIO_MAX = datetime.now().year
 
     def __init__(self):
         super().__init__()
         self.calendario = None
-        self.anio_actual = 2026
+        self.anio_actual = self.ANIO_MAX
 
         self.boton_anio_anterior = QPushButton("<")
         self.boton_anio_siguiente = QPushButton(">")
-        self.label_anio = QLabel(str(self.anio_actual))
-        self.label_anio.setAlignment(Qt.AlignCenter)
-        self.label_anio.setFixedWidth(60)
+
+        self.campo_anio = QLineEdit(str(self.anio_actual))
+        self.campo_anio.setAlignment(Qt.AlignCenter)
+        self.campo_anio.setFixedWidth(60)
+        self.campo_anio.setValidator(QIntValidator(self.ANIO_MIN, self.ANIO_MAX))
 
         self.boton_anio_anterior.setFixedWidth(36)
         self.boton_anio_siguiente.setFixedWidth(36)
@@ -36,7 +40,7 @@ class CalendarView(QWidget):
         layout_superior = QHBoxLayout()
         layout_superior.addStretch()
         layout_superior.addWidget(self.boton_anio_anterior)
-        layout_superior.addWidget(self.label_anio)
+        layout_superior.addWidget(self.campo_anio)
         layout_superior.addWidget(self.boton_anio_siguiente)
         layout_superior.addStretch()
 
@@ -55,27 +59,39 @@ class CalendarView(QWidget):
 
         self.boton_anio_anterior.clicked.connect(self._anio_anterior)
         self.boton_anio_siguiente.clicked.connect(self._anio_siguiente)
+        self.campo_anio.editingFinished.connect(self._anio_escrito_manualmente)
 
         self._actualizar_botones()
         self.cargar_calendario(self.anio_actual)
 
     def _anio_anterior(self):
         if self.anio_actual > self.ANIO_MIN:
-            self.anio_actual -= 1
-            self.label_anio.setText(str(self.anio_actual))
-            self._actualizar_botones()
-            self.cargar_calendario(self.anio_actual)
+            self._ir_a_anio(self.anio_actual - 1)
 
     def _anio_siguiente(self):
         if self.anio_actual < self.ANIO_MAX:
-            self.anio_actual += 1
-            self.label_anio.setText(str(self.anio_actual))
-            self._actualizar_botones()
-            self.cargar_calendario(self.anio_actual)
+            self._ir_a_anio(self.anio_actual + 1)
+
+    def _anio_escrito_manualmente(self):
+        texto = self.campo_anio.text()
+        if not texto:
+            self.campo_anio.setText(str(self.anio_actual))
+            return
+
+        anio_pedido = int(texto)
+        anio_pedido = max(self.ANIO_MIN, min(anio_pedido, self.ANIO_MAX))
+        self._ir_a_anio(anio_pedido)
+
+    def _ir_a_anio(self, nuevo_anio):
+        self.anio_actual = nuevo_anio
+        self.campo_anio.setText(str(self.anio_actual))
+        self._actualizar_botones()
+        self.cargar_calendario(self.anio_actual)
 
     def _actualizar_botones(self):
         self.boton_anio_anterior.setEnabled(self.anio_actual > self.ANIO_MIN)
         self.boton_anio_siguiente.setEnabled(self.anio_actual < self.ANIO_MAX)
+
     def cargar_calendario(self, year):
         self.calendario = fastf1.get_event_schedule(year)
 

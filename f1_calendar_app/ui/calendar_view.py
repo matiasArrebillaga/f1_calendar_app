@@ -5,17 +5,13 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
     QScrollArea, QGridLayout
 )
-from PySide6.QtGui import QColor, QIntValidator
+from PySide6.QtGui import QIntValidator
 from PySide6.QtCore import Signal, Qt
 
 from ui.calendar_event_card import CalendarEventCard
 
 class CalendarView(QWidget):
     evento_seleccionado = Signal(int)
-
-    COLOR_PASADO = QColor("#54190a")
-    COLOR_FUTURO = QColor("#313333")
-    COLOR_PROXIMA = QColor("#524a03")
 
     COLUMNAS_GRID = 5
     ANIO_MIN = 1950
@@ -46,6 +42,8 @@ class CalendarView(QWidget):
 
         self.contenedor_grid = QWidget()
         self.grid = QGridLayout()
+        self.grid.setSpacing(14)
+        self.grid.setContentsMargins(6, 10, 6, 10)
         self.contenedor_grid.setLayout(self.grid)
 
         self.scroll = QScrollArea()
@@ -105,13 +103,13 @@ class CalendarView(QWidget):
 
         for fila, (indice_pandas, evento) in enumerate(self.calendario.iterrows()):
             if indice_pandas == indice_proxima:
-                color = self.COLOR_PROXIMA
+                estado = 'proxima'
             elif evento['EventDate'] < hoy:
-                color = self.COLOR_PASADO
+                estado = 'pasado'
             else:
-                color = self.COLOR_FUTURO
+                estado = 'futuro'
 
-            tarjeta = CalendarEventCard(fila, evento, color)
+            tarjeta = CalendarEventCard(fila, evento, estado)
             tarjeta.clickeada.connect(self.evento_seleccionado.emit)
 
             fila_grid = fila // self.COLUMNAS_GRID

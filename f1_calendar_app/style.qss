@@ -1,24 +1,68 @@
+/* =========================================================
+   F1 Calendar App — tema "transmisión"
+   Paleta:
+     bg-app:        #0b0b0e
+     bg-panel:      #17171d
+     bg-surface:    #1e1e26
+     bg-surface-h:  #262631
+     border:        #2a2a33
+     border-strong: #3a3a45
+     text-primary:  #f0f0f0
+     text-muted:    #9a9aa5
+     accent (rojo): #e10600
+     accent-hover:  #ff2410
+     accent-press:  #a80500
+   ========================================================= */
+
 QWidget {
-    background-color: #15151a;
+    background-color: #0b0b0e;
     color: #f0f0f0;
     font-family: "Segoe UI", sans-serif;
     font-size: 13px;
 }
 
 QMainWindow {
-    background-color: #15151a;
+    background-color: #0b0b0e;
 }
 
 QLabel {
     color: #f0f0f0;
 }
 
+/* ---------- Encabezados ---------- */
+
 QLabel#titulo {
-    font-size: 20px;
-    font-weight: bold;
-    color: #e10600;
-    padding: 8px 0px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #f5f5f5;
+    padding: 2px 0px;
 }
+
+QLabel#subtitulo {
+    font-size: 13px;
+    color: #9a9aa5;
+    padding-bottom: 6px;
+}
+
+QFrame#lineaAcento {
+    background-color: #e10600;
+    max-height: 3px;
+    min-height: 3px;
+    border: none;
+    border-radius: 1px;
+}
+
+QLabel#badgeRonda {
+    background-color: #1e1e26;
+    border: 1px solid #3a3a45;
+    border-radius: 4px;
+    color: #d0d0d5;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 8px;
+}
+
+/* ---------- Botones genéricos (año, volver) ---------- */
 
 QPushButton {
     background-color: #e10600;
@@ -26,38 +70,221 @@ QPushButton {
     border: none;
     border-radius: 4px;
     padding: 8px 14px;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 QPushButton:hover {
-    background-color: #ff1e1e;
+    background-color: #ff2410;
 }
 
 QPushButton:pressed {
     background-color: #a80500;
 }
 
-QComboBox {
-    background-color: #1f1f26;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 4px 8px;
+QPushButton:disabled {
+    background-color: #2a2a33;
+    color: #6a6a74;
 }
 
-QTableWidget {
-    background-color: #1a1a20;
-    gridline-color: #2a2a33;
+/* ---------- Selector de año ---------- */
+
+QLineEdit {
+    background-color: #1e1e26;
+    border: 1px solid #3a3a45;
+    border-radius: 4px;
+    padding: 5px 6px;
+    color: #f0f0f0;
+    font-weight: 600;
+}
+
+QLineEdit:focus {
+    border: 1px solid #e10600;
+}
+
+/* ---------- Tarjetas de calendario ---------- */
+
+QWidget#tarjetaEvento {
+    background-color: #1e1e26;
     border: 1px solid #2a2a33;
+    border-left: 4px solid #3a3a45;
+    border-radius: 6px;
+}
+
+QWidget#tarjetaEvento[estado="proxima"] {
+    border-left: 4px solid #e10600;
+    background-color: #241a1a;
+}
+
+QWidget#tarjetaEvento[estado="pasado"] {
+    border-left: 4px solid #4a4a54;
+}
+
+QWidget#tarjetaEvento[estado="futuro"] {
+    border-left: 4px solid #1f5fa8;
+}
+
+QLabel#nombreEvento {
+    font-weight: 700;
+    font-size: 13px;
+    background: transparent;
+    color: #f5f5f5;
+}
+
+QLabel#paisEvento {
+    background: transparent;
+    color: #b6b6bd;
+    font-size: 12px;
+}
+
+QLabel#fechaEvento {
+    background: transparent;
+    color: #7d7d87;
+    font-size: 11px;
+}
+
+QLabel#etiquetaRonda {
+    background: transparent;
+    color: #7d7d87;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+QLabel#etiquetaProxima {
+    background-color: #e10600;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 2px 5px;
+}
+
+/* ---------- Pestañas de sesión (event detail, estilo broadcast) ---------- */
+
+QPushButton#tabSesion {
+    background-color: #17171d;
+    color: #b6b6bd;
+    text-align: left;
+    border: 1px solid #2a2a33;
+    border-left: 3px solid transparent;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-weight: 600;
+}
+
+QPushButton#tabSesion:hover:enabled {
+    background-color: #1e1e26;
+    color: #f0f0f0;
+    border-left: 3px solid #5a1a17;
+}
+
+QPushButton#tabSesion:checked {
+    background-color: #241a1a;
+    color: #ffffff;
+    border-left: 3px solid #e10600;
+    border-top: 1px solid #3a3a45;
+    border-right: 1px solid #3a3a45;
+    border-bottom: 1px solid #3a3a45;
+}
+
+QPushButton#tabSesion:disabled {
+    background-color: #141418;
+    color: #4a4a52;
+    border-left: 3px solid transparent;
+}
+
+/* ---------- Estado (cargando / error) ---------- */
+
+QLabel#estadoCargando {
+    color: #d9a441;
+    font-style: italic;
+    padding: 4px 0px;
+}
+
+QLabel#estadoError {
+    color: #ff4d4d;
+    font-weight: 600;
+    padding: 4px 0px;
+}
+
+QLabel#estadoVacio {
+    color: #9a9aa5;
+    font-style: italic;
+    padding: 4px 0px;
+}
+
+/* ---------- Tabla de resultados, estilo pantalla de timing ---------- */
+
+QTableWidget {
+    background-color: #17171d;
+    alternate-background-color: #1b1b22;
+    gridline-color: #262631;
+    border: 1px solid #2a2a33;
+    border-radius: 4px;
+    selection-background-color: #2a2a33;
+    selection-color: #f0f0f0;
+}
+
+QTableWidget::item {
+    padding: 4px 6px;
+    border-bottom: 1px solid #232329;
 }
 
 QHeaderView::section {
     background-color: #e10600;
     color: white;
-    padding: 6px;
+    padding: 7px 6px;
     border: none;
-    font-weight: bold;
+    border-right: 1px solid #a80500;
+    font-weight: 700;
+    font-size: 11px;
 }
-QPushButton:disabled {
-    background-color: #3a3a3a;
-    color: #888888;
+
+QTableWidget QScrollBar:vertical {
+    background: #17171d;
+    width: 10px;
+    margin: 0px;
+}
+
+QTableWidget QScrollBar::handle:vertical {
+    background: #3a3a45;
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QTableWidget QScrollBar::handle:vertical:hover {
+    background: #4a4a58;
+}
+
+QTableWidget QScrollBar::add-line:vertical,
+QTableWidget QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* ---------- ScrollArea del calendario ---------- */
+
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+
+QScrollArea QScrollBar:vertical {
+    background: #0b0b0e;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollArea QScrollBar::handle:vertical {
+    background: #3a3a45;
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QScrollArea QScrollBar::handle:vertical:hover {
+    background: #e10600;
+}
+
+QScrollArea QScrollBar::add-line:vertical,
+QScrollArea QScrollBar::sub-line:vertical {
+    height: 0px;
 }

@@ -6,7 +6,8 @@ from ui.calendar_view import CalendarView
 from ui.event_detail_view import EventDetailView
 
 fastf1.Cache.enable_cache('cache')
-
+# agregar logo de f1, agrandar tarjetas, cambiar botones detailed view, agregar sidebar
+#listar standings, pilotos, equipos
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()

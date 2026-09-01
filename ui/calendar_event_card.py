@@ -3,8 +3,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Signal, Qt, QPropertyAnimation, QEasingCurve, QEvent, QRect
-from PySide6.QtGui import QColor
-
+from PySide6.QtGui import QColor, QPixmap
+from core.flags import obtener_ruta_bandera
 
 class CalendarEventCard(QWidget):
     """
@@ -27,8 +27,11 @@ class CalendarEventCard(QWidget):
         self._ancho = 190
         self._alto = 100
 
-        # Contenedor externo: tamaño fijo, transparente, es lo único que
-        # ve el QGridLayout. Nunca cambia de tamaño, así el grid no salta.
+        bandera = QLabel()
+        bandera.setStyleSheet("background: transparent;")
+        ruta_bandera = obtener_ruta_bandera(evento['Country'])
+        if ruta_bandera:
+            bandera.setPixmap(QPixmap(ruta_bandera))        
         self.setFixedSize(self._ancho, self._alto)
         self.setCursor(Qt.PointingHandCursor)
 

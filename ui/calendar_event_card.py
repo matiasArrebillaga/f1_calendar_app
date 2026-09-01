@@ -27,14 +27,21 @@ class CalendarEventCard(QWidget):
         self._ancho = 190
         self._alto = 100
 
-        bandera = QLabel()
-        bandera.setStyleSheet("background: transparent;")
-        ruta_bandera = obtener_ruta_bandera(evento['Country'])
-        if ruta_bandera:
-            bandera.setPixmap(QPixmap(ruta_bandera))        
+        
         self.setFixedSize(self._ancho, self._alto)
         self.setCursor(Qt.PointingHandCursor)
+        # Preparamos la bandera ACÁ (antes de armar fila_superior) porque
+        # necesitamos conocer su ancho para reservarle espacio en el layout.
+        self.ancho_bandera = 21
+        self.margen_bandera = 12
+        self._pixmap_bandera = None
 
+        ruta_bandera = obtener_ruta_bandera(evento['Country'])
+        if ruta_bandera:
+            pixmap_original = QPixmap(ruta_bandera)
+            self._pixmap_bandera = pixmap_original.scaledToWidth(
+                self.ancho_bandera, Qt.SmoothTransformation
+            )
         # Tarjeta interior: la que realmente se ve y se anima.
         self._interior = QWidget(self)
         self._interior.setObjectName("tarjetaEvento")
@@ -85,6 +92,10 @@ class CalendarEventCard(QWidget):
             etiqueta_proxima.setObjectName("etiquetaProxima")
             fila_superior.addWidget(etiqueta_proxima)
 
+        # Reservamos un hueco vacío del ancho de la bandera + un margen chico,
+        # así "PRÓXIMA" no queda escondida debajo de la bandera flotante.
+        if self._pixmap_bandera is not None:
+            fila_superior.addSpacing(self.ancho_bandera + 8)
         nombre = QLabel(str(evento['EventName']))
         nombre.setObjectName("nombreEvento")
         nombre.setWordWrap(True)
@@ -105,6 +116,17 @@ class CalendarEventCard(QWidget):
         layout.addWidget(fecha)
         self._interior.setLayout(layout)
 
+
+        if self._pixmap_bandera is not None:
+            self._bandera = QLabel(self)
+            self._bandera.setPixmap(self._pixmap_bandera)
+            self._bandera.setFixedSize(self._pixmap_bandera.size())
+            self._bandera.setStyleSheet("background: transparent;")
+            self._bandera.move(
+                self._ancho - self._pixmap_bandera.width() - self.margen_bandera,
+                self.margen_bandera
+            )
+            self._bandera.raise_()
     def eventFilter(self, obj, event):
         if obj is self._interior:
             if event.type() == QEvent.MouseButtonPress:

@@ -14,8 +14,8 @@ class TopBar(QWidget):
         super().__init__()
         self.anio_actual = self.ANIO_MAX
 
-        boton_logo = QPushButton("🏁")
-        boton_logo.setFixedWidth(40)
+        boton_logo = QPushButton("F1")
+        boton_logo.setFixedWidth(60)
         boton_logo.clicked.connect(self.logo_clickeado.emit)
 
         titulo_app = QLabel("F1 Calendar App")

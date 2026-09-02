@@ -25,6 +25,122 @@ QMainWindow {
     background-color: #0b0b0e;
 }
 
+/* ---------- Barra superior ---------- */
+
+QWidget#topBar {
+    background-color: #111116;
+    border-bottom: 1px solid #2a2a33;
+}
+
+QLabel#tituloApp {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #f0f0f0;
+}
+
+QPushButton#botonAnio {
+    background-color: #1e1e26;
+    color: #f0f0f0;
+    border: 1px solid #3a3a45;
+    border-radius: 4px;
+    padding: 4px 0px;
+    font-weight: 700;
+}
+
+QPushButton#botonAnio:hover {
+    background-color: #262631;
+}
+
+QPushButton#botonAnio:pressed {
+    background-color: #17171d;
+}
+
+QPushButton#botonAnio:disabled {
+    background-color: #141418;
+    color: #4a4a52;
+    border-color: #232329;
+}
+
+QPushButton#botonLogoF1 {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+QPushButton#botonLogoF1:hover {
+    background-color: #1c1c22;
+}
+
+QPushButton#botonLogoF1Fallback {
+    background-color: #e10600;
+    color: white;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+QPushButton#botonLogoF1Fallback:hover {
+    background-color: #ff2410;
+}
+
+/* ---------- Sidebar de navegación ---------- */
+
+QWidget#sidebarPrincipal {
+    background-color: #111116;
+    border-right: 1px solid #2a2a33;
+}
+
+QPushButton#navLateral {
+    background-color: transparent;
+    color: #9a9aa5;
+    text-align: left;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-weight: 600;
+}
+
+QPushButton#navLateral:hover {
+    background-color: #1a1a20;
+    color: #f0f0f0;
+    border-left: 3px solid #5a1a17;
+}
+
+QPushButton#navLateral:checked {
+    background-color: #1e1e26;
+    color: #ffffff;
+    border-left: 3px solid #e10600;
+}
+
+/* ---------- Pestañas horizontales (standings) ---------- */
+
+QPushButton#tabHorizontal {
+    background-color: #17171d;
+    color: #b6b6bd;
+    border: 1px solid #2a2a33;
+    border-bottom: 3px solid transparent;
+    border-radius: 4px;
+    padding: 8px 18px;
+    font-weight: 600;
+}
+
+QPushButton#tabHorizontal:hover {
+    background-color: #1e1e26;
+    color: #f0f0f0;
+}
+
+QPushButton#tabHorizontal:checked {
+    background-color: #241a1a;
+    color: #ffffff;
+    border-bottom: 3px solid #e10600;
+}
+
 /* Fondo con un ligero degradé vertical en vez de un plano parejo. */
 QWidget#vistaPrincipal {
     background: qlineargradient(
@@ -195,8 +311,8 @@ QPushButton#tabSesion {
     background-color: #17171d;
     color: #b6b6bd;
     text-align: left;
-    border: 1px solid #2b0b0b;
-    border-left: 3px solid #272727;
+    border: 1px solid #2a2a33;
+    border-left: 3px solid transparent;
     border-radius: 4px;
     padding: 12px 16px;
     font-size: 14px;

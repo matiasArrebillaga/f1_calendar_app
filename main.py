@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("F1 Calendar App")
-        self.resize(1100, 700)
+        self.resize(1300, 750)
 
         self.top_bar = TopBar()
         self.sidebar = Sidebar()
@@ -29,11 +29,15 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.standings_view)   # índice 2
 
         layout_cuerpo = QHBoxLayout()
+        layout_cuerpo.setContentsMargins(0, 0, 0, 0)
+        layout_cuerpo.setSpacing(0)
         layout_cuerpo.addWidget(self.sidebar)
         layout_cuerpo.addWidget(self.stack)
 
         contenedor_central = QWidget()
         layout_principal = QVBoxLayout()
+        layout_principal.setContentsMargins(0, 0, 0, 0)
+        layout_principal.setSpacing(0)
         layout_principal.addWidget(self.top_bar)
         layout_principal.addLayout(layout_cuerpo)
         contenedor_central.setLayout(layout_principal)

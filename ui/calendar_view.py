@@ -12,7 +12,7 @@ class CalendarView(QWidget):
 
     ANCHO_TARJETA = 190
     ESPACIADO = 10          # tarjetas más juntas entre sí
-    RESERVA_LATERAL = 5   # espacio que se deja libre a la derecha para la futura barra de opciones
+    RESERVA_LATERAL = 0 # espacio que se deja libre a la izquierda para la futura barra de opciones
 
     def __init__(self):
         super().__init__()
@@ -25,7 +25,7 @@ class CalendarView(QWidget):
 
         # El grid vive en un contenedor que solo ocupa el ancho que
         # realmente necesita (según cuántas columnas entren); el resto del
-        # espacio a la derecha queda libre para la futura barra lateral.
+        # espacio a la izquierda queda libre para la futura barra lateral.
         self.contenedor_grid = QWidget()
         self.grid = QGridLayout(self.contenedor_grid)
         self.grid.setSpacing(self.ESPACIADO)
@@ -34,6 +34,7 @@ class CalendarView(QWidget):
         wrapper = QWidget()
         layout_wrapper = QHBoxLayout(wrapper)
         layout_wrapper.setContentsMargins(6, 10, 6, 10)
+        layout_wrapper.addStretch()
         layout_wrapper.addWidget(self.contenedor_grid, alignment=Qt.AlignTop | Qt.AlignLeft)
 
         self.scroll = QScrollArea()

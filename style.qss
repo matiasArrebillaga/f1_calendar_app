@@ -195,8 +195,8 @@ QPushButton#tabSesion {
     background-color: #17171d;
     color: #b6b6bd;
     text-align: left;
-    border: 1px solid #2a2a33;
-    border-left: 3px solid transparent;
+    border: 1px solid #2b0b0b;
+    border-left: 3px solid #272727;
     border-radius: 4px;
     padding: 12px 16px;
     font-size: 14px;

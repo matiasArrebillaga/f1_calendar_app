@@ -19,21 +19,21 @@ class CalendarEventCard(QWidget):
     """
     clickeada = Signal(int)
 
-    MARGEN = 5  # cuánto "crece" la tarjeta hacia cada lado al hacer hover
+    MARGEN = 6  # cuánto "crece" la tarjeta hacia cada lado al hacer hover
 
     def __init__(self, indice_fila, evento, estado):
         super().__init__()
         self.indice_fila = indice_fila
-        self._ancho = 190
-        self._alto = 100
+        self._ancho = 200
+        self._alto = 115
 
         
         self.setFixedSize(self._ancho, self._alto)
         self.setCursor(Qt.PointingHandCursor)
         # Preparamos la bandera ACÁ (antes de armar fila_superior) porque
         # necesitamos conocer su ancho para reservarle espacio en el layout.
-        self.ancho_bandera = 21
-        self.margen_bandera = 12
+        self.ancho_bandera = 22
+        self.margen_bandera = 14
         self._pixmap_bandera = None
 
         ruta_bandera = obtener_ruta_bandera(evento['Country'])

@@ -15,7 +15,7 @@ CODIGOS_PAIS = {
     "Sweden": "se", "Switzerland": "ch", "South Africa": "za",
     "Argentina": "ar", "Morocco": "ma", "India": "in", "Korea": "kr",
     "Turkey": "tr", "Russia": "ru", "Malaysia": "my",
-    "San Marino": "sm", "Luxembourg": "lu",
+    "San Marino": "sm", "Luxembourg": "lu","Abu Dhabi":"ae","UAE": "ae"
 }
 
 

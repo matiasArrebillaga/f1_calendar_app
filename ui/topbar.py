@@ -80,7 +80,23 @@ class TopBar(QWidget):
         anio_pedido = max(self.ANIO_MIN, min(int(texto), self.ANIO_MAX))
         self._ir_a_anio(anio_pedido)
 
-    def _ir_a_anio(self, nuevo_anio):
+    def _anio_anterior(self):
+        if self.anio_actual > self.ANIO_MIN:
+            self.ir_a_anio(self.anio_actual - 1)
+
+    def _anio_siguiente(self):
+        if self.anio_actual < self.ANIO_MAX:
+            self.ir_a_anio(self.anio_actual + 1)
+
+    def _anio_escrito_manualmente(self):
+        texto = self.campo_anio.text()
+        if not texto:
+            self.campo_anio.setText(str(self.anio_actual))
+            return
+        self.ir_a_anio(int(texto))
+
+    def ir_a_anio(self, nuevo_anio):
+        nuevo_anio = max(self.ANIO_MIN, min(nuevo_anio, self.ANIO_MAX))
         self.anio_actual = nuevo_anio
         self.campo_anio.setText(str(self.anio_actual))
         self._actualizar_botones()

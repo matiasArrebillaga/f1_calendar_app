@@ -26,7 +26,6 @@ class CalendarEventCard(QWidget):
         self.indice_fila = indice_fila
         self._ancho = 200
         self._alto = 115
-
         
         self.setFixedSize(self._ancho, self._alto)
         self.setCursor(Qt.PointingHandCursor)

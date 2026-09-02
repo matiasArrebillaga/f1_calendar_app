@@ -15,7 +15,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("F1 Calendar App")
         self.resize(1300, 750)
-
         self.top_bar = TopBar()
         self.sidebar = Sidebar()
 
@@ -48,7 +47,6 @@ class MainWindow(QMainWindow):
         self.top_bar.anio_cambiado.connect(self.on_anio_cambiado)
         self.top_bar.logo_clickeado.connect(self.ir_a_calendario)
         self.sidebar.navegar.connect(self.on_navegar_sidebar)
-
         # carga inicial
         self.on_anio_cambiado(self.top_bar.anio_actual)
 

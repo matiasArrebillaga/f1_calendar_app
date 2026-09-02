@@ -11,8 +11,8 @@ class CalendarView(QWidget):
     evento_seleccionado = Signal(int)
 
     ANCHO_TARJETA = 190
-    ESPACIADO = 10          # tarjetas más juntas entre sí
-    RESERVA_LATERAL = 0 # espacio que se deja libre a la izquierda para la futura barra de opciones
+    ESPACIADO = 10
+    RESERVA_LATERAL = 0
 
     def __init__(self):
         super().__init__()
@@ -23,9 +23,6 @@ class CalendarView(QWidget):
         self._tarjetas = []
         self._columnas_actual = None
 
-        # El grid vive en un contenedor que solo ocupa el ancho que
-        # realmente necesita (según cuántas columnas entren); el resto del
-        # espacio a la izquierda queda libre para la futura barra lateral.
         self.contenedor_grid = QWidget()
         self.grid = QGridLayout(self.contenedor_grid)
         self.grid.setSpacing(self.ESPACIADO)
@@ -34,8 +31,8 @@ class CalendarView(QWidget):
         wrapper = QWidget()
         layout_wrapper = QHBoxLayout(wrapper)
         layout_wrapper.setContentsMargins(6, 10, 6, 10)
-        layout_wrapper.addStretch()
         layout_wrapper.addWidget(self.contenedor_grid, alignment=Qt.AlignTop | Qt.AlignLeft)
+        layout_wrapper.addStretch()
 
         self.scroll = QScrollArea()
         self.scroll.setWidget(wrapper)
@@ -69,7 +66,7 @@ class CalendarView(QWidget):
             tarjeta.clickeada.connect(self.evento_seleccionado.emit)
             self._tarjetas.append(tarjeta)
 
-        self._columnas_actual = None  # fuerza un reacomodo aunque el número de columnas no cambie
+        self._columnas_actual = None
         self._reorganizar_grid()
 
     def _calcular_columnas(self):

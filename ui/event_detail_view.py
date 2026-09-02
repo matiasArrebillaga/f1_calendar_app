@@ -7,7 +7,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QColor, QFont
 import pandas as pd
 from workers.session_worker import SessionWorker
-
+from ui.spinner_widget import SpinnerWidget
 
 class EventDetailView(QWidget):
     volver = Signal()
@@ -86,7 +86,13 @@ class EventDetailView(QWidget):
 
         self.estado = QLabel()
         self.estado.setObjectName("estadoVacio")
+        self.spinner = SpinnerWidget(tamano=20)
+        self.spinner.hide()
 
+        layout_estado = QHBoxLayout()
+        layout_estado.addWidget(self.spinner)
+        layout_estado.addWidget(self.estado)
+        layout_estado.addStretch()
         self.tabla_resultados = QTableWidget()
         self.tabla_resultados.setAlternatingRowColors(True)
         self.tabla_resultados.verticalHeader().setVisible(False)
@@ -103,7 +109,7 @@ class EventDetailView(QWidget):
 
         grid_raiz.addLayout(fila_encabezado, 0, 1)
         grid_raiz.addWidget(linea_acento, 1, 1)
-        grid_raiz.addWidget(self.estado, 2, 1)
+        grid_raiz.addLayout(layout_estado, 2, 1)
         grid_raiz.addWidget(
             self.tabla_resultados, FILA_TABLA, 1, self.TOTAL_SLOTS_SESION, 1
         )
@@ -161,7 +167,8 @@ class EventDetailView(QWidget):
                 boton.setEnabled(False)
 
     def cargar_sesion(self, year, gp, codigo_sesion):
-        self._set_estado("Cargando resultados…", tipo="cargando")
+        self.estado.setText("Cargando resultados...")
+        self.spinner.iniciar()
         self.tabla_resultados.setRowCount(0)
         self.codigo_sesion = codigo_sesion
 
@@ -169,8 +176,11 @@ class EventDetailView(QWidget):
         self.worker.terminado.connect(self.on_sesion_cargada)
         self.worker.error.connect(self.on_error)
         self.worker.start()
-
     def on_sesion_cargada(self, sesion):
+        self.spinner.detener()
+        self.estado.setText("")
+
+
         resultados = sesion.results
 
         if resultados is None or resultados.empty:
@@ -258,7 +268,8 @@ class EventDetailView(QWidget):
         return str(valor)
 
     def on_error(self, mensaje):
-        self._set_estado(f"Error al cargar: {mensaje}", tipo="error")
+        self.spinner.detener()
+        self.estado.setText(f"Error al cargar: {mensaje}")
 
     def _set_estado(self, texto, tipo=""):
         """

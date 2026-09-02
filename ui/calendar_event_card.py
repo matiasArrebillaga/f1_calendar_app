@@ -20,7 +20,7 @@ class CalendarEventCard(QWidget):
     clickeada = Signal(int)
 
     MARGEN = 6  # cuánto "crece" la tarjeta hacia cada lado al hacer hover
-
+    _cache_pixmaps = {}
     def __init__(self, indice_fila, evento, estado):
         super().__init__()
         self.indice_fila = indice_fila
@@ -33,7 +33,7 @@ class CalendarEventCard(QWidget):
         # necesitamos conocer su ancho para reservarle espacio en el layout.
         self.ancho_bandera = 22
         self.margen_bandera = 14
-        self._pixmap_bandera = None
+        self._pixmap_bandera = self._obtener_pixmap_bandera(evento['Country'])
 
         ruta_bandera = obtener_ruta_bandera(evento['Country'])
         if ruta_bandera:
@@ -153,3 +153,18 @@ class CalendarEventCard(QWidget):
         self._animacion_tamano.setStartValue(self._interior.geometry())
         self._animacion_tamano.setEndValue(destino_geometria)
         self._animacion_tamano.start()
+    @classmethod
+    def _obtener_pixmap_bandera(cls, pais):
+        if pais in cls._cache_pixmaps:
+            return cls._cache_pixmaps[pais]
+
+        ruta_bandera = obtener_ruta_bandera(pais)
+        if not ruta_bandera:
+            cls._cache_pixmaps[pais] = None
+            return None
+
+        pixmap_original = QPixmap(ruta_bandera)
+        pixmap_escalado = pixmap_original.scaledToWidth(22, Qt.SmoothTransformation)
+
+        cls._cache_pixmaps[pais] = pixmap_escalado
+        return pixmap_escalado        

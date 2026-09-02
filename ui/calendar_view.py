@@ -18,7 +18,10 @@ class CalendarView(QWidget):
         super().__init__()
         self.setObjectName("vistaPrincipal")
         self.setAttribute(Qt.WA_StyledBackground, True)
-
+        self.calendario = None
+        self._tarjetas = []
+        self._columnas_actual = None
+        self._cache_por_anio = {}
         self.calendario = None
         self._tarjetas = []
         self._columnas_actual = None
@@ -45,26 +48,37 @@ class CalendarView(QWidget):
     def cargar_calendario(self, year):
         self.calendario = fastf1.get_event_schedule(year)
 
+        # Sacamos las tarjetas del año anterior del grid SIN destruirlas —
+        # si pertenecen a un año cacheado, tienen que sobrevivir para reusarse después.
+        for tarjeta in self._tarjetas:
+            tarjeta.hide()
         while self.grid.count():
-            item = self.grid.takeAt(0)
-            item.widget().deleteLater()
+            self.grid.takeAt(0)
 
-        hoy = pd.Timestamp.now()
-        fechas_futuras = self.calendario[self.calendario['EventDate'] >= hoy]
-        indice_proxima = fechas_futuras.index.min() if not fechas_futuras.empty else None
+        if year in self._cache_por_anio:
+            self._tarjetas = self._cache_por_anio[year]
+            for tarjeta in self._tarjetas:
+                tarjeta.show()
+        else:
+            hoy = pd.Timestamp.now()
+            fechas_futuras = self.calendario[self.calendario['EventDate'] >= hoy]
+            indice_proxima = fechas_futuras.index.min() if not fechas_futuras.empty else None
 
-        self._tarjetas = []
-        for fila, (indice_pandas, evento) in enumerate(self.calendario.iterrows()):
-            if indice_pandas == indice_proxima:
-                estado = 'proxima'
-            elif evento['EventDate'] < hoy:
-                estado = 'pasado'
-            else:
-                estado = 'futuro'
+            tarjetas_nuevas = []
+            for fila, (indice_pandas, evento) in enumerate(self.calendario.iterrows()):
+                if indice_pandas == indice_proxima:
+                    estado = 'proxima'
+                elif evento['EventDate'] < hoy:
+                    estado = 'pasado'
+                else:
+                    estado = 'futuro'
 
-            tarjeta = CalendarEventCard(fila, evento, estado)
-            tarjeta.clickeada.connect(self.evento_seleccionado.emit)
-            self._tarjetas.append(tarjeta)
+                tarjeta = CalendarEventCard(fila, evento, estado)
+                tarjeta.clickeada.connect(self.evento_seleccionado.emit)
+                tarjetas_nuevas.append(tarjeta)
+
+            self._cache_por_anio[year] = tarjetas_nuevas
+            self._tarjetas = tarjetas_nuevas
 
         self._columnas_actual = None
         self._reorganizar_grid()

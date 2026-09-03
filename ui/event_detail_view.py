@@ -4,10 +4,15 @@ from PySide6.QtWidgets import (
     QSizePolicy, QStackedWidget
 )
 from PySide6.QtCore import Signal, Qt
+from PySide6.QtWidgets import QGraphicsDropShadowEffect, QGraphicsOpacityEffect
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QColor
 from PySide6.QtGui import QColor, QFont
 import pandas as pd
 from workers.session_worker import SessionWorker
 from ui.spinner_widget import SpinnerWidget
+from PySide6.QtGui import QPixmap
+from core.circuits import obtener_datos_circuito, obtener_ruta_imagen_circuito
 class EventDetailView(QWidget):
     volver = Signal()
 
@@ -96,11 +101,35 @@ class EventDetailView(QWidget):
         self.tabla_resultados.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tabla_resultados.setShowGrid(False)
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.panel_info = QWidget()
+        
+        self._efecto_opacidad = QGraphicsOpacityEffect(self.panel_info)
+        self.panel_info.setGraphicsEffect(self._efecto_opacidad)
 
-        self.panel_info = QLabel()
-        self.panel_info.setObjectName("panelInfoEvento")
-        self.panel_info.setWordWrap(True)
-        self.panel_info.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self._animacion_fade = QPropertyAnimation(self._efecto_opacidad, b"opacity")
+        self._animacion_fade.setDuration(350)
+        self._animacion_fade.setStartValue(0)
+        self._animacion_fade.setEndValue(1)
+        self._animacion_fade.setEasingCurve(QEasingCurve.OutCubic)        
+        layout_panel_info = QVBoxLayout(self.panel_info)
+        layout_panel_info.setContentsMargins(20, 20, 20, 20)
+        self.imagen_circuito = QLabel()
+        self.imagen_circuito.setAlignment(Qt.AlignCenter)
+        self.imagen_circuito.setStyleSheet(
+            "background-color: #f5f5f5; border-radius: 10px; padding: 14px;"
+        )
+        sombra_imagen = QGraphicsDropShadowEffect()
+        sombra_imagen.setColor(QColor(0, 0, 0, 160))
+        sombra_imagen.setOffset(0, 4)
+        sombra_imagen.setBlurRadius(25)
+        self.imagen_circuito.setGraphicsEffect(sombra_imagen)
+        self.texto_info = QLabel()
+        self.texto_info.setWordWrap(True)
+        self.texto_info.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        layout_panel_info.addWidget(self.imagen_circuito, alignment=Qt.AlignHCenter)
+        layout_panel_info.addWidget(self.texto_info)
+        layout_panel_info.addStretch()
 
         self.stack_contenido = QStackedWidget()
         self.stack_contenido.addWidget(self.tabla_resultados)  # índice 0
@@ -156,11 +185,29 @@ class EventDetailView(QWidget):
         self.sesiones_info = {}
         boton_race = None
         codigo_race = None
+        hoy = pd.Timestamp.now()
+
+        # Primero armamos toda la info de fechas/nombres, sin tocar botones todavía.
+        info_sesiones_ordenada = []
+        for i in range(self.TOTAL_SLOTS_SESION):
+            nombre_sesion = evento.get(f'Session{i + 1}')
+            fecha_sesion = evento.get(f'Session{i + 1}Date')
+
+            if nombre_sesion and str(nombre_sesion) != 'nan':
+                fecha_sin_tz = self._convertir_a_gmt_menos_3(fecha_sesion)
+                info_sesiones_ordenada.append({
+                    'indice': i,
+                    'nombre': nombre_sesion,
+                    'fecha': fecha_sin_tz,
+                    'pasada': pd.notna(fecha_sin_tz) and fecha_sin_tz < hoy,
+                })
+
+        # Buscamos cuál es la próxima sesión sin correr (la más cercana en el tiempo).
+        futuras = [s for s in info_sesiones_ordenada if not s['pasada'] and pd.notna(s['fecha'])]
+        indice_proxima = min(futuras, key=lambda s: s['fecha'])['indice'] if futuras else None
 
         for i in range(self.TOTAL_SLOTS_SESION):
             boton = self.sidebar_botones[i]
-            nombre_sesion = evento.get(f'Session{i + 1}')
-            fecha_sesion = evento.get(f'Session{i + 1}Date')
 
             try:
                 boton.clicked.disconnect()
@@ -168,30 +215,49 @@ class EventDetailView(QWidget):
                 pass
 
             boton.setChecked(False)
+            boton.setProperty("estadoSesion", "")
 
-            if nombre_sesion and str(nombre_sesion) != 'nan':
-                codigo = codigos.get(nombre_sesion, nombre_sesion)
-                boton.setText(nombre_sesion)
-                boton.setEnabled(True)
-                boton.clicked.connect(
-                    lambda checked, y=year, g=gp, c=codigo, b=boton: self._click_sesion(y, g, c, b)
-                )
-                self.sesiones_info[codigo] = {'nombre': nombre_sesion, 'fecha': fecha_sesion}
-
-                if nombre_sesion == 'Race':
-                    boton_race = boton
-                    codigo_race = codigo
-            else:
+            match = next((s for s in info_sesiones_ordenada if s['indice'] == i), None)
+            if match is None:
                 boton.setText("No disponible")
                 boton.setEnabled(False)
+                boton.style().unpolish(boton)
+                boton.style().polish(boton)
+                continue
 
-        # Auto-selección: si la carrera ya se corrió, mostramos sus resultados de una.
-        hoy = pd.Timestamp.now()
-        if codigo_race and pd.notna(self.sesiones_info[codigo_race]['fecha']):
-            fecha_race = self._convertir_a_gmt_menos_3(self.sesiones_info[codigo_race]['fecha'])
-            if fecha_race < hoy:
-                boton_race.setChecked(True)
-                self.cargar_sesion(year, gp, codigo_race)
+            codigos = {'Practice 1': 'FP1', 'Practice 2': 'FP2', 'Practice 3': 'FP3',
+                       'Qualifying': 'Q', 'Sprint': 'S', 'Sprint Qualifying': 'SQ',
+                       'Race': 'R'}
+            codigo = codigos.get(match['nombre'], match['nombre'])
+            self.sesiones_info[codigo] = {'nombre': match['nombre'], 'fecha': match['fecha']}
+
+            year = int(evento['EventDate'].year)
+            gp = int(evento['RoundNumber'])
+            boton.setEnabled(True)
+            boton.clicked.connect(
+                lambda checked, y=year, g=gp, c=codigo, b=boton: self._click_sesion(y, g, c, b)
+            )
+
+            if match['pasada']:
+                boton.setText(match['nombre'])
+                boton.setProperty("estadoSesion", "pasada")
+            elif i == indice_proxima:
+                fecha_txt = match['fecha'].strftime('%d/%m %H:%M') if pd.notna(match['fecha']) else ""
+                boton.setText(f"{match['nombre']}\n{fecha_txt} — PRÓXIMA")
+                boton.setProperty("estadoSesion", "proxima")
+            else:
+                fecha_txt = match['fecha'].strftime('%d/%m %H:%M') if pd.notna(match['fecha']) else ""
+                boton.setText(f"{match['nombre']}\n{fecha_txt}")
+                boton.setProperty("estadoSesion", "futura")
+
+            boton.style().unpolish(boton)
+            boton.style().polish(boton)
+
+            if match['nombre'] == 'Race':
+                boton_race = boton
+                codigo_race = codigo
+
+        self._mostrar_info_circuito()
     def _click_sesion(self, year, gp, codigo, boton):
         boton.setChecked(True)
         self.cargar_sesion(year, gp, codigo)
@@ -213,9 +279,8 @@ class EventDetailView(QWidget):
         resultados = sesion.results
 
         if resultados is None or resultados.empty:
-            self._mostrar_panel_info()
+            self._mostrar_info_circuito(codigo_sesion=self.codigo_sesion)
             return
-
         self.stack_contenido.setCurrentIndex(0)
 
         self.stack_contenido.setCurrentIndex(0)
@@ -258,35 +323,58 @@ class EventDetailView(QWidget):
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
 
-    def _mostrar_panel_info(self):
-        info = self.sesiones_info.get(self.codigo_sesion, {})
-        nombre_sesion = info.get('nombre', self.codigo_sesion)
-        fecha = self._convertir_a_gmt_menos_3(info.get('fecha'))
+    def _mostrar_info_circuito(self, codigo_sesion=None):
+        location = self.evento_actual.get('Location')
 
-        lineas = [
-            f"<b>{nombre_sesion}</b> todavía no se corrió.",
-            "",
-            f"<b>Circuito:</b> {self.evento_actual.get('Location', '—')}",
-            f"<b>País:</b> {self.evento_actual.get('Country', '—')}",
-            f"<b>Nombre oficial:</b> {self.evento_actual.get('OfficialEventName', '—')}",
-        ]
+        ruta_imagen = obtener_ruta_imagen_circuito(location)
+        if ruta_imagen:
+            pixmap = QPixmap(ruta_imagen).scaledToWidth(620, Qt.SmoothTransformation)
+            self.imagen_circuito.setPixmap(pixmap)
+            self.imagen_circuito.show()
+        else:
+            self.imagen_circuito.hide()
 
-        if pd.notna(fecha):
-            hoy = pd.Timestamp.now()
-            dias_restantes = (fecha.normalize() - hoy.normalize()).days
+        lineas = []
+        datos_circuito = obtener_datos_circuito(location)
 
-            lineas.append(f"<b>Fecha (GMT-3):</b> {fecha.strftime('%d/%m/%Y %H:%M')}")
+        if datos_circuito:
+            lineas.append(f"<b>{datos_circuito['nombre_completo']}</b>")
+            lineas.append(f"Longitud: {datos_circuito['longitud_km']} km")
+            lineas.append(f"Vueltas: {datos_circuito['vueltas']}")
+            lineas.append(f"Distancia total: {datos_circuito['distancia_km']} km")
+            lineas.append(f"Curvas: {datos_circuito['curvas']}")
+            lineas.append(f"Récord de vuelta: {datos_circuito['record_vuelta']}")
+            lineas.append(f"Primer GP: {datos_circuito['primer_gp']}")
+        else:
+            lineas.append(f"<b>Circuito:</b> {location or '—'}")
 
-            if dias_restantes > 0:
-                lineas.append(f"<b>Faltan:</b> {dias_restantes} día(s)")
-            elif dias_restantes == 0:
-                lineas.append("<b>¡Es hoy!</b>")
-            else:
-                lineas.append("Todavía no hay resultados cargados para esta sesión.")
+        lineas.append("")
+        lineas.append(f"<b>País:</b> {self.evento_actual.get('Country', '—')}")
+        lineas.append(f"<b>Nombre oficial del evento:</b> {self.evento_actual.get('OfficialEventName', '—')}")
 
-        self.panel_info.setText("<br>".join(lineas))
+        if codigo_sesion:
+            info = self.sesiones_info.get(codigo_sesion, {})
+            nombre_sesion = info.get('nombre', codigo_sesion)
+            fecha = info.get('fecha')
+
+            lineas.append("")
+            lineas.append(f"<b>{nombre_sesion}</b> todavía no se corrió.")
+
+            if pd.notna(fecha):
+                hoy = pd.Timestamp.now()
+                dias_restantes = (fecha.normalize() - hoy.normalize()).days
+
+                lineas.append(f"<b>Fecha (GMT-3):</b> {fecha.strftime('%d/%m/%Y %H:%M')}")
+
+                if dias_restantes > 0:
+                    lineas.append(f"<b>Faltan:</b> {dias_restantes} día(s)")
+                elif dias_restantes == 0:
+                    lineas.append("<b>¡Es hoy!</b>")
+
+        self.texto_info.setText("<br>".join(lineas))
         self.stack_contenido.setCurrentIndex(1)
-
+        self._animacion_fade.stop()
+        self._animacion_fade.start()        
     def _color_por_posicion(self, posicion, es_clasificacion, total_pilotos):
         if pd.isna(posicion):
             return None

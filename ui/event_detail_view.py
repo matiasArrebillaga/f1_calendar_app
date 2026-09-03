@@ -1,24 +1,22 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QFrame, QButtonGroup, QHeaderView,
-    QSizePolicy
+    QSizePolicy, QStackedWidget
 )
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QColor, QFont
 import pandas as pd
 from workers.session_worker import SessionWorker
 from ui.spinner_widget import SpinnerWidget
-
 class EventDetailView(QWidget):
     volver = Signal()
 
-    # Colores de posición estilo overlay de transmisión.
-    COLOR_PRIMERO = QColor("#8a6d0e")   # oro
-    COLOR_SEGUNDO = QColor("#5c6068")   # plata
-    COLOR_TERCERO = QColor("#7a4a1e")   # bronce
-    COLOR_TOP10 = QColor("#1c2a63")     # azul puntos
-    COLOR_Q1 = QColor("#5c1010")        # eliminado Q1
-    COLOR_Q2 = QColor("#6e4a0f")        # eliminado Q2
+    COLOR_PRIMERO = QColor("#8a6d0e")
+    COLOR_SEGUNDO = QColor("#5c6068")
+    COLOR_TERCERO = QColor("#7a4a1e")
+    COLOR_TOP10 = QColor("#1c2a63")
+    COLOR_Q1 = QColor("#5c1010")
+    COLOR_Q2 = QColor("#6e4a0f")
 
     TOTAL_SLOTS_SESION = 5
     COL_SIDEBAR = 190
@@ -28,10 +26,6 @@ class EventDetailView(QWidget):
         self.setObjectName("vistaPrincipal")
         self.setAttribute(Qt.WA_StyledBackground, True)
 
-        # --- Grid raíz: columna 0 = sidebar de sesiones, columna 1 = contenido ---
-        # Las pestañas de sesión arrancan en la misma fila que la tabla de
-        # resultados (fila FILA_TABLA) y ocupan la misma cantidad de filas,
-        # así su borde superior queda a la altura del encabezado "Pos, Cod...".
         grid_raiz = QGridLayout()
         grid_raiz.setContentsMargins(0, 0, 0, 0)
         grid_raiz.setHorizontalSpacing(16)
@@ -61,7 +55,6 @@ class EventDetailView(QWidget):
             grid_raiz.setRowStretch(FILA_TABLA + i, 1)
             self.sidebar_botones.append(boton)
 
-        # --- Encabezado: ronda + título + país ---
         fila_encabezado = QHBoxLayout()
         fila_encabezado.setSpacing(10)
 
@@ -86,13 +79,16 @@ class EventDetailView(QWidget):
 
         self.estado = QLabel()
         self.estado.setObjectName("estadoVacio")
-        self.spinner = SpinnerWidget(tamano=20)
+
+        self.spinner = SpinnerWidget(tamano=18)
         self.spinner.hide()
 
         layout_estado = QHBoxLayout()
         layout_estado.addWidget(self.spinner)
         layout_estado.addWidget(self.estado)
         layout_estado.addStretch()
+
+        # --- Tabla de resultados y panel informativo, alternados con un stack ---
         self.tabla_resultados = QTableWidget()
         self.tabla_resultados.setAlternatingRowColors(True)
         self.tabla_resultados.verticalHeader().setVisible(False)
@@ -100,6 +96,15 @@ class EventDetailView(QWidget):
         self.tabla_resultados.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tabla_resultados.setShowGrid(False)
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        self.panel_info = QLabel()
+        self.panel_info.setObjectName("panelInfoEvento")
+        self.panel_info.setWordWrap(True)
+        self.panel_info.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
+        self.stack_contenido = QStackedWidget()
+        self.stack_contenido.addWidget(self.tabla_resultados)  # índice 0
+        self.stack_contenido.addWidget(self.panel_info)         # índice 1
 
         boton_volver = QPushButton("← Volver")
         boton_volver.setFixedWidth(140)
@@ -111,7 +116,7 @@ class EventDetailView(QWidget):
         grid_raiz.addWidget(linea_acento, 1, 1)
         grid_raiz.addLayout(layout_estado, 2, 1)
         grid_raiz.addWidget(
-            self.tabla_resultados, FILA_TABLA, 1, self.TOTAL_SLOTS_SESION, 1
+            self.stack_contenido, FILA_TABLA, 1, self.TOTAL_SLOTS_SESION, 1
         )
         grid_raiz.addLayout(
             layout_volver, FILA_TABLA + self.TOTAL_SLOTS_SESION, 0, 1, 2
@@ -125,8 +130,11 @@ class EventDetailView(QWidget):
         boton_volver.clicked.connect(self.volver.emit)
         self.worker = None
         self.codigo_sesion = None
+        self.evento_actual = None
+        self.sesiones_info = {}  # {codigo: {'nombre': str, 'fecha': Timestamp}}
 
     def mostrar_evento(self, evento):
+        self.evento_actual = evento
         self.titulo.setText(str(evento['EventName']))
         self.subtitulo.setText(str(evento['Country']))
 
@@ -135,6 +143,7 @@ class EventDetailView(QWidget):
 
         self.tabla_resultados.clear()
         self.tabla_resultados.setRowCount(0)
+        self.stack_contenido.setCurrentIndex(0)
         self._set_estado("")
 
         codigos = {'Practice 1': 'FP1', 'Practice 2': 'FP2', 'Practice 3': 'FP3',
@@ -144,14 +153,19 @@ class EventDetailView(QWidget):
         year = int(evento['EventDate'].year)
         gp = int(evento['RoundNumber'])
 
+        self.sesiones_info = {}
+        boton_race = None
+        codigo_race = None
+
         for i in range(self.TOTAL_SLOTS_SESION):
             boton = self.sidebar_botones[i]
             nombre_sesion = evento.get(f'Session{i + 1}')
+            fecha_sesion = evento.get(f'Session{i + 1}Date')
 
             try:
                 boton.clicked.disconnect()
             except TypeError:
-                pass  # no tenía ninguna conexión previa, no hay nada que desconectar
+                pass
 
             boton.setChecked(False)
 
@@ -160,11 +174,27 @@ class EventDetailView(QWidget):
                 boton.setText(nombre_sesion)
                 boton.setEnabled(True)
                 boton.clicked.connect(
-                    lambda checked, y=year, g=gp, c=codigo: self.cargar_sesion(y, g, c)
+                    lambda checked, y=year, g=gp, c=codigo, b=boton: self._click_sesion(y, g, c, b)
                 )
+                self.sesiones_info[codigo] = {'nombre': nombre_sesion, 'fecha': fecha_sesion}
+
+                if nombre_sesion == 'Race':
+                    boton_race = boton
+                    codigo_race = codigo
             else:
                 boton.setText("No disponible")
                 boton.setEnabled(False)
+
+        # Auto-selección: si la carrera ya se corrió, mostramos sus resultados de una.
+        hoy = pd.Timestamp.now()
+        if codigo_race and pd.notna(self.sesiones_info[codigo_race]['fecha']):
+            fecha_race = self._convertir_a_gmt_menos_3(self.sesiones_info[codigo_race]['fecha'])
+            if fecha_race < hoy:
+                boton_race.setChecked(True)
+                self.cargar_sesion(year, gp, codigo_race)
+    def _click_sesion(self, year, gp, codigo, boton):
+        boton.setChecked(True)
+        self.cargar_sesion(year, gp, codigo)
 
     def cargar_sesion(self, year, gp, codigo_sesion):
         self.estado.setText("Cargando resultados...")
@@ -176,18 +206,19 @@ class EventDetailView(QWidget):
         self.worker.terminado.connect(self.on_sesion_cargada)
         self.worker.error.connect(self.on_error)
         self.worker.start()
+
     def on_sesion_cargada(self, sesion):
         self.spinner.detener()
         self.estado.setText("")
-
-
         resultados = sesion.results
 
         if resultados is None or resultados.empty:
-            self._set_estado("Esta sesión todavía no tiene resultados.", tipo="vacio")
+            self._mostrar_panel_info()
             return
 
-        self._set_estado("")
+        self.stack_contenido.setCurrentIndex(0)
+
+        self.stack_contenido.setCurrentIndex(0)
 
         columnas = ['Position', 'Abbreviation', 'FullName', 'TeamName',
                     'GridPosition', 'Status', 'Points', 'Time']
@@ -226,6 +257,35 @@ class EventDetailView(QWidget):
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.tabla_resultados.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+
+    def _mostrar_panel_info(self):
+        info = self.sesiones_info.get(self.codigo_sesion, {})
+        nombre_sesion = info.get('nombre', self.codigo_sesion)
+        fecha = self._convertir_a_gmt_menos_3(info.get('fecha'))
+
+        lineas = [
+            f"<b>{nombre_sesion}</b> todavía no se corrió.",
+            "",
+            f"<b>Circuito:</b> {self.evento_actual.get('Location', '—')}",
+            f"<b>País:</b> {self.evento_actual.get('Country', '—')}",
+            f"<b>Nombre oficial:</b> {self.evento_actual.get('OfficialEventName', '—')}",
+        ]
+
+        if pd.notna(fecha):
+            hoy = pd.Timestamp.now()
+            dias_restantes = (fecha.normalize() - hoy.normalize()).days
+
+            lineas.append(f"<b>Fecha (GMT-3):</b> {fecha.strftime('%d/%m/%Y %H:%M')}")
+
+            if dias_restantes > 0:
+                lineas.append(f"<b>Faltan:</b> {dias_restantes} día(s)")
+            elif dias_restantes == 0:
+                lineas.append("<b>¡Es hoy!</b>")
+            else:
+                lineas.append("Todavía no hay resultados cargados para esta sesión.")
+
+        self.panel_info.setText("<br>".join(lineas))
+        self.stack_contenido.setCurrentIndex(1)
 
     def _color_por_posicion(self, posicion, es_clasificacion, total_pilotos):
         if pd.isna(posicion):
@@ -266,17 +326,20 @@ class EventDetailView(QWidget):
             return f"{minutos}:{segundos:06.3f}"
 
         return str(valor)
+    def _convertir_a_gmt_menos_3(self, timestamp):
+        if pd.isna(timestamp):
+            return timestamp
 
+        if timestamp.tzinfo is None:
+            return timestamp
+
+        timestamp_gmt3 = timestamp.tz_convert('Etc/GMT+3')
+        return timestamp_gmt3.tz_localize(None)   
     def on_error(self, mensaje):
         self.spinner.detener()
         self.estado.setText(f"Error al cargar: {mensaje}")
 
     def _set_estado(self, texto, tipo=""):
-        """
-        tipo: '' | 'cargando' | 'error' | 'vacio'
-        Cambia el objectName para que style.qss aplique el color correcto
-        (ámbar para cargando, rojo para error, gris para vacío).
-        """
         nombres = {
             "": "estadoVacio",
             "cargando": "estadoCargando",

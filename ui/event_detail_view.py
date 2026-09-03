@@ -13,6 +13,8 @@ from workers.session_worker import SessionWorker
 from ui.spinner_widget import SpinnerWidget
 from PySide6.QtGui import QPixmap
 from core.circuits import obtener_datos_circuito, obtener_ruta_imagen_circuito
+from workers.track_map_worker import TrackMapWorker
+from core.track_map import obtener_ruta_mapa
 class EventDetailView(QWidget):
     volver = Signal()
 
@@ -87,7 +89,7 @@ class EventDetailView(QWidget):
 
         self.spinner = SpinnerWidget(tamano=18)
         self.spinner.hide()
-
+        self.track_map_worker = None
         layout_estado = QHBoxLayout()
         layout_estado.addWidget(self.spinner)
         layout_estado.addWidget(self.estado)
@@ -326,14 +328,20 @@ class EventDetailView(QWidget):
     def _mostrar_info_circuito(self, codigo_sesion=None):
         location = self.evento_actual.get('Location')
 
-        ruta_imagen = obtener_ruta_imagen_circuito(location)
-        if ruta_imagen:
-            pixmap = QPixmap(ruta_imagen).scaledToWidth(620, Qt.SmoothTransformation)
+        ruta_mapa = obtener_ruta_mapa(location)
+        if ruta_mapa:
+            pixmap = QPixmap(ruta_mapa).scaledToWidth(420, Qt.SmoothTransformation)
             self.imagen_circuito.setPixmap(pixmap)
             self.imagen_circuito.show()
+        elif self.track_map_worker is None or not self.track_map_worker.isRunning():
+            self.imagen_circuito.hide()
+            year_actual = int(self.evento_actual['EventDate'].year)
+            gp_actual = int(self.evento_actual['RoundNumber'])
+            self.track_map_worker = TrackMapWorker(location, year_actual - 1, gp_actual)
+            self.track_map_worker.terminado.connect(self._on_mapa_generado)
+            self.track_map_worker.start()
         else:
             self.imagen_circuito.hide()
-
         lineas = []
         datos_circuito = obtener_datos_circuito(location)
 
@@ -375,6 +383,10 @@ class EventDetailView(QWidget):
         self.stack_contenido.setCurrentIndex(1)
         self._animacion_fade.stop()
         self._animacion_fade.start()        
+    def _on_mapa_generado(self, ruta_mapa):
+        pixmap = QPixmap(ruta_mapa).scaledToWidth(420, Qt.SmoothTransformation)
+        self.imagen_circuito.setPixmap(pixmap)
+        self.imagen_circuito.show()        
     def _color_por_posicion(self, posicion, es_clasificacion, total_pilotos):
         if pd.isna(posicion):
             return None

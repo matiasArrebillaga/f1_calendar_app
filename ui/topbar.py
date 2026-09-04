@@ -5,6 +5,12 @@ from datetime import datetime
 from PySide6.QtGui import QPixmap
 from PySide6.QtGui import QPixmap, QIcon
 from PySide6.QtCore import Signal, Qt, QSize
+import sys
+import os
+
+def resource_path(ruta_relativa):
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, ruta_relativa)
 class TopBar(QWidget):
     logo_clickeado = Signal()
     anio_cambiado = Signal(int)
@@ -14,11 +20,12 @@ class TopBar(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.setObjectName("topBar")
         self.anio_actual = self.ANIO_MAX
 
         self.boton_logo = QPushButton()
         self.boton_logo.setFixedSize(55, 55)
-        self.boton_logo.setIcon(QIcon("assets/logo.png"))
+        self.boton_logo.setIcon(QIcon(resource_path("assets/logo.png")))
         self.boton_logo.setIconSize(QSize(55, 55))
         self.boton_logo.setCursor(Qt.PointingHandCursor)
         self.boton_logo.setStyleSheet("""
@@ -33,7 +40,7 @@ class TopBar(QWidget):
         """)
         self.boton_logo.clicked.connect(self.logo_clickeado)
 
-        titulo_app = QLabel(" CALENDARIO ")
+        titulo_app = QLabel("CALENDARIO F1")
         titulo_app.setObjectName("tituloApp")
 
         self.boton_anio_anterior = QPushButton("<")
@@ -46,12 +53,11 @@ class TopBar(QWidget):
         self.boton_anio_anterior.setFixedWidth(36)
         self.boton_anio_siguiente.setFixedWidth(36)
 
-        # --- Sección izquierda: logo + título, pegados a la izquierda ---
+        # --- Sección izquierda: logo, pegado a la izquierda ---
         seccion_izquierda = QWidget()
         layout_izquierda = QHBoxLayout(seccion_izquierda)
         layout_izquierda.setContentsMargins(0, 0, 0, 0)
         layout_izquierda.addWidget(self.boton_logo)
-        layout_izquierda.addWidget(titulo_app)
         layout_izquierda.addStretch()
 
         # --- Sección central: selector de año, centrado dentro de su propia columna ---
@@ -64,8 +70,12 @@ class TopBar(QWidget):
         layout_centro.addWidget(self.boton_anio_siguiente)
         layout_centro.addStretch()
 
-        # --- Sección derecha: vacía por ahora, balancea visualmente a la izquierda ---
+        # --- Sección derecha: título, pegado a la derecha ---
         seccion_derecha = QWidget()
+        layout_derecha = QHBoxLayout(seccion_derecha)
+        layout_derecha.setContentsMargins(0, 0, 0, 0)
+        layout_derecha.addStretch()
+        layout_derecha.addWidget(titulo_app)
 
         layout = QHBoxLayout()
         layout.addWidget(seccion_izquierda, 1)

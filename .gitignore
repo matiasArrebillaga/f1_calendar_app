@@ -8,3 +8,7 @@ cache_circuitos/
 precache.py
 precache_tracks.py
 test.py
+F1CalendarApp.spec
+dist/
+build/
+.vscode/

@@ -1,7 +1,9 @@
 import os
 import urllib.request
 
-CACHE_DIR = "cache_circuitos"
+from core.paths import ruta_cache, data_path
+
+CACHE_DIR_NOMBRE = "cache_circuitos"
 
 DATOS_CIRCUITOS = {
     "Monza": {
@@ -239,24 +241,27 @@ def obtener_ruta_imagen_circuito(location):
     if not datos or not datos.get("imagen_url"):
         return None
 
-    os.makedirs(CACHE_DIR, exist_ok=True)
-
     url = datos["imagen_url"]
     ruta_sin_query = url.split("?")[0]  # sacamos los parámetros de tracking antes de mirar la extensión
     extension = ruta_sin_query.rsplit(".", 1)[-1]
     nombre_archivo = location.lower().replace(" ", "_") + f".{extension}"
-    ruta_local = os.path.join(CACHE_DIR, nombre_archivo)
 
-    if not os.path.exists(ruta_local):
+    ruta, es_escribible = ruta_cache(CACHE_DIR_NOMBRE, nombre_archivo)
+
+    if not es_escribible:
+        return ruta
+
+    if not os.path.exists(ruta):
+        os.makedirs(data_path(CACHE_DIR_NOMBRE), exist_ok=True)
         try:
             request = urllib.request.Request(
                 url,
                 headers={"User-Agent": "F1CalendarApp/1.0 (proyecto educativo personal)"}
             )
-            with urllib.request.urlopen(request) as respuesta, open(ruta_local, "wb") as archivo:
+            with urllib.request.urlopen(request) as respuesta, open(ruta, "wb") as archivo:
                 archivo.write(respuesta.read())
         except Exception as e:
             print(f"No se pudo descargar la imagen del circuito: {e}")
             return None
 
-    return ruta_local
+    return ruta

@@ -3,7 +3,7 @@ from PySide6.QtCore import Signal
 
 
 class Sidebar(QWidget):
-    navegar = Signal(str)  # emite "calendario" o "standings"
+    navegar = Signal(str)
 
     def __init__(self):
         super().__init__()

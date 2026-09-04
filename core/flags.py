@@ -1,7 +1,8 @@
 import os
 import urllib.request
+from core.paths import ruta_cache, data_path
 
-CACHE_DIR = "cache_flags"
+CACHE_DIR_NOMBRE = "cache_flags"
 
 CODIGOS_PAIS = {
     "United Kingdom": "gb", "UK": "gb", "Great Britain": "gb",
@@ -24,14 +25,18 @@ def obtener_ruta_bandera(pais):
     if codigo is None:
         return None
 
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    ruta_local = os.path.join(CACHE_DIR, f"{codigo}.png")
+    nombre_archivo = f"{codigo}.png"
+    ruta, es_escribible = ruta_cache(CACHE_DIR_NOMBRE, nombre_archivo)
 
-    if not os.path.exists(ruta_local):
+    if not es_escribible:
+        return ruta  # ya viene empaquetado, ni siquiera hace falta chequear que exista
+
+    if not os.path.exists(ruta):
+        os.makedirs(data_path(CACHE_DIR_NOMBRE), exist_ok=True)
         url = f"https://flagcdn.com/32x24/{codigo}.png"
         try:
-            urllib.request.urlretrieve(url, ruta_local)
+            urllib.request.urlretrieve(url, ruta)
         except Exception:
             return None
 
-    return ruta_local
+    return ruta

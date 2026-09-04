@@ -8,14 +8,35 @@ from ui.sidebar import Sidebar
 from ui.calendar_view import CalendarView
 from ui.event_detail_view import EventDetailView
 from ui.standings_view import StandingsView
+import sys
+import os
+from core.paths import data_path
+from PySide6.QtGui import QIcon
 
-fastf1.Cache.enable_cache('cache')
+
+fastf1.Cache.enable_cache(data_path('cache'))
 QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
+
+
+def resource_path(ruta_relativa):
+    """Devuelve la ruta correcta a un recurso, tanto corriendo como script
+    normal como empaquetado en un .exe con PyInstaller."""
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    return os.path.join(base_path, ruta_relativa)
+def data_path(nombre_carpeta):
+    """Carpeta de datos generados en runtime (caché), siempre al lado del
+    .exe o del script — a diferencia de resource_path, que apunta a los
+    recursos empaquetados de solo lectura."""
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.abspath(".")
+    return os.path.join(base, nombre_carpeta)
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Calendario")
+        self.setWindowTitle("Calendario F1")
         self.resize(1300, 750)
         self.top_bar = TopBar()
         self.sidebar = Sidebar()
@@ -51,6 +72,7 @@ class MainWindow(QMainWindow):
         self.sidebar.navegar.connect(self.on_navegar_sidebar)
         # carga inicial
         self.on_anio_cambiado(self.top_bar.anio_actual)
+        
 
     def abrir_detalle(self, fila):
         evento = self.calendar_view.calendario.iloc[fila]
@@ -76,10 +98,9 @@ class MainWindow(QMainWindow):
 
 
 app = QApplication(sys.argv)
-
-with open("style.qss", "r", encoding="utf-8") as f:
+app.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
+with open(resource_path("style.qss"), "r", encoding="utf-8") as f:
     app.setStyleSheet(f.read())
-
 ventana = MainWindow()
 ventana.show()
 app.exec()

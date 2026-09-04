@@ -1,11 +1,12 @@
 import os
 import math
 import matplotlib
-matplotlib.use('Agg')  # backend sin ventana, para generar imágenes desde un hilo secundario
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import numpy as np
 
-CACHE_DIR = "cache_tracks"
+from core.paths import ruta_cache, data_path
+
+CACHE_DIR_NOMBRE = "cache_tracks"
 
 ALIAS_LOCATION = {
     "Monte Carlo": "Monaco",
@@ -15,6 +16,8 @@ ALIAS_LOCATION = {
 
 def normalizar_location(location):
     return ALIAS_LOCATION.get(location, location)
+
+
 def _rotar(x, y, angulo_grados):
     angulo = math.radians(angulo_grados)
     x_rot = x * math.cos(angulo) - y * math.sin(angulo)
@@ -23,13 +26,13 @@ def _rotar(x, y, angulo_grados):
 
 
 def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
-    """Genera un PNG del trazado con los números de curva, en los colores del tema."""
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
 
     rotacion = circuito_info.rotation
     x, y = telemetria['X'].to_numpy(), telemetria['Y'].to_numpy()
     x_rot, y_rot = _rotar(x, y, rotacion)
-    fig, ax = plt.subplots(figsize=(10, 10))  # antes: (6, 6) — genera la figura más grande
+
+    fig, ax = plt.subplots(figsize=(10, 10))
     fig.patch.set_alpha(0)
     ax.set_facecolor('none')
 
@@ -37,7 +40,7 @@ def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
 
     for _, curva in circuito_info.corners.iterrows():
         cx, cy = _rotar(curva['X'], curva['Y'], rotacion)
-        ax.scatter(cx, cy, color='#1e1e26', s=180, zorder=5, edgecolors='#e10600', linewidths=3)  # antes: s=280
+        ax.scatter(cx, cy, color='#1e1e26', s=180, zorder=5, edgecolors='#e10600', linewidths=1.5)
         ax.text(cx, cy, str(int(curva['Number'])), color='white',
                 ha='center', va='center', fontsize=8, fontweight='bold', zorder=6)
 
@@ -53,8 +56,15 @@ def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
 def obtener_ruta_mapa(location):
     location_normalizado = normalizar_location(location)
     nombre_archivo = location_normalizado.lower().replace(" ", "_") + ".png"
-    ruta_local = os.path.join(CACHE_DIR, nombre_archivo)
-    return ruta_local if os.path.exists(ruta_local) else None
+
+    ruta, es_escribible = ruta_cache(CACHE_DIR_NOMBRE, nombre_archivo)
+
+    if not es_escribible:
+        return ruta  # viene empaquetado, ya sabemos que existe
+
+    return ruta if os.path.exists(ruta) else None
+
+
 def buscar_referencia(location, year_actual):
     import pandas as pd
     import fastf1
@@ -82,9 +92,9 @@ def buscar_referencia(location, year_actual):
 
 
 def generar_o_obtener_mapa(location, year_actual):
-    """Devuelve la ruta del mapa cacheado, generándolo primero si hace falta.
-    Función síncrona: bloquea mientras genera, pensada para scripts o para
-    llamarse desde dentro de un QThread (nunca desde el hilo principal de la UI)."""
+    """Devuelve la ruta del mapa cacheado (o empaquetado), generándolo
+    primero si hace falta. Función síncrona: bloquea mientras genera,
+    pensada para scripts o para llamarse desde dentro de un QThread."""
     ruta_existente = obtener_ruta_mapa(location)
     if ruta_existente:
         return ruta_existente
@@ -104,7 +114,7 @@ def generar_o_obtener_mapa(location, year_actual):
 
     location_normalizado = normalizar_location(location)
     nombre_archivo = location_normalizado.lower().replace(" ", "_") + ".png"
-    ruta_salida = os.path.join(CACHE_DIR, nombre_archivo)
+    ruta_salida = os.path.join(data_path(CACHE_DIR_NOMBRE), nombre_archivo)
 
     generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida)
     return ruta_salida

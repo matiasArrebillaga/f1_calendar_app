@@ -2,10 +2,9 @@ cache/
 __pycache__/
 venv/
 cache_flags/
-precache.py
-cache_circuitos/
-precache_tracks.py
-test.py
-
 cache_tracks/
 assets/
+cache_circuitos/
+precache.py
+precache_tracks.py
+test.py

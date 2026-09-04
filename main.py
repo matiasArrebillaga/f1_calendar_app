@@ -1,5 +1,6 @@
 import sys
 import fastf1
+from PySide6.QtCore import QLocale
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout, QHBoxLayout
 
 from ui.topbar import TopBar
@@ -9,6 +10,7 @@ from ui.event_detail_view import EventDetailView
 from ui.standings_view import StandingsView
 
 fastf1.Cache.enable_cache('cache')
+QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
 
 class MainWindow(QMainWindow):
     def __init__(self):

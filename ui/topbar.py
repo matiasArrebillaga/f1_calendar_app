@@ -33,7 +33,7 @@ class TopBar(QWidget):
         """)
         self.boton_logo.clicked.connect(self.logo_clickeado)
 
-        titulo_app = QLabel("F1 Calendar App")
+        titulo_app = QLabel(" CALENDARIO ")
         titulo_app.setObjectName("tituloApp")
 
         self.boton_anio_anterior = QPushButton("<")

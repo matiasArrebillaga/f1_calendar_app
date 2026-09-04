@@ -15,6 +15,7 @@ from PySide6.QtGui import QPixmap
 from core.circuits import obtener_datos_circuito, obtener_ruta_imagen_circuito
 from workers.track_map_worker import TrackMapWorker
 from core.track_map import obtener_ruta_mapa
+from core.i18n import traducir_evento, traducir_pais, traducir_sesion
 class EventDetailView(QWidget):
     volver = Signal()
 
@@ -204,6 +205,16 @@ class EventDetailView(QWidget):
                     'pasada': pd.notna(fecha_sin_tz) and fecha_sin_tz < hoy,
                 })
 
+        nombres_sesiones_es = {
+            'Practice 1': 'Entrenamiento 1',
+            'Practice 2': 'Entrenamiento 2',
+            'Practice 3': 'Entrenamiento 3',
+            'Qualifying': 'Clasificación',
+            'Sprint Qualifying': 'Clasificación sprint',
+            'Sprint': 'Sprint',
+            'Race': 'Carrera',
+        }
+
         # Buscamos cuál es la próxima sesión sin correr (la más cercana en el tiempo).
         futuras = [s for s in info_sesiones_ordenada if not s['pasada'] and pd.notna(s['fecha'])]
         indice_proxima = min(futuras, key=lambda s: s['fecha'])['indice'] if futuras else None
@@ -231,7 +242,8 @@ class EventDetailView(QWidget):
                        'Qualifying': 'Q', 'Sprint': 'S', 'Sprint Qualifying': 'SQ',
                        'Race': 'R'}
             codigo = codigos.get(match['nombre'], match['nombre'])
-            self.sesiones_info[codigo] = {'nombre': match['nombre'], 'fecha': match['fecha']}
+            nombre_es = nombres_sesiones_es.get(match['nombre'], match['nombre'])
+            self.sesiones_info[codigo] = {'nombre': nombre_es, 'fecha': match['fecha']}
 
             year = int(evento['EventDate'].year)
             gp = int(evento['RoundNumber'])
@@ -241,15 +253,15 @@ class EventDetailView(QWidget):
             )
 
             if match['pasada']:
-                boton.setText(match['nombre'])
+                boton.setText(nombre_es)
                 boton.setProperty("estadoSesion", "pasada")
             elif i == indice_proxima:
                 fecha_txt = match['fecha'].strftime('%d/%m %H:%M') if pd.notna(match['fecha']) else ""
-                boton.setText(f"{match['nombre']}\n{fecha_txt} — PRÓXIMA")
+                boton.setText(f"{nombre_es}\n{fecha_txt} — PRÓXIMA")
                 boton.setProperty("estadoSesion", "proxima")
             else:
                 fecha_txt = match['fecha'].strftime('%d/%m %H:%M') if pd.notna(match['fecha']) else ""
-                boton.setText(f"{match['nombre']}\n{fecha_txt}")
+                boton.setText(f"{nombre_es}\n{fecha_txt}")
                 boton.setProperty("estadoSesion", "futura")
 
             boton.style().unpolish(boton)

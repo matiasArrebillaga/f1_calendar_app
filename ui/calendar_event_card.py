@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt, QPropertyAnimation, QEasingCurve, QEvent, QRect
 from PySide6.QtGui import QColor, QPixmap
 from core.flags import obtener_ruta_bandera
+from core.i18n import traducir_evento, traducir_pais
 
 class CalendarEventCard(QWidget):
     """
@@ -25,7 +26,7 @@ class CalendarEventCard(QWidget):
         super().__init__()
         self.indice_fila = indice_fila
         self._ancho = 200
-        self._alto = 115
+        self._alto = 120
         
         self.setFixedSize(self._ancho, self._alto)
         self.setCursor(Qt.PointingHandCursor)
@@ -95,11 +96,11 @@ class CalendarEventCard(QWidget):
         # así "PRÓXIMA" no queda escondida debajo de la bandera flotante.
         if self._pixmap_bandera is not None:
             fila_superior.addSpacing(self.ancho_bandera + 8)
-        nombre = QLabel(str(evento['EventName']))
+        nombre = QLabel(traducir_evento(evento['EventName']))
         nombre.setObjectName("nombreEvento")
         nombre.setWordWrap(True)
 
-        pais = QLabel(str(evento['Country']))
+        pais = QLabel(traducir_pais(evento['Country']))
         pais.setObjectName("paisEvento")
 
         fecha = QLabel(str(evento['EventDate'].date()))

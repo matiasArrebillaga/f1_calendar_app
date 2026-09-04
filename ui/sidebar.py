@@ -14,7 +14,7 @@ class Sidebar(QWidget):
         etiqueta.setObjectName("etiquetaRonda")
 
         self.boton_calendario = QPushButton("Calendario")
-        self.boton_standings = QPushButton("Standings")
+        self.boton_standings = QPushButton("Clasificación")
 
         self.grupo = QButtonGroup(self)
         self.grupo.setExclusive(True)

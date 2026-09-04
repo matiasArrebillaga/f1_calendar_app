@@ -62,31 +62,9 @@ QPushButton#botonAnio:disabled {
     border-color: #232329;
 }
 
-QPushButton#botonLogoF1 {
-    background-color: transparent;
-    border: none;
-    border-radius: 6px;
-    padding: 4px 8px;
-}
 
-QPushButton#botonLogoF1:hover {
-    background-color: #1c1c22;
-}
 
-QPushButton#botonLogoF1Fallback {
-    background-color: #e10600;
-    color: white;
-    font-weight: 800;
-    font-size: 13px;
-    letter-spacing: 1px;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-}
 
-QPushButton#botonLogoF1Fallback:hover {
-    background-color: #ff2410;
-}
 
 /* ---------- Sidebar de navegación ---------- */
 
@@ -102,8 +80,9 @@ QPushButton#navLateral {
     border: none;
     border-left: 3px solid transparent;
     border-radius: 4px;
-    padding: 10px 12px;
-    font-weight: 600;
+    padding: 16px 14px;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 QPushButton#navLateral:hover {
@@ -118,30 +97,94 @@ QPushButton#navLateral:checked {
     border-left: 3px solid #e10600;
 }
 
-/* ---------- Pestañas horizontales (standings) ---------- */
+/* ---------- Selector segmentado (standings: Pilotos / Equipos) ---------- */
 
-QPushButton#tabHorizontal {
+QWidget#selectorTabs {
     background-color: #17171d;
-    color: #b6b6bd;
     border: 1px solid #2a2a33;
-    border-bottom: 3px solid transparent;
-    border-radius: 4px;
-    padding: 8px 18px;
-    font-weight: 600;
+    border-radius: 6px;
 }
 
-QPushButton#tabHorizontal:hover {
+QPushButton#tabHorizontalIzq,
+QPushButton#tabHorizontalDer {
+    background-color: transparent;
+    color: #b6b6bd;
+    border: none;
+    padding: 9px 18px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+QPushButton#tabHorizontalIzq {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+QPushButton#tabHorizontalDer {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+QPushButton#tabHorizontalIzq:hover:!checked,
+QPushButton#tabHorizontalDer:hover:!checked {
     background-color: #1e1e26;
     color: #f0f0f0;
 }
 
-QPushButton#tabHorizontal:checked {
-    background-color: #241a1a;
+QPushButton#tabHorizontalIzq:checked,
+QPushButton#tabHorizontalDer:checked {
+    background-color: #e10600;
     color: #ffffff;
-    border-bottom: 3px solid #e10600;
 }
 
-/* Fondo con un ligero degradé vertical en vez de un plano parejo. */
+/* ---------- Tabla de standings (mismo criterio que la de resultados) ---------- */
+
+QTableWidget#tablaStandings {
+    font-size: 13px;
+}
+
+/* ---------- Panel informativo del circuito (event detail) ---------- */
+
+QWidget#panelInfoCircuito {
+    background-color: transparent;
+}
+
+QLabel#imagenCircuito {
+    background-color: #15151b;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+QLabel#textoInfoCircuito {
+    background-color: transparent;
+}
+
+/* =========================================================
+   FONDO DEL CALENDARIO — CAMBIAR ACÁ
+   Esta regla es SOLO para la pantalla de calendario (CalendarView
+   tiene objectName="vistaCalendario"). El detalle de evento y los
+   standings usan "vistaPrincipal" más abajo y no se ven afectados
+   si tocás esto.
+
+   Para dejar el degradé como está, no cambies nada.
+   Para poner una foto de fondo en vez del degradé, reemplazá el
+   valor de "background" por:
+       background-image: url(assets/fondo_calendario.jpg);
+       background-position: center;
+       background-repeat: no-repeat;
+   (Qt no soporta "background-size: cover", así que la imagen que
+   uses ya tiene que tener más o menos la proporción de la ventana.)
+   ========================================================= */
+QWidget#vistaCalendario {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #380101,
+        stop: 0.5 #0d0d11,
+        stop: 1 #1a0000
+    );
+}
+
+/* Fondo del detalle de evento y de standings (comparten este mismo look). */
 QWidget#vistaPrincipal {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
@@ -153,6 +196,10 @@ QWidget#vistaPrincipal {
 
 QLabel {
     color: #f0f0f0;
+    background-color: transparent;  /* fix: sin esto, cada QLabel heredaba
+                                        el fondo oscuro sólido de QWidget y
+                                        se veía como un rectángulo tapando
+                                        el degradé de fondo */
 }
 
 /* ---------- Encabezados ---------- */
@@ -340,6 +387,28 @@ QPushButton#tabSesion:disabled {
     border-left: 3px solid transparent;
 }
 
+/* Estado por fecha (independiente de si está seleccionada o no).
+   La "próxima" usa la MISMA paleta roja que la tarjeta "PRÓXIMA" del
+   calendario, para que ambas se lean como el mismo indicador. */
+QPushButton#tabSesion[estadoSesion="pasada"] {
+    color: #ffffff;
+}
+
+QPushButton#tabSesion[estadoSesion="futura"] {
+    color: #9a9aa5;
+}
+
+QPushButton#tabSesion[estadoSesion="proxima"] {
+    background-color: #241a1a;
+    border-left: 3px solid #e10600;
+    color: #ffffff;
+}
+
+QPushButton#tabSesion[estadoSesion="proxima"]:hover:enabled {
+    background-color: #2c1e1e;
+    border-left: 3px solid #ff2410;
+}
+
 /* ---------- Estado (cargando / error) ---------- */
 
 QLabel#estadoCargando {
@@ -434,17 +503,4 @@ QScrollArea QScrollBar::handle:vertical:hover {
 QScrollArea QScrollBar::add-line:vertical,
 QScrollArea QScrollBar::sub-line:vertical {
     height: 0px;
-}
-QPushButton#tabSesion[estadoSesion="proxima"] {
-    background-color: #524a03;
-    border-left: 3px solid #e10600;
-    color: #ffffff;
-}
-
-QPushButton#tabSesion[estadoSesion="futura"] {
-    color: #9a9aa5;
-}
-
-QPushButton#tabSesion[estadoSesion="pasada"] {
-    color: #ffffff;
 }

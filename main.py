@@ -13,7 +13,7 @@ fastf1.Cache.enable_cache('cache')
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("F1 Calendar App")
+        self.setWindowTitle("Calendario")
         self.resize(1300, 750)
         self.top_bar = TopBar()
         self.sidebar = Sidebar()
@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
 
 app = QApplication(sys.argv)
 
-with open("style.qss", "r") as f:
+with open("style.qss", "r", encoding="utf-8") as f:
     app.setStyleSheet(f.read())
 
 ventana = MainWindow()

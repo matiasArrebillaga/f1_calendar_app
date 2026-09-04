@@ -346,13 +346,17 @@ class EventDetailView(QWidget):
         datos_circuito = obtener_datos_circuito(location)
 
         if datos_circuito:
+            lineas.append(
+                f"<div style='font-size:18px; font-weight:800; color:#ffffff; "
+                f"margin-bottom:10px;'>{datos_circuito['nombre_completo']}</div>"
+            )
             lineas.append(f"<b>{datos_circuito['nombre_completo']}</b>")
-            lineas.append(f"Longitud: {datos_circuito['longitud_km']} km")
-            lineas.append(f"Vueltas: {datos_circuito['vueltas']}")
-            lineas.append(f"Distancia total: {datos_circuito['distancia_km']} km")
-            lineas.append(f"Curvas: {datos_circuito['curvas']}")
-            lineas.append(f"Récord de vuelta: {datos_circuito['record_vuelta']}")
-            lineas.append(f"Primer GP: {datos_circuito['primer_gp']}")
+            lineas.append(f"<b>Longitud</b>: {datos_circuito['longitud_km']} km")
+            lineas.append(f"<b>Vueltas</b>: {datos_circuito['vueltas']}")
+            lineas.append(f"<b>Distancia total</b>: {datos_circuito['distancia_km']} km")
+            lineas.append(f"<b>Curvas</b>: {datos_circuito['curvas']}")
+            lineas.append(f"<b>Récord de vuelta</b>: {datos_circuito['record_vuelta']}")
+            lineas.append(f"<b>Primer GP:<b> {datos_circuito['primer_gp']}")
         else:
             lineas.append(f"<b>Circuito:</b> {location or '—'}")
 
@@ -457,3 +461,10 @@ class EventDetailView(QWidget):
         self.estado.setText(texto)
         self.estado.style().unpolish(self.estado)
         self.estado.style().polish(self.estado)
+    def _fila_dato(self, etiqueta, valor):
+        """Línea de datos técnicos: etiqueta muda + valor bien blanco y en negrita."""
+        return (
+            f"<div style='font-size:13px; margin-bottom:3px;'>"
+            f"<span style='color:#9a9aa5;'>{etiqueta}:</span> "
+            f"<span style='color:#f5f5f5; font-weight:700;'>{valor}</span></div>"
+        )        

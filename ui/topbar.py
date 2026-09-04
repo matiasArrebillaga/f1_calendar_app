@@ -2,7 +2,9 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QLineEd
 from PySide6.QtGui import QIntValidator
 from PySide6.QtCore import Signal, Qt
 from datetime import datetime
-
+from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QIcon
+from PySide6.QtCore import Signal, Qt, QSize
 class TopBar(QWidget):
     logo_clickeado = Signal()
     anio_cambiado = Signal(int)
@@ -14,9 +16,22 @@ class TopBar(QWidget):
         super().__init__()
         self.anio_actual = self.ANIO_MAX
 
-        boton_logo = QPushButton("F1")
-        boton_logo.setFixedWidth(60)
-        boton_logo.clicked.connect(self.logo_clickeado.emit)
+        self.boton_logo = QPushButton()
+        self.boton_logo.setFixedSize(55, 55)
+        self.boton_logo.setIcon(QIcon("assets/logo.png"))
+        self.boton_logo.setIconSize(QSize(55, 55))
+        self.boton_logo.setCursor(Qt.PointingHandCursor)
+        self.boton_logo.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                padding: 0;
+            }
+            QPushButton:hover {
+                background-color: transparent;
+            }
+        """)
+        self.boton_logo.clicked.connect(self.logo_clickeado)
 
         titulo_app = QLabel("F1 Calendar App")
         titulo_app.setObjectName("tituloApp")
@@ -35,7 +50,7 @@ class TopBar(QWidget):
         seccion_izquierda = QWidget()
         layout_izquierda = QHBoxLayout(seccion_izquierda)
         layout_izquierda.setContentsMargins(0, 0, 0, 0)
-        layout_izquierda.addWidget(boton_logo)
+        layout_izquierda.addWidget(self.boton_logo)
         layout_izquierda.addWidget(titulo_app)
         layout_izquierda.addStretch()
 

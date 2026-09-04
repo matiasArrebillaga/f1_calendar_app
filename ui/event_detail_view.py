@@ -118,7 +118,7 @@ class EventDetailView(QWidget):
         self.imagen_circuito = QLabel()
         self.imagen_circuito.setAlignment(Qt.AlignCenter)
         self.imagen_circuito.setStyleSheet(
-            "background-color: #f5f5f5; border-radius: 10px; padding: 14px;"
+            "background-color: ##0e0c0b; border-radius: 10px; padding: 14px;"
         )
         sombra_imagen = QGraphicsDropShadowEffect()
         sombra_imagen.setColor(QColor(0, 0, 0, 160))
@@ -330,14 +330,14 @@ class EventDetailView(QWidget):
 
         ruta_mapa = obtener_ruta_mapa(location)
         if ruta_mapa:
-            pixmap = QPixmap(ruta_mapa).scaledToWidth(420, Qt.SmoothTransformation)
+            pixmap = QPixmap(ruta_mapa).scaled(600, 450, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.imagen_circuito.setPixmap(pixmap)
             self.imagen_circuito.show()
         elif self.track_map_worker is None or not self.track_map_worker.isRunning():
             self.imagen_circuito.hide()
             year_actual = int(self.evento_actual['EventDate'].year)
             gp_actual = int(self.evento_actual['RoundNumber'])
-            self.track_map_worker = TrackMapWorker(location, year_actual - 1, gp_actual)
+            self.track_map_worker = TrackMapWorker(location, year_actual)
             self.track_map_worker.terminado.connect(self._on_mapa_generado)
             self.track_map_worker.start()
         else:
@@ -384,9 +384,16 @@ class EventDetailView(QWidget):
         self._animacion_fade.stop()
         self._animacion_fade.start()        
     def _on_mapa_generado(self, ruta_mapa):
-        pixmap = QPixmap(ruta_mapa).scaledToWidth(420, Qt.SmoothTransformation)
+        pixmap = QPixmap(ruta_mapa).scaled(
+            600, 450, Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
         self.imagen_circuito.setPixmap(pixmap)
-        self.imagen_circuito.show()        
+        self.imagen_circuito.adjustSize()
+        self.imagen_circuito.show()
+
+        self.panel_info.layout().activate()
+        self.panel_info.updateGeometry()
+        self.panel_info.update()      
     def _color_por_posicion(self, posicion, es_clasificacion, total_pilotos):
         if pd.isna(posicion):
             return None

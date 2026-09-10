@@ -299,19 +299,44 @@ class EventDetailView(QWidget):
 
         self.stack_contenido.setCurrentIndex(0)
 
-        columnas = ['Position', 'Abbreviation', 'FullName', 'TeamName',
-                    'GridPosition', 'Status', 'Points', 'Time']
-        etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo', 'Largada', 'Estado', 'Pts', 'Tiempo']
-        columnas_monoespaciadas = {'Position', 'GridPosition', 'Time', 'Points'}
-
-        self.tabla_resultados.setColumnCount(len(columnas))
-        self.tabla_resultados.setHorizontalHeaderLabels(etiquetas)
         self.tabla_resultados.setRowCount(len(resultados))
 
         fuente_datos = QFont("Consolas")
         fuente_datos.setStyleHint(QFont.Monospace)
 
         es_clasificacion = self.codigo_sesion in ('Q', 'SQ')
+        es_practica_o_clasificacion = es_clasificacion or self.codigo_sesion in (
+            'FP1', 'FP2', 'FP3'
+        )
+        if es_practica_o_clasificacion:
+            columnas = ['Position', 'Abbreviation', 'FullName', 'TeamName']
+            etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo']
+            if 'BestLapTime' in resultados.columns:
+                columnas.append('BestLapTime')
+                etiquetas.append('Tiempo de vuelta')
+            elif 'Time' in resultados.columns:
+                columnas.append('Time')
+                etiquetas.append('Tiempo de vuelta')
+            if 'Laps' in resultados.columns and resultados['Laps'].notna().any():
+                columnas.append('Laps')
+                etiquetas.append('Vueltas')
+        else:
+            columnas = ['Position', 'Abbreviation', 'FullName', 'TeamName',
+                        'GridPosition', 'Status', 'Points', 'Time']
+            etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo', 'Largada', 'Estado', 'Pts', 'Tiempo']
+
+        columnas_disponibles = [
+            (columna, etiqueta)
+            for columna, etiqueta in zip(columnas, etiquetas)
+            if columna in resultados.columns
+        ]
+        columnas = [columna for columna, _ in columnas_disponibles]
+        etiquetas = [etiqueta for _, etiqueta in columnas_disponibles]
+        self.tabla_resultados.setColumnCount(len(columnas))
+        self.tabla_resultados.setHorizontalHeaderLabels(etiquetas)
+        columnas_monoespaciadas = {
+            'Position', 'GridPosition', 'Time', 'BestLapTime', 'Points', 'Laps'
+        }
         total_pilotos = len(resultados)
 
         for fila, (_, row) in enumerate(resultados.iterrows()):
@@ -322,7 +347,7 @@ class EventDetailView(QWidget):
                 texto = self._formatear_valor(nombre_col, valor)
                 item = QTableWidgetItem(texto)
 
-                if nombre_col in ('Position', 'Points'):
+                if nombre_col in ('Position', 'Points', 'Laps'):
                     item.setTextAlignment(Qt.AlignCenter)
                 if nombre_col in columnas_monoespaciadas:
                     item.setFont(fuente_datos)
@@ -436,10 +461,10 @@ class EventDetailView(QWidget):
         if pd.isna(valor):
             return "—"
 
-        if nombre_col in ('Position', 'GridPosition', 'Points'):
+        if nombre_col in ('Position', 'GridPosition', 'Points', 'Laps'):
             return str(int(valor))
 
-        if nombre_col == 'Time':
+        if nombre_col in ('Time', 'BestLapTime'):
             total_segundos = valor.total_seconds()
             horas = int(total_segundos // 3600)
             minutos = int((total_segundos % 3600) // 60)

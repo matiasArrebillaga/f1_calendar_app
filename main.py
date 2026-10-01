@@ -1,43 +1,33 @@
 import sys
 import fastf1
-from PySide6.QtCore import QLocale
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout, QHBoxLayout
+from PySide6.QtCore import QLocale, Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout, QHBoxLayout,
+    QGraphicsOpacityEffect
+)
 
 from ui.topbar import TopBar
 from ui.sidebar import Sidebar
 from ui.calendar_view import CalendarView
 from ui.event_detail_view import EventDetailView
 from ui.standings_view import StandingsView
-import sys
-import os
-from core.paths import data_path
-from PySide6.QtGui import QIcon
+from core.paths import resource_path, data_path
 
 
 fastf1.Cache.enable_cache(data_path('cache'))
 QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
 
 
-def resource_path(ruta_relativa):
-    """Devuelve la ruta correcta a un recurso, tanto corriendo como script
-    normal como empaquetado en un .exe con PyInstaller."""
-    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
-    return os.path.join(base_path, ruta_relativa)
-def data_path(nombre_carpeta):
-    """Carpeta de datos generados en runtime (caché), siempre al lado del
-    .exe o del script — a diferencia de resource_path, que apunta a los
-    recursos empaquetados de solo lectura."""
-    if getattr(sys, 'frozen', False):
-        base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.abspath(".")
-    return os.path.join(base, nombre_carpeta)
-
 class MainWindow(QMainWindow):
+    DURACION_FADE = 220
+    TIMEOUT_CIERRE_MS = 3000
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Calendario F1")
         self.resize(1300, 750)
+        self.setMinimumSize(1100, 650)
         self.top_bar = TopBar()
         self.sidebar = Sidebar()
 
@@ -72,29 +62,91 @@ class MainWindow(QMainWindow):
         self.sidebar.navegar.connect(self.on_navegar_sidebar)
         # carga inicial
         self.on_anio_cambiado(self.top_bar.anio_actual)
-        
+
+    def _mostrar_vista(self, indice):
+        """Cambia de página del stack con un fade de entrada.
+
+        El efecto va sobre la página entrante y se saca al terminar: Qt admite
+        un solo QGraphicsEffect por widget y, mientras está puesto, pinta todo
+        el subárbol por software.
+        """
+        if self.stack.currentIndex() == indice:
+            return
+
+        self.stack.setCurrentIndex(indice)
+        vista = self.stack.widget(indice)
+
+        efecto = QGraphicsOpacityEffect(vista)
+        vista.setGraphicsEffect(efecto)
+
+        animacion = QPropertyAnimation(efecto, b"opacity", self)
+        animacion.setDuration(self.DURACION_FADE)
+        animacion.setStartValue(0.0)
+        animacion.setEndValue(1.0)
+        animacion.setEasingCurve(QEasingCurve.OutCubic)
+        # La animación ya es hija de self (3er argumento), así que sobrevive sin
+        # guardarla a mano; lo que hace falta es liberarla, porque si no cada
+        # cambio de vista deja una colgada del árbol para siempre. Del efecto se
+        # encarga setGraphicsEffect(None): Qt es su dueño y lo borra ahí mismo
+        # (tocarlo después tira "Internal C++ object already deleted").
+        animacion.finished.connect(
+            lambda: self._terminar_fade(vista, animacion)
+        )
+        animacion.start()
+
+    @staticmethod
+    def _terminar_fade(vista, animacion):
+        vista.setGraphicsEffect(None)
+        animacion.deleteLater()
 
     def abrir_detalle(self, fila):
         evento = self.calendar_view.calendario.iloc[fila]
         self.detail_view.mostrar_evento(evento)
-        self.stack.setCurrentIndex(1)
+        self._mostrar_vista(1)
 
     def volver_a_calendario(self):
         self.ir_a_calendario()
 
     def ir_a_calendario(self):
-        self.stack.setCurrentIndex(0)
+        self._mostrar_vista(0)
         self.sidebar.marcar_calendario()
 
     def on_navegar_sidebar(self, destino):
         if destino == "calendario":
-            self.stack.setCurrentIndex(0)
+            self._mostrar_vista(0)
         elif destino == "standings":
-            self.stack.setCurrentIndex(2)
+            self._mostrar_vista(2)
 
     def on_anio_cambiado(self, year):
         self.calendar_view.cargar_calendario(year)
-        self.standings_view.cargar_datos(year)
+        # La clasificación se pide recién cuando se la mira: antes, cada año que
+        # pasaba con las flechas era una request a Ergast (que limita a 4/s y
+        # 200/h) aunque la vista estuviera oculta.
+        self.standings_view.pedir_anio(year)
+
+    def keyPressEvent(self, evento_tecla):
+        tecla = evento_tecla.key()
+
+        if tecla == Qt.Key_Escape and self.stack.currentIndex() != 0:
+            self.ir_a_calendario()
+            return
+
+        # Las flechas cambian de año, salvo mientras se está escribiendo uno.
+        if tecla in (Qt.Key_Left, Qt.Key_Right) and not self.top_bar.campo_anio.hasFocus():
+            paso = -1 if tecla == Qt.Key_Left else 1
+            self.top_bar.ir_a_anio(self.top_bar.anio_actual + paso)
+            return
+
+        super().keyPressEvent(evento_tecla)
+
+    def closeEvent(self, evento_cierre):
+        """Espera a los workers antes de salir: un QThread vivo al destruirse
+        la ventana da 'QThread: Destroyed while thread is still running' y a
+        veces crashea (TrackMapWorker puede estar bajando telemetría)."""
+        for vista in (self.calendar_view, self.detail_view, self.standings_view):
+            for worker in list(getattr(vista, '_workers_activos', [])):
+                worker.wait(self.TIMEOUT_CIERRE_MS)
+        super().closeEvent(evento_cierre)
 
 
 app = QApplication(sys.argv)

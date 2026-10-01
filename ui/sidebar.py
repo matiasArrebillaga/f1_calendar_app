@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QButtonGroup
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 
 
 class Sidebar(QWidget):
@@ -19,10 +19,14 @@ class Sidebar(QWidget):
         self.grupo = QButtonGroup(self)
         self.grupo.setExclusive(True)
 
+        self.boton_calendario.setToolTip("Calendario de la temporada (Esc)")
+        self.boton_standings.setToolTip("Clasificación de pilotos y equipos")
+
         for boton in (self.boton_calendario, self.boton_standings):
             boton.setObjectName("navLateral")
             boton.setCheckable(True)
             boton.setMinimumHeight(44)
+            boton.setCursor(Qt.PointingHandCursor)
             self.grupo.addButton(boton)
 
         self.boton_calendario.setChecked(True)

@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QLabel, QSizePolicy, QHeaderView
 )
 from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt
 from workers.standings_worker import StandingsWorker
 
 
@@ -11,6 +12,8 @@ class StandingsView(QWidget):
         super().__init__()
         self.setObjectName("vistaPrincipal")
         self.year = None
+        self._year_pedido = None
+        self._cache_por_anio = {}   # {year: (pilotos, equipos)} | {year: None} si no hay datos
         self._workers_activos = []  # referencias vivas mientras corren, evita el crash
 
         self.boton_pilotos = QPushButton("Pilotos")
@@ -21,7 +24,10 @@ class StandingsView(QWidget):
             boton.setCheckable(True)
             boton.setMinimumHeight(38)
             boton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            boton.setCursor(Qt.PointingHandCursor)
         self.boton_pilotos.setChecked(True)
+        self.boton_pilotos.setToolTip("Clasificación de pilotos")
+        self.boton_equipos.setToolTip("Clasificación de constructores")
 
         layout_tabs = QHBoxLayout()
         layout_tabs.setContentsMargins(12, 10, 12, 8)
@@ -37,6 +43,9 @@ class StandingsView(QWidget):
         self.tabla_pilotos.setWordWrap(True)
         self.tabla_pilotos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tabla_pilotos.setFont(QFont("Segoe UI", 12))
+        self.tabla_pilotos.setSelectionBehavior(QTableWidget.SelectRows)
+        self.tabla_pilotos.setSelectionMode(QTableWidget.SingleSelection)
+        self.tabla_pilotos.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tabla_pilotos.horizontalHeader().setStretchLastSection(True)
         self.tabla_pilotos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -48,10 +57,14 @@ class StandingsView(QWidget):
         self.tabla_equipos.setWordWrap(True)
         self.tabla_equipos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tabla_equipos.setFont(QFont("Segoe UI", 12))
+        self.tabla_equipos.setSelectionBehavior(QTableWidget.SelectRows)
+        self.tabla_equipos.setSelectionMode(QTableWidget.SingleSelection)
+        self.tabla_equipos.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tabla_equipos.horizontalHeader().setStretchLastSection(True)
         self.tabla_equipos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.estado = QLabel()
+        self.estado.setObjectName("estadoVacio")
 
         self.stack_interno = QStackedWidget()
         self.stack_interno.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -73,9 +86,42 @@ class StandingsView(QWidget):
         self.boton_equipos.setChecked(indice == 1)
         self.stack_interno.setCurrentIndex(indice)
 
+    def _set_estado(self, texto, tipo=""):
+        # ponytail: mismas 4 líneas que EventDetailView._set_estado. Dos usos no
+        # justifican un helper compartido; extraer si aparece una tercera vista.
+        nombres = {"": "estadoVacio", "cargando": "estadoCargando",
+                   "error": "estadoError", "vacio": "estadoVacio"}
+        self.estado.setObjectName(nombres.get(tipo, "estadoVacio"))
+        self.estado.setText(texto)
+        self.estado.style().unpolish(self.estado)
+        self.estado.style().polish(self.estado)
+
+    def pedir_anio(self, year):
+        """Anota el año sin pedir nada a la red. La carga real ocurre en
+        showEvent, cuando esta vista es la que se está mirando."""
+        self._year_pedido = year
+        if self.isVisible():
+            self.cargar_datos(year)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._year_pedido is not None and self._year_pedido != self.year:
+            self.cargar_datos(self._year_pedido)
+
     def cargar_datos(self, year):
         self.year = year
-        self.estado.setText("Cargando clasificación...")
+
+        if year in self._cache_por_anio:
+            cacheado = self._cache_por_anio[year]
+            if cacheado is None:
+                self._mostrar_sin_datos(year)
+            else:
+                self._set_estado("")
+                self._llenar_tabla_pilotos(cacheado[0])
+                self._llenar_tabla_equipos(cacheado[1])
+            return
+
+        self._set_estado(f"Cargando clasificación {year}...", "cargando")
         self.tabla_pilotos.setRowCount(0)
         self.tabla_equipos.setRowCount(0)
 
@@ -96,31 +142,33 @@ class StandingsView(QWidget):
         if worker.year != self.year:
             return  # llegó tarde: el usuario ya cambió de año, ignoramos este resultado
 
-        self.estado.setText("")
+        self._cache_por_anio[worker.year] = (standings_pilotos, standings_equipos)
+        self._set_estado("")
         self._llenar_tabla_pilotos(standings_pilotos)
         self._llenar_tabla_equipos(standings_equipos)
 
     def on_error(self, mensaje):
         worker = self.sender()
+        # Cacheamos también el fallo: los años sin datos en Ergast (la década
+        # del 50 no tiene constructores) si no, re-pegaban en cada visita.
+        self._cache_por_anio[worker.year] = None
         if worker.year != self.year:
             return
 
-        self.estado.setText(f"No hay clasificación disponible para {self.year}.")
+        self._mostrar_sin_datos(self.year)
+
+    def _mostrar_sin_datos(self, year):
+        self._set_estado(f"No hay clasificación disponible para {year}.", "vacio")
         self.tabla_pilotos.setRowCount(0)
         self.tabla_equipos.setRowCount(0)
 
     def _llenar_tabla_pilotos(self, df):
-        columnas = ['position', 'driverCode', 'givenName', 'familyName', 'constructorNames', 'points', 'wins']
         etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo', 'Pts', 'Victorias']
 
-        self.tabla_pilotos.setColumnCount(len(columnas) - 1)
+        self.tabla_pilotos.setColumnCount(len(etiquetas))
         self.tabla_pilotos.setHorizontalHeaderLabels(etiquetas)
         self.tabla_pilotos.setRowCount(len(df))
         self.tabla_pilotos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tabla_pilotos.setColumnWidth(0, 60)
-        self.tabla_pilotos.setColumnWidth(1, 80)
-        self.tabla_pilotos.setColumnWidth(3, 90)
-        self.tabla_pilotos.setColumnWidth(4, 90)
 
         for fila, (_, row) in enumerate(df.iterrows()):
             fila_datos = [
@@ -134,8 +182,9 @@ class StandingsView(QWidget):
 
             for col, texto in enumerate(fila_datos):
                 item = QTableWidgetItem(texto)
-                item.setTextAlignment(0x0004 | 0x0080)
+                item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
                 item.setFont(QFont("Segoe UI", 12))
+                item.setToolTip(texto)
                 self.tabla_pilotos.setItem(fila, col, item)
 
         self.tabla_pilotos.resizeRowsToContents()
@@ -148,17 +197,15 @@ class StandingsView(QWidget):
         self.tabla_equipos.setHorizontalHeaderLabels(etiquetas)
         self.tabla_equipos.setRowCount(len(df))
         self.tabla_equipos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tabla_equipos.setColumnWidth(0, 60)
-        self.tabla_equipos.setColumnWidth(2, 90)
-        self.tabla_equipos.setColumnWidth(3, 90)
 
         for fila, (_, row) in enumerate(df.iterrows()):
             for col, nombre_col in enumerate(columnas):
                 valor = row[nombre_col]
                 texto = str(int(valor)) if nombre_col in ('position', 'wins', 'points') else str(valor)
                 item = QTableWidgetItem(texto)
-                item.setTextAlignment(0x0004 | 0x0080)
+                item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
                 item.setFont(QFont("Segoe UI", 12))
+                item.setToolTip(texto)
                 self.tabla_equipos.setItem(fila, col, item)
 
         self.tabla_equipos.resizeRowsToContents()

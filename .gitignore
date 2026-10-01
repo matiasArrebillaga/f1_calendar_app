@@ -12,3 +12,4 @@ F1CalendarApp.spec
 dist/
 build/
 .vscode/
+graphify-out/

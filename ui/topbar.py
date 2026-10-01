@@ -1,22 +1,21 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QLineEdit
-from PySide6.QtGui import QIntValidator
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtGui import QIntValidator, QIcon
+from PySide6.QtCore import Signal, Qt, QSize, QTimer
 from datetime import datetime
-from PySide6.QtGui import QPixmap
-from PySide6.QtGui import QPixmap, QIcon
-from PySide6.QtCore import Signal, Qt, QSize
-import sys
-import os
 
-def resource_path(ruta_relativa):
-    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
-    return os.path.join(base_path, ruta_relativa)
+from core.paths import resource_path
+
+
 class TopBar(QWidget):
     logo_clickeado = Signal()
     anio_cambiado = Signal(int)
 
     ANIO_MIN = 1950
     ANIO_MAX = datetime.now().year
+
+    # El auto-repeat del teclado dispara ~30 pulsaciones por segundo: sin esto,
+    # mantener una flecha apretada arrancaba un QThread (y una carga) por año.
+    RETARDO_EMISION_MS = 150
 
     def __init__(self):
         super().__init__()
@@ -28,6 +27,7 @@ class TopBar(QWidget):
         self.boton_logo.setIcon(QIcon(resource_path("assets/logo.png")))
         self.boton_logo.setIconSize(QSize(55, 55))
         self.boton_logo.setCursor(Qt.PointingHandCursor)
+        self.boton_logo.setToolTip("Volver al calendario")
         self.boton_logo.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
@@ -49,9 +49,16 @@ class TopBar(QWidget):
         self.campo_anio.setAlignment(Qt.AlignCenter)
         self.campo_anio.setFixedWidth(60)
         self.campo_anio.setValidator(QIntValidator(self.ANIO_MIN, self.ANIO_MAX))
+        self.campo_anio.setToolTip(f"Año entre {self.ANIO_MIN} y {self.ANIO_MAX}")
 
+        self.boton_anio_anterior.setObjectName("botonAnio")
+        self.boton_anio_siguiente.setObjectName("botonAnio")
         self.boton_anio_anterior.setFixedWidth(36)
         self.boton_anio_siguiente.setFixedWidth(36)
+        self.boton_anio_anterior.setToolTip("Año anterior (←)")
+        self.boton_anio_siguiente.setToolTip("Año siguiente (→)")
+        for boton in (self.boton_anio_anterior, self.boton_anio_siguiente):
+            boton.setCursor(Qt.PointingHandCursor)
 
         # --- Sección izquierda: logo, pegado a la izquierda ---
         seccion_izquierda = QWidget()
@@ -87,23 +94,14 @@ class TopBar(QWidget):
         self.boton_anio_siguiente.clicked.connect(self._anio_siguiente)
         self.campo_anio.editingFinished.connect(self._anio_escrito_manualmente)
 
+        self._timer_emision = QTimer(self)
+        self._timer_emision.setSingleShot(True)
+        self._timer_emision.setInterval(self.RETARDO_EMISION_MS)
+        self._timer_emision.timeout.connect(
+            lambda: self.anio_cambiado.emit(self.anio_actual)
+        )
+
         self._actualizar_botones()
-
-    def _anio_anterior(self):
-        if self.anio_actual > self.ANIO_MIN:
-            self._ir_a_anio(self.anio_actual - 1)
-
-    def _anio_siguiente(self):
-        if self.anio_actual < self.ANIO_MAX:
-            self._ir_a_anio(self.anio_actual + 1)
-
-    def _anio_escrito_manualmente(self):
-        texto = self.campo_anio.text()
-        if not texto:
-            self.campo_anio.setText(str(self.anio_actual))
-            return
-        anio_pedido = max(self.ANIO_MIN, min(int(texto), self.ANIO_MAX))
-        self._ir_a_anio(anio_pedido)
 
     def _anio_anterior(self):
         if self.anio_actual > self.ANIO_MIN:
@@ -125,7 +123,9 @@ class TopBar(QWidget):
         self.anio_actual = nuevo_anio
         self.campo_anio.setText(str(self.anio_actual))
         self._actualizar_botones()
-        self.anio_cambiado.emit(self.anio_actual)
+        # Debounce: el último año gana. La UI (campo y botones) ya se actualizó,
+        # lo que se posterga es sólo la carga de datos.
+        self._timer_emision.start()
 
     def _actualizar_botones(self):
         self.boton_anio_anterior.setEnabled(self.anio_actual > self.ANIO_MIN)

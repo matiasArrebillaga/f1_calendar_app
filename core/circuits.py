@@ -1,9 +1,53 @@
-import os
-import urllib.request
+# fastf1 no es consistente con el campo 'Location': el mismo circuito aparece
+# con distinta grafía según el año (Monaco/Monte Carlo, Bahrain/Sakhir,
+# Miami/Miami Gardens, Yas Marina/Yas Island, Montreal/Montréal), y para varios
+# usa el nombre de la ciudad y no el del circuito (Austin, Barcelona, Budapest,
+# Spielberg, Mexico City, São Paulo, Lusail).
+#
+# Las claves de DATOS_CIRCUITOS son la grafía que fastf1 usa en los años más
+# recientes; ALIAS_LOCATION traduce todas las demás a esa. Usar la grafía de
+# fastf1 como canónica (en vez de nombres "lindos" tipo COTA o Catalunya) hace
+# que los mapas ya cacheados en cache_tracks/ se sigan reusando tal cual.
+ALIAS_LOCATION = {
+    # variantes del mismo circuito según el año
+    "Monte Carlo": "Monaco",
+    "Montréal": "Montreal",
+    "Miami Gardens": "Miami",
+    "Yas Island": "Yas Marina",
+    "Abu Dhabi": "Yas Marina",
+    "Bahrain": "Sakhir",
+    "Singapore": "Marina Bay",
+    "Spa": "Spa-Francorchamps",
+    "Nürburg": "Nürburgring",
+    "Portimao": "Portimão",
 
-from core.paths import ruta_cache, data_path
+    # ciudad en el calendario, nombre del circuito en el uso corriente
+    "COTA": "Austin",
+    "Catalunya": "Barcelona",
+    "Hungaroring": "Budapest",
+    "Red Bull Ring": "Spielberg",
+    "Hermanos Rodriguez": "Mexico City",
+    "Interlagos": "São Paulo",
+    "Losail": "Lusail",
+    "Paul Ricard": "Le Castellet",
+    "Fuji": "Oyama",
+    "Buddh": "Uttar Pradesh",
+    "Korea": "Yeongam County",
 
-CACHE_DIR_NOMBRE = "cache_circuitos"
+    # 2022: sesión de test de pretemporada en Barcelona, sin circuito propio
+    "Spain": "Barcelona",
+    # error de datos conocido en el calendario 2026 de FastF1: el GP de Baréin
+    # aparece con Location "Kuala Lumpur"
+    "Kuala Lumpur": "Sakhir",
+}
+
+
+def normalizar_location(location):
+    """Traduce la grafía que vino del calendario a la clave canónica."""
+    if not isinstance(location, str):
+        return location
+    return ALIAS_LOCATION.get(location, location)
+
 
 DATOS_CIRCUITOS = {
     "Monza": {
@@ -15,7 +59,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:21.046 — Rubens Barrichello (2004)",
         "primer_gp": 1950,
     },
-    "Bahrain": {
+    "Sakhir": {
         "nombre_completo": "Bahrain International Circuit",
         "longitud_km": 5.412,
         "vueltas": 57,
@@ -60,7 +104,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:29.708 — Max Verstappen (2023)",
         "primer_gp": 2022,
     },
-    "Catalunya": {
+    "Barcelona": {
         "nombre_completo": "Circuit de Barcelona-Catalunya",
         "longitud_km": 4.657,
         "vueltas": 66,
@@ -68,6 +112,15 @@ DATOS_CIRCUITOS = {
         "curvas": 14,
         "record_vuelta": "1:16.330 — Max Verstappen (2023)",
         "primer_gp": 1991,
+    },
+    "Madrid": {
+        "nombre_completo": "Madring",
+        "longitud_km": 5.414,
+        "vueltas": 57,
+        "distancia_km": 308.399,
+        "curvas": 22,
+        "record_vuelta": "1:35.587 — George Russell (2026)",
+        "primer_gp": 2026,
     },
     "Monaco": {
         "nombre_completo": "Circuit de Monaco",
@@ -87,7 +140,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:13.078 — Valtteri Bottas (2019)",
         "primer_gp": 1978,
     },
-    "Red Bull Ring": {
+    "Spielberg": {
         "nombre_completo": "Red Bull Ring",
         "longitud_km": 4.318,
         "vueltas": 71,
@@ -105,7 +158,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:27.097 — Max Verstappen (2020)",
         "primer_gp": 1950,
     },
-    "Hungaroring": {
+    "Budapest": {
         "nombre_completo": "Hungaroring",
         "longitud_km": 4.381,
         "vueltas": 70,
@@ -159,7 +212,16 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:30.983 — Lewis Hamilton (2019)",
         "primer_gp": 1987,
     },
-    "COTA": {
+    "Shanghai": {
+        "nombre_completo": "Shanghai International Circuit",
+        "longitud_km": 5.451,
+        "vueltas": 56,
+        "distancia_km": 305.066,
+        "curvas": 16,
+        "record_vuelta": "1:32.238 — Michael Schumacher (2004)",
+        "primer_gp": 2004,
+    },
+    "Austin": {
         "nombre_completo": "Circuit of The Americas",
         "longitud_km": 5.513,
         "vueltas": 56,
@@ -168,7 +230,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:36.169 — Charles Leclerc (2019)",
         "primer_gp": 2012,
     },
-    "Hermanos Rodriguez": {
+    "Mexico City": {
         "nombre_completo": "Autódromo Hermanos Rodríguez",
         "longitud_km": 4.304,
         "vueltas": 71,
@@ -177,7 +239,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:17.774 — Valtteri Bottas (2021)",
         "primer_gp": 1963,
     },
-    "Interlagos": {
+    "São Paulo": {
         "nombre_completo": "Autódromo José Carlos Pace",
         "longitud_km": 4.309,
         "vueltas": 71,
@@ -195,7 +257,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:35.490 — Oscar Piastri (2023)",
         "primer_gp": 2023,
     },
-    "Losail": {
+    "Lusail": {
         "nombre_completo": "Lusail International Circuit",
         "longitud_km": 5.419,
         "vueltas": 57,
@@ -213,7 +275,9 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:26.103 — Max Verstappen (2021)",
         "primer_gp": 2009,
     },
-    "Paul Ricard": {
+
+    # --- Circuitos que ya no están en el calendario ---
+    "Le Castellet": {
         "nombre_completo": "Circuit Paul Ricard",
         "longitud_km": 5.842,
         "vueltas": 53,
@@ -222,7 +286,7 @@ DATOS_CIRCUITOS = {
         "record_vuelta": "1:32.740 — Sebastian Vettel (2019)",
         "primer_gp": 1971,
     },
-    "Portimao": {
+    "Portimão": {
         "nombre_completo": "Algarve International Circuit",
         "longitud_km": 4.653,
         "vueltas": 66,
@@ -230,38 +294,108 @@ DATOS_CIRCUITOS = {
         "curvas": 15,
         "record_vuelta": "1:18.750 — Lewis Hamilton (2020)",
         "primer_gp": 2020,
-    }
+    },
+    "Sochi": {
+        "nombre_completo": "Sochi Autodrom",
+        "longitud_km": 5.848,
+        "vueltas": 53,
+        "distancia_km": 309.745,
+        "curvas": 18,
+        "record_vuelta": "1:35.761 — Lewis Hamilton (2019)",
+        "primer_gp": 2014,
+    },
+    "Istanbul": {
+        "nombre_completo": "Istanbul Park",
+        "longitud_km": 5.338,
+        "vueltas": 58,
+        "distancia_km": 309.396,
+        "curvas": 14,
+        "record_vuelta": "1:24.770 — Juan Pablo Montoya (2005)",
+        "primer_gp": 2005,
+    },
+    "Hockenheim": {
+        "nombre_completo": "Hockenheimring",
+        "longitud_km": 4.574,
+        "vueltas": 67,
+        "distancia_km": 306.458,
+        "curvas": 17,
+        "record_vuelta": "1:13.780 — Kimi Räikkönen (2004)",
+        "primer_gp": 1970,
+    },
+    "Nürburgring": {
+        "nombre_completo": "Nürburgring",
+        "longitud_km": 5.148,
+        "vueltas": 60,
+        "distancia_km": 308.623,
+        "curvas": 15,
+        "record_vuelta": "1:27.776 — Max Verstappen (2020)",
+        "primer_gp": 1951,
+    },
+    "Mugello": {
+        "nombre_completo": "Autodromo Internazionale del Mugello",
+        "longitud_km": 5.245,
+        "vueltas": 59,
+        "distancia_km": 309.497,
+        "curvas": 15,
+        "record_vuelta": "1:15.144 — Lewis Hamilton (2020)",
+        "primer_gp": 2020,
+    },
+    "Indianapolis": {
+        "nombre_completo": "Indianapolis Motor Speedway (trazado mixto)",
+        "longitud_km": 4.192,
+        "vueltas": 73,
+        "distancia_km": 306.016,
+        "curvas": 13,
+        "record_vuelta": "1:10.399 — Rubens Barrichello (2004)",
+        "primer_gp": 2000,
+    },
+    "Magny Cours": {
+        "nombre_completo": "Circuit de Nevers Magny-Cours",
+        "longitud_km": 4.411,
+        "vueltas": 70,
+        "distancia_km": 308.586,
+        "curvas": 17,
+        "record_vuelta": "1:15.377 — Michael Schumacher (2004)",
+        "primer_gp": 1991,
+    },
+    "Oyama": {
+        "nombre_completo": "Fuji Speedway",
+        "longitud_km": 4.563,
+        "vueltas": 67,
+        "distancia_km": 305.721,
+        "curvas": 16,
+        "record_vuelta": "1:18.426 — Felipe Massa (2008)",
+        "primer_gp": 1976,
+    },
+    "Uttar Pradesh": {
+        "nombre_completo": "Buddh International Circuit",
+        "longitud_km": 5.125,
+        "vueltas": 60,
+        "distancia_km": 307.249,
+        "curvas": 16,
+        "record_vuelta": "1:25.599 — Sebastian Vettel (2011)",
+        "primer_gp": 2011,
+    },
+    "Valencia": {
+        "nombre_completo": "Valencia Street Circuit",
+        "longitud_km": 5.419,
+        "vueltas": 57,
+        "distancia_km": 308.883,
+        "curvas": 25,
+        "record_vuelta": "1:38.683 — Timo Glock (2009)",
+        "primer_gp": 2008,
+    },
+    "Yeongam County": {
+        "nombre_completo": "Korea International Circuit",
+        "longitud_km": 5.615,
+        "vueltas": 55,
+        "distancia_km": 308.630,
+        "curvas": 18,
+        "record_vuelta": "1:39.605 — Sebastian Vettel (2011)",
+        "primer_gp": 2010,
+    },
 }
+
+
 def obtener_datos_circuito(location):
-    return DATOS_CIRCUITOS.get(location)
-
-
-def obtener_ruta_imagen_circuito(location):
-    datos = obtener_datos_circuito(location)
-    if not datos or not datos.get("imagen_url"):
-        return None
-
-    url = datos["imagen_url"]
-    ruta_sin_query = url.split("?")[0]  # sacamos los parámetros de tracking antes de mirar la extensión
-    extension = ruta_sin_query.rsplit(".", 1)[-1]
-    nombre_archivo = location.lower().replace(" ", "_") + f".{extension}"
-
-    ruta, es_escribible = ruta_cache(CACHE_DIR_NOMBRE, nombre_archivo)
-
-    if not es_escribible:
-        return ruta
-
-    if not os.path.exists(ruta):
-        os.makedirs(data_path(CACHE_DIR_NOMBRE), exist_ok=True)
-        try:
-            request = urllib.request.Request(
-                url,
-                headers={"User-Agent": "F1CalendarApp/1.0 (proyecto educativo personal)"}
-            )
-            with urllib.request.urlopen(request) as respuesta, open(ruta, "wb") as archivo:
-                archivo.write(respuesta.read())
-        except Exception as e:
-            print(f"No se pudo descargar la imagen del circuito: {e}")
-            return None
-
-    return ruta
+    return DATOS_CIRCUITOS.get(normalizar_location(location))

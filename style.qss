@@ -12,7 +12,22 @@
      accent (rojo): #e10600
      accent-hover:  #ff2410
      accent-press:  #a80500
+     row-hover:     #232330   (hover de fila en tablas)
+     card-pressed:  #1a1a22   (tarjeta mientras se mantiene el click)
    ========================================================= */
+
+/* ---------- Tooltips ----------
+   Sin esta regla Qt usa el tooltip del sistema (fondo amarillo claro), que
+   sobre un tema oscuro se ve como un error. */
+
+QToolTip {
+    background-color: #17171d;
+    color: #f0f0f0;
+    border: 1px solid #2a2a33;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+}
 
 QWidget {
     background-color: #0b0b0e;
@@ -62,6 +77,10 @@ QPushButton#botonAnio:disabled {
     border-color: #232329;
 }
 
+QPushButton#botonAnio:focus {
+    border: 1px solid #e10600;
+}
+
 
 
 
@@ -94,6 +113,12 @@ QPushButton#navLateral:hover {
 QPushButton#navLateral:checked {
     background-color: #1e1e26;
     color: #ffffff;
+    border-left: 3px solid #e10600;
+}
+
+QPushButton#navLateral:focus {
+    background-color: #1e1e26;
+    color: #f0f0f0;
     border-left: 3px solid #e10600;
 }
 
@@ -160,13 +185,10 @@ QLabel#textoInfoCircuito {
 }
 
 /* =========================================================
-   FONDO DEL CALENDARIO — CAMBIAR ACÁ
-   Esta regla es SOLO para la pantalla de calendario (CalendarView
-   tiene objectName="vistaCalendario"). El detalle de evento y los
-   standings usan "vistaPrincipal" más abajo y no se ven afectados
-   si tocás esto.
+   FONDO DE LAS TRES PANTALLAS — CAMBIAR ACÁ
+   Calendario, detalle de evento y standings comparten este fondo
+   (los tres usan objectName="vistaPrincipal").
 
-   Para dejar el degradé como está, no cambies nada.
    Para poner una foto de fondo en vez del degradé, reemplazá el
    valor de "background" por:
        background-image: url(assets/fondo_calendario.jpg);
@@ -175,16 +197,6 @@ QLabel#textoInfoCircuito {
    (Qt no soporta "background-size: cover", así que la imagen que
    uses ya tiene que tener más o menos la proporción de la ventana.)
    ========================================================= */
-QWidget#vistaCalendario {
-    background: qlineargradient(
-        x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #380101,
-        stop: 0.5 #0d0d11,
-        stop: 1 #1a0000
-    );
-}
-
-/* Fondo del detalle de evento y de standings (comparten este mismo look). */
 QWidget#vistaPrincipal {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
@@ -316,6 +328,19 @@ QWidget#tarjetaEvento[estado="futuro"]:hover {
     border-left: 4px solid #2f7bd1;
 }
 
+/* Foco de teclado. No se usa el pseudo-estado :focus porque el foco lo recibe
+   el contenedor (CalendarEventCard), no este hijo, que es el que se pinta: la
+   tarjeta expone una propiedad Qt "foco" desde focusInEvent/focusOutEvent. */
+QWidget#tarjetaEvento[foco="true"] {
+    background-color: #262631;
+    border: 1px solid #e10600;
+}
+
+/* Mientras se mantiene apretado el click: la superficie se hunde un tono. */
+QWidget#tarjetaEvento[presionada="true"] {
+    background-color: #1a1a22;
+}
+
 QLabel#nombreEvento {
     font-weight: 700;
     font-size: 13px;
@@ -387,6 +412,12 @@ QPushButton#tabSesion:disabled {
     border-left: 3px solid transparent;
 }
 
+QPushButton#tabSesion:focus:enabled {
+    border-top: 1px solid #e10600;
+    border-right: 1px solid #e10600;
+    border-bottom: 1px solid #e10600;
+}
+
 /* Estado por fecha (independiente de si está seleccionada o no).
    La "próxima" usa la MISMA paleta roja que la tarjeta "PRÓXIMA" del
    calendario, para que ambas se lean como el mismo indicador. */
@@ -444,6 +475,18 @@ QTableWidget {
 QTableWidget::item {
     padding: 4px 6px;
     border-bottom: 1px solid #232329;
+}
+
+/* ponytail: Qt repinta solo la celda bajo el cursor, no la fila entera. El
+   hover de fila completa necesitaría un QStyledItemDelegate; si hace falta,
+   ese es el camino. La selección (SelectRows) sí resalta la fila completa. */
+QTableWidget::item:hover {
+    background-color: #232330;
+}
+
+QTableWidget::item:selected {
+    background-color: #2f2f3d;
+    color: #ffffff;
 }
 
 QHeaderView::section {

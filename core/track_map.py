@@ -5,17 +5,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from core.paths import ruta_cache, data_path
+# Una sola tabla de alias para toda la app: la de core.circuits. Antes este
+# módulo tenía su propia copia con 2 entradas, así que el mismo circuito se
+# generaba varias veces bajo distinto nombre (montreal.png y montréal.png,
+# miami.png y miami_gardens.png, bahrain.png y sakhir.png, yas_marina.png y
+# yas_island.png) — una descarga de telemetría desperdiciada por duplicado.
+from core.circuits import normalizar_location
 
 CACHE_DIR_NOMBRE = "cache_tracks"
-
-ALIAS_LOCATION = {
-    "Monte Carlo": "Monaco",
-    "Kuala Lumpur": "Sakhir",  # error de datos conocido en el calendario 2026 de FastF1 (debería ser Bahrein)
-}
-
-
-def normalizar_location(location):
-    return ALIAS_LOCATION.get(location, location)
 
 
 def _rotar(x, y, angulo_grados):

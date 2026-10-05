@@ -26,6 +26,8 @@ from PySide6.QtGui import QPixmap
 import workers.pilotos_worker as pilotos_worker
 from test_historial import base_de_prueba
 from ui.fichas_pilotos import formato_celda, sigla
+import ui.pilotos_view as pilotos_view
+from core import historial
 
 
 def test_ir_a_anio_clampea_los_dos_extremos():
@@ -496,6 +498,148 @@ def test_formato_de_las_celdas_de_la_tira():
 def test_sigla_de_pilotos_sin_codigo():
     assert sigla({"codigo": "NOR", "apellido": "Norris"}) == "NOR"
     assert sigla({"codigo": None, "apellido": "Senna"}) == "SEN"
+
+
+class _PilotosWorkerFalso(_WorkerFalso):
+    """Emite pilotos y equipos de la base falsa. Con `pendientes` puesto,
+    start() no emite: se guarda para emitir después (resultado tardío)."""
+    con = None
+    pendientes = None
+
+    def start(self):
+        if _PilotosWorkerFalso.pendientes is not None:
+            _PilotosWorkerFalso.pendientes.append(self)
+            return
+        self.emitir()
+
+    def emitir(self):
+        _WorkerFalso.vista.sender = lambda: self
+        datos = {"pilotos": historial.pilotos_temporada(self.con, self.year),
+                 "equipos": historial.equipos_temporada(self.con, self.year)}
+        for cb in self._terminado:
+            cb(datos)
+        for cb in self._finished:
+            cb()
+
+
+class _FotosWorkerFalso:
+    def __init__(self, pilotos):
+        self.pilotos = pilotos
+
+    @property
+    def foto_lista(self):
+        return _WorkerFalso._Senal([])
+
+    @property
+    def finished(self):
+        return _WorkerFalso._Senal([])
+
+    def start(self):
+        pass
+
+    def requestInterruption(self):
+        pass
+
+
+_WORKERS_PILOTOS = (pilotos_view.PilotosWorker, pilotos_view.FotosWorker)
+
+
+def _vista_pilotos():
+    con = base_de_prueba()
+    _PilotosWorkerFalso.con = con
+    pilotos_view.PilotosWorker = _PilotosWorkerFalso
+    pilotos_view.FotosWorker = _FotosWorkerFalso
+    vista = pilotos_view.PilotosView()
+    vista._con = con
+    _WorkerFalso.vista = vista
+    vista.resize(1000, 700)
+    return vista
+
+
+def _restaurar_pilotos():
+    pilotos_view.PilotosWorker, pilotos_view.FotosWorker = _WORKERS_PILOTOS
+    _PilotosWorkerFalso.pendientes = None
+    _WorkerFalso.vista = None
+
+
+def test_pilotos_muestra_una_tarjeta_por_piloto_y_por_equipo():
+    vista = _vista_pilotos()
+    try:
+        vista.cargar_datos(2025)
+        assert [t.clave for t in vista.grilla_pilotos.tarjetas()] ==             ["norris", "piastri", "leclerc", "lawson"]
+        assert [t.clave for t in vista.grilla_equipos.tarjetas()] == ["mclaren", "ferrari"]
+        assert vista.estado.isHidden()
+    finally:
+        _restaurar_pilotos()
+
+
+def test_fichas_de_piloto_y_de_equipo():
+    vista = _vista_pilotos()
+    try:
+        vista.cargar_datos(2025)
+        vista.abrir_piloto("norris")
+        assert vista.stack_interno.currentIndex() == pilotos_view.FICHA_PILOTO
+        assert len(vista.ficha_piloto.tira.celdas()) == 4
+        assert vista.volver_a_grilla()
+        assert vista.stack_interno.currentIndex() == pilotos_view.GRILLA_PILOTOS
+        assert not vista.volver_a_grilla(), "desde la grilla, Esc le toca a MainWindow"
+
+        vista.abrir_equipo("mclaren")
+        assert vista.stack_interno.currentIndex() == pilotos_view.FICHA_EQUIPO
+        assert vista.ficha_equipo.filas["carrera"].valor_a.text() == "2"
+        assert vista.ficha_equipo.sin_duelo.isHidden()
+
+        vista.abrir_equipo("ferrari")   # un solo piloto: sin cara a cara
+        assert not vista.ficha_equipo.sin_duelo.isHidden()
+        assert vista.ficha_equipo.bloque_duelo.isHidden()
+
+        vista.cargar_datos(1990)        # sin siglas, equipos sin color
+        vista.abrir_piloto("senna")
+        vista.abrir_equipo("coloni")
+    finally:
+        _restaurar_pilotos()
+
+
+def test_pilotos_de_otro_anio_que_llegan_tarde_se_descartan():
+    vista = _vista_pilotos()
+    try:
+        pendientes = []
+        _PilotosWorkerFalso.pendientes = pendientes
+        vista.cargar_datos(2025)        # queda en vuelo
+        _PilotosWorkerFalso.pendientes = None
+        vista.cargar_datos(1990)        # llega enseguida
+        pendientes[0].emitir()          # y recién ahora llega 2025
+        assert [t.clave for t in vista.grilla_pilotos.tarjetas()] == ["senna", "prost", "nadie"]
+    finally:
+        _restaurar_pilotos()
+
+
+def test_temporada_sin_resultados_muestra_estado_vacio():
+    vista = _vista_pilotos()
+    try:
+        vista.cargar_datos(2026)
+        assert vista.grilla_pilotos.tarjetas() == []
+        assert vista.estado.objectName() == "estadoVacio"
+        assert "2026" in vista.estado.text()
+    finally:
+        _restaurar_pilotos()
+
+
+def test_un_error_de_red_se_reintenta_al_volver_a_la_pestania():
+    vista = _vista_pilotos()
+    try:
+        vista.cargar_datos(2025)
+
+        class _Worker2025:
+            year = 2025
+
+        vista.sender = lambda: _Worker2025()
+        vista.on_error("sin red")
+        assert vista.estado.objectName() == "estadoError"
+        # Con year puesto, showEvent no vuelve a pedir el año que falló.
+        assert vista.year is None
+    finally:
+        _restaurar_pilotos()
 
 
 if __name__ == "__main__":

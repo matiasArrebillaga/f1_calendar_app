@@ -11,6 +11,7 @@ from core.fechas import MESES, largada
 from ui.calendar_event_card import CalendarEventCard
 from ui.proxima_carrera import ProximaCarrera
 from ui.spinner_widget import SpinnerWidget
+from ui.estado import aplicar_estado
 from workers.calendar_worker import CalendarWorker
 
 class CalendarView(QWidget):
@@ -305,17 +306,7 @@ class CalendarView(QWidget):
             encabezado.mapTo(self.scroll.widget(), QPoint(0, 0)).y())
 
     def _set_estado(self, texto, tipo=""):
-        nombres = {
-            "": "estadoVacio",
-            "cargando": "estadoCargando",
-            "error": "estadoError",
-            "vacio": "estadoVacio",
-        }
-        self.estado.setObjectName(nombres.get(tipo, "estadoVacio"))
-        self.estado.setText(texto)
-        self.estado.setVisible(bool(texto))
-        self.estado.style().unpolish(self.estado)
-        self.estado.style().polish(self.estado)
+        aplicar_estado(self.estado, texto, tipo)
 
     def _calcular_columnas(self):
         ancho_disponible = self.scroll.viewport().width() - self.RESERVA_LATERAL

@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from core.equipos import color_equipo
 from ui.delegados import BarraPuntos, MedallaPosicion
 from ui.icons import franja_equipo, DATO
+from ui.estado import aplicar_estado
 from workers.standings_worker import StandingsWorker
 
 PUNTOS_POR_CARRERA = {0: 25, 1: 25 + 18}   # pilotos / equipos (1º + 2º), sin sprints
@@ -126,15 +127,7 @@ class StandingsView(QWidget):
         self._actualizar_kpis()
 
     def _set_estado(self, texto, tipo=""):
-        # ponytail: mismas 4 líneas que EventDetailView._set_estado. Dos usos no
-        # justifican un helper compartido; extraer si aparece una tercera vista.
-        nombres = {"": "estadoVacio", "cargando": "estadoCargando",
-                   "error": "estadoError", "vacio": "estadoVacio"}
-        self.estado.setObjectName(nombres.get(tipo, "estadoVacio"))
-        self.estado.setText(texto)
-        self.estado.setVisible(bool(texto))
-        self.estado.style().unpolish(self.estado)
-        self.estado.style().polish(self.estado)
+        aplicar_estado(self.estado, texto, tipo)
 
     def pedir_anio(self, year):
         """Anota el año sin pedir nada a la red. La carga real ocurre en

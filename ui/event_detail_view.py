@@ -14,6 +14,7 @@ from core.track_map import obtener_ruta_mapa
 from ui.delegados import MedallaPosicion
 from ui.icons import icono, franja_equipo, MUTED, PRIMARIO, DATO
 from ui.spinner_widget import SpinnerWidget
+from ui.estado import aplicar_estado
 from workers.session_worker import SessionWorker
 from workers.track_map_worker import TrackMapWorker
 
@@ -590,14 +591,4 @@ class EventDetailView(QWidget):
         self._set_estado(f"Error al cargar: {mensaje}", "error")
 
     def _set_estado(self, texto, tipo=""):
-        nombres = {
-            "": "estadoVacio",
-            "cargando": "estadoCargando",
-            "error": "estadoError",
-            "vacio": "estadoVacio",
-        }
-        self.estado.setObjectName(nombres.get(tipo, "estadoVacio"))
-        self.estado.setText(texto)
-        self.estado.setVisible(bool(texto))
-        self.estado.style().unpolish(self.estado)
-        self.estado.style().polish(self.estado)
+        aplicar_estado(self.estado, texto, tipo)

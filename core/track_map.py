@@ -37,7 +37,7 @@ def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
 
     for _, curva in circuito_info.corners.iterrows():
         cx, cy = _rotar(curva['X'], curva['Y'], rotacion)
-        ax.scatter(cx, cy, color='#1e1e26', s=180, zorder=5, edgecolors='#e10600', linewidths=1.5)
+        ax.scatter(cx, cy, color='#12161C', s=180, zorder=5, edgecolors='#e10600', linewidths=1.5)
         ax.text(cx, cy, str(int(curva['Number'])), color='white',
                 ha='center', va='center', fontsize=8, fontweight='bold', zorder=6)
 

@@ -1,13 +1,13 @@
+import glob
 import sys
 import fastf1
 from PySide6.QtCore import QLocale, Qt, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QFontDatabase
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QStackedWidget, QWidget, QHBoxLayout,
     QGraphicsOpacityEffect
 )
 
-from ui.topbar import TopBar
 from ui.sidebar import Sidebar
 from ui.calendar_view import CalendarView
 from ui.event_detail_view import EventDetailView
@@ -17,6 +17,27 @@ from core.paths import resource_path, data_path
 
 fastf1.Cache.enable_cache(data_path('cache'))
 QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
+
+# Qt NO hace cascada como CSS: si se le pide una familia que no está instalada
+# cae a Tahoma, así que se elige a mano la primera presente. Va en Python y no
+# en el .qss porque acá se puede verificar contra las familias que el sistema
+# realmente tiene.
+#
+# Ésta es la fuente del texto común, que en la app es casi todo de 9 a 13 px:
+# ahí manda la nitidez. Titillium Web (la de los títulos, en el .qss) se pixela
+# a esos tamaños; Segoe UI Variable Text es la variante de Windows 11 dibujada
+# justamente para texto chico en pantalla.
+FAMILIAS_PREFERIDAS = (
+    "Segoe UI Variable Text",      # viene con Windows 11
+    "Segoe UI",
+    "Helvetica Neue",
+    "Arial",
+)
+
+
+def _familia_disponible():
+    instaladas = set(QFontDatabase.families())
+    return next((f for f in FAMILIAS_PREFERIDAS if f in instaladas), None)
 
 
 class MainWindow(QMainWindow):
@@ -28,8 +49,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Calendario F1")
         self.resize(1300, 750)
         self.setMinimumSize(1100, 650)
-        self.top_bar = TopBar()
         self.sidebar = Sidebar()
+        self.selector = self.sidebar.selector
 
         self.calendar_view = CalendarView()
         self.detail_view = EventDetailView()
@@ -40,28 +61,23 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.detail_view)      # índice 1
         self.stack.addWidget(self.standings_view)   # índice 2
 
-        layout_cuerpo = QHBoxLayout()
-        layout_cuerpo.setContentsMargins(0, 0, 0, 0)
-        layout_cuerpo.setSpacing(0)
-        layout_cuerpo.addWidget(self.sidebar)
-        layout_cuerpo.addWidget(self.stack)
-
+        # Sin barra superior: el logo y la temporada viven en la sidebar, y
+        # cada vista arma su propio encabezado.
         contenedor_central = QWidget()
-        layout_principal = QVBoxLayout()
+        layout_principal = QHBoxLayout(contenedor_central)
         layout_principal.setContentsMargins(0, 0, 0, 0)
         layout_principal.setSpacing(0)
-        layout_principal.addWidget(self.top_bar)
-        layout_principal.addLayout(layout_cuerpo)
-        contenedor_central.setLayout(layout_principal)
+        layout_principal.addWidget(self.sidebar)
+        layout_principal.addWidget(self.stack)
         self.setCentralWidget(contenedor_central)
 
         self.calendar_view.evento_seleccionado.connect(self.abrir_detalle)
         self.detail_view.volver.connect(self.volver_a_calendario)
-        self.top_bar.anio_cambiado.connect(self.on_anio_cambiado)
-        self.top_bar.logo_clickeado.connect(self.ir_a_calendario)
+        self.selector.anio_cambiado.connect(self.on_anio_cambiado)
+        self.sidebar.logo_clickeado.connect(self.ir_a_calendario)
         self.sidebar.navegar.connect(self.on_navegar_sidebar)
         # carga inicial
-        self.on_anio_cambiado(self.top_bar.anio_actual)
+        self.on_anio_cambiado(self.selector.anio_actual)
 
     def _mostrar_vista(self, indice):
         """Cambia de página del stack con un fade de entrada.
@@ -132,9 +148,9 @@ class MainWindow(QMainWindow):
             return
 
         # Las flechas cambian de año, salvo mientras se está escribiendo uno.
-        if tecla in (Qt.Key_Left, Qt.Key_Right) and not self.top_bar.campo_anio.hasFocus():
+        if tecla in (Qt.Key_Left, Qt.Key_Right) and not self.selector.campo_anio.hasFocus():
             paso = -1 if tecla == Qt.Key_Left else 1
-            self.top_bar.ir_a_anio(self.top_bar.anio_actual + paso)
+            self.selector.ir_a_anio(self.selector.anio_actual + paso)
             return
 
         super().keyPressEvent(evento_tecla)
@@ -151,6 +167,17 @@ class MainWindow(QMainWindow):
 
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
+
+# Titillium Web, para los títulos. Empaquetada (licencia OFL,
+# assets/fonts/OFL.txt): así se ve igual en una PC que no la tiene instalada.
+for archivo_fuente in glob.glob(resource_path("assets/fonts/*.ttf")):
+    QFontDatabase.addApplicationFont(archivo_fuente)
+
+familia = _familia_disponible()
+if familia is not None:
+    fuente = app.font()
+    fuente.setFamily(familia)
+    app.setFont(fuente)
 with open(resource_path("style.qss"), "r", encoding="utf-8") as f:
     app.setStyleSheet(f.read())
 ventana = MainWindow()

@@ -5,7 +5,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt, QPropertyAnimation, QEasingCurve, QEvent, QRect
 from PySide6.QtGui import QColor, QPixmap
 from core.flags import obtener_ruta_bandera
-from core.i18n import traducir_evento, traducir_pais
+from core.fechas import rango_fechas
+from core.i18n import traducir_evento
 
 class CalendarEventCard(QWidget):
     """
@@ -29,8 +30,9 @@ class CalendarEventCard(QWidget):
     def __init__(self, indice_fila, evento, estado):
         super().__init__()
         self.indice_fila = indice_fila
+        self.estado = estado
         self._ancho = 200
-        self._alto = 120
+        self._alto = 108
 
         self.setFixedSize(self._ancho, self._alto)
         self.setCursor(Qt.PointingHandCursor)
@@ -42,7 +44,6 @@ class CalendarEventCard(QWidget):
         self._pixmap_bandera = self._obtener_pixmap_bandera(evento['Country'])
 
         nombre_evento_es = traducir_evento(evento['EventName'])
-        pais_es = traducir_pais(evento['Country'])
 
         # Tarjeta interior: la que realmente se ve y se anima.
         self._interior = QWidget(self)
@@ -106,18 +107,16 @@ class CalendarEventCard(QWidget):
         nombre.setObjectName("nombreEvento")
         nombre.setWordWrap(True)
 
-        pais = QLabel(pais_es)
-        pais.setObjectName("paisEvento")
-
-        fecha = QLabel(str(evento['EventDate'].date()))
+        # Sin etiqueta de país: lo dice la bandera, y el nombre del GP casi
+        # siempre lo repite.
+        fecha = QLabel(rango_fechas(evento))
         fecha.setObjectName("fechaEvento")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(3)
         layout.addLayout(fila_superior)
         layout.addWidget(nombre)
-        layout.addWidget(pais)
         layout.addStretch()
         layout.addWidget(fecha)
         self._interior.setLayout(layout)

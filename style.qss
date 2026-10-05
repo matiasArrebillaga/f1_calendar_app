@@ -1,19 +1,52 @@
 /* =========================================================
-   F1 Calendar App — tema "transmisión"
-   Paleta:
-     bg-app:        #0b0b0e
-     bg-panel:      #17171d
-     bg-surface:    #1e1e26
-     bg-surface-h:  #262631
-     border:        #2a2a33
-     border-strong: #3a3a45
-     text-primary:  #f0f0f0
-     text-muted:    #9a9aa5
-     accent (rojo): #e10600
-     accent-hover:  #ff2410
-     accent-press:  #a80500
-     row-hover:     #232330   (hover de fila en tablas)
-     card-pressed:  #1a1a22   (tarjeta mientras se mantiene el click)
+   F1 Calendar App — tema "telemetría"
+   Grafito frío de pit wall: el rojo F1 marca ESTADO y FOCO, el cian
+   marca DATOS (tiempos, diferencias, cuenta regresiva, barras).
+
+   PALETA — fuente única de verdad. Los pocos colores que viven en
+   Python (ui/icons.py: MUTED, PRIMARIO, DATO, BORDE y las medallas de
+   PODIO; spinner; mapas de core/track_map) salen de esta misma tabla.
+
+     bg-app            #090A0D   fondo de la ventana
+     bg-panel          #12161C   sidebar, header de tabla, paneles
+     bg-surface        #1B2029   tarjeta, celda, input, botón
+     bg-surface-hover  #262D38
+     bg-sunken         #0C0E12   pressed, cajas de la cuenta regresiva
+     border-hairline   #2D3541   TODO borde es este, a 1px
+     border-strong     #3F4957   sólo donde hace falta separar superficies
+     border-soft       #202631   líneas entre filas de tabla
+
+     text-primary      #F3F6F9
+     text-secondary    #CAD2DC
+     text-muted        #A4AEBC   pasa AA (4.5:1) sobre bg-surface-hover
+     text-disabled     #5A6370
+
+     accent            #E10600   rojo F1
+     accent-hover      #F5200F
+     accent-press      #A80500
+     accent-wash       #261519   fondo de "próxima"
+     dato              #52DEEC   cian de telemetría
+
+     estado-cargando   #E8B931
+     estado-error      #FF6B57   (distinto del accent a propósito:
+                                 un error no se tiene que leer como un adorno)
+
+   REGLAS DE LA CASA
+   1. Un solo peso de línea: 1px #2D3541. La única excepción son las
+      barras de 2px que marcan ESTADO (próxima / activo / foco).
+   2. La jerarquía la hace el espacio y el peso tipográfico, no bloques
+      de color. Por eso los botones y los headers de tabla son neutros.
+   3. El rojo sólo marca estado y foco: barra de "próxima", ítem activo,
+      anillo de foco y el chip #etiquetaProxima. El cian sólo marca datos.
+   4. Escala de espaciado de 4px: 4 / 8 / 12 / 16 / 24.
+   5. El ancho de los bordes NUNCA cambia entre estados — en Qt el borde
+      es parte de la caja, así que pasar de 1px a 2px al enfocar corre el
+      contenido 1px. Cambia el COLOR, no el ancho.
+   6. La familia del texto común NO va acá: se resuelve en main.py contra
+      las familias realmente instaladas (Qt cae a Tahoma si pide una que no
+      existe). Acá sólo van dos que están garantizadas: Titillium Web (viene
+      en assets/fonts) para los títulos grandes, y Consolas para números.
+      Titillium nunca por debajo de ~17px: a tamaños chicos se pixela.
    ========================================================= */
 
 /* ---------- Tooltips ----------
@@ -21,167 +54,30 @@
    sobre un tema oscuro se ve como un error. */
 
 QToolTip {
-    background-color: #17171d;
-    color: #f0f0f0;
-    border: 1px solid #2a2a33;
-    border-radius: 4px;
-    padding: 6px 8px;
+    background-color: #12161C;
+    color: #F3F6F9;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+    padding: 8px 12px;
     font-size: 12px;
 }
 
 QWidget {
-    background-color: #0b0b0e;
-    color: #f0f0f0;
-    font-family: "Segoe UI", sans-serif;
+    background-color: #090A0D;
+    color: #F3F6F9;
     font-size: 13px;
 }
 
 QMainWindow {
-    background-color: #0b0b0e;
+    background-color: #090A0D;
 }
 
-/* ---------- Barra superior ---------- */
-
-QWidget#topBar {
-    background-color: #111116;
-    border-bottom: 1px solid #2a2a33;
-}
-
-QLabel#tituloApp {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    color: #f0f0f0;
-}
-
-QPushButton#botonAnio {
-    background-color: #1e1e26;
-    color: #f0f0f0;
-    border: 1px solid #3a3a45;
-    border-radius: 4px;
-    padding: 4px 0px;
-    font-weight: 700;
-}
-
-QPushButton#botonAnio:hover {
-    background-color: #262631;
-}
-
-QPushButton#botonAnio:pressed {
-    background-color: #17171d;
-}
-
-QPushButton#botonAnio:disabled {
-    background-color: #141418;
-    color: #4a4a52;
-    border-color: #232329;
-}
-
-QPushButton#botonAnio:focus {
-    border: 1px solid #e10600;
-}
-
-
-
-
-
-/* ---------- Sidebar de navegación ---------- */
-
-QWidget#sidebarPrincipal {
-    background-color: #111116;
-    border-right: 1px solid #2a2a33;
-}
-
-QPushButton#navLateral {
-    background-color: transparent;
-    color: #9a9aa5;
-    text-align: left;
-    border: none;
-    border-left: 3px solid transparent;
-    border-radius: 4px;
-    padding: 16px 14px;
-    font-size: 14px;
-    font-weight: 700;
-}
-
-QPushButton#navLateral:hover {
-    background-color: #1a1a20;
-    color: #f0f0f0;
-    border-left: 3px solid #5a1a17;
-}
-
-QPushButton#navLateral:checked {
-    background-color: #1e1e26;
-    color: #ffffff;
-    border-left: 3px solid #e10600;
-}
-
-QPushButton#navLateral:focus {
-    background-color: #1e1e26;
-    color: #f0f0f0;
-    border-left: 3px solid #e10600;
-}
-
-/* ---------- Selector segmentado (standings: Pilotos / Equipos) ---------- */
-
-QWidget#selectorTabs {
-    background-color: #17171d;
-    border: 1px solid #2a2a33;
-    border-radius: 6px;
-}
-
-QPushButton#tabHorizontalIzq,
-QPushButton#tabHorizontalDer {
-    background-color: transparent;
-    color: #b6b6bd;
-    border: none;
-    padding: 9px 18px;
-    font-weight: 700;
-    font-size: 13px;
-}
-
-QPushButton#tabHorizontalIzq {
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
-}
-
-QPushButton#tabHorizontalDer {
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
-}
-
-QPushButton#tabHorizontalIzq:hover:!checked,
-QPushButton#tabHorizontalDer:hover:!checked {
-    background-color: #1e1e26;
-    color: #f0f0f0;
-}
-
-QPushButton#tabHorizontalIzq:checked,
-QPushButton#tabHorizontalDer:checked {
-    background-color: #e10600;
-    color: #ffffff;
-}
-
-/* ---------- Tabla de standings (mismo criterio que la de resultados) ---------- */
-
-QTableWidget#tablaStandings {
-    font-size: 13px;
-}
-
-/* ---------- Panel informativo del circuito (event detail) ---------- */
-
-QWidget#panelInfoCircuito {
-    background-color: transparent;
-}
-
-QLabel#imagenCircuito {
-    background-color: #15151b;
-    border-radius: 10px;
-    padding: 14px;
-}
-
-QLabel#textoInfoCircuito {
-    background-color: transparent;
+QLabel {
+    color: #F3F6F9;
+    background-color: transparent;  /* fix: sin esto, cada QLabel heredaba
+                                        el fondo oscuro sólido de QWidget y
+                                        se veía como un rectángulo tapando
+                                        el degradé de fondo */
 }
 
 /* =========================================================
@@ -200,350 +96,696 @@ QLabel#textoInfoCircuito {
 QWidget#vistaPrincipal {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 0, y2: 1,
-        stop: 0 #111116,
-        stop: 0.5 #0d0d11,
-        stop: 1 #08080a
+        stop: 0 #10141A,
+        stop: 0.35 #090A0D,
+        stop: 1 #08090C
     );
 }
 
-QLabel {
-    color: #f0f0f0;
-    background-color: transparent;  /* fix: sin esto, cada QLabel heredaba
-                                        el fondo oscuro sólido de QWidget y
-                                        se veía como un rectángulo tapando
-                                        el degradé de fondo */
+/* ---------- Sidebar ---------- */
+
+QWidget#sidebarPrincipal {
+    background-color: #12161C;
+    border-right: 1px solid #2D3541;
 }
 
-/* ---------- Encabezados ---------- */
-
-QLabel#titulo {
-    font-size: 22px;
-    font-weight: 700;
-    color: #f5f5f5;
-    padding: 2px 0px;
-}
-
-QLabel#subtitulo {
-    font-size: 13px;
-    color: #9a9aa5;
-    padding-bottom: 6px;
-}
-
-QFrame#lineaAcento {
-    background-color: #e10600;
-    max-height: 3px;
-    min-height: 3px;
+/* La marca va chica y con mucho tracking: el nombre de la aplicación es una
+   etiqueta tranquila, no un grito. */
+QPushButton#botonMarca {
+    background-color: transparent;
+    color: #F3F6F9;
     border: none;
-    border-radius: 1px;
-}
-
-QLabel#badgeRonda {
-    background-color: #1e1e26;
-    border: 1px solid #3a3a45;
-    border-radius: 4px;
-    color: #d0d0d5;
-    font-weight: 700;
+    text-align: left;
+    padding: 4px 16px;
     font-size: 11px;
-    padding: 3px 8px;
+    font-weight: 700;
+    letter-spacing: 3px;
 }
 
-/* ---------- Botones genéricos (año, volver) ---------- */
+QPushButton#botonMarca:hover,
+QPushButton#botonMarca:pressed {
+    background-color: transparent;
+    color: #FFFFFF;
+}
 
-QPushButton {
-    background-color: #e10600;
-    color: white;
-    border: none;
+QFrame#selectorTemporada {
+    background-color: #1B2029;
+    border: 1px solid #2D3541;
     border-radius: 4px;
-    padding: 8px 14px;
+    margin: 0px 12px;
+}
+
+QLabel#anioMini {
+    color: #CAD2DC;
+    font-family: Consolas;
+    font-size: 12px;
     font-weight: 600;
+    padding: 4px 0px 8px 0px;
 }
 
-QPushButton:hover {
-    background-color: #ff2410;
+QLabel#etiquetaGrupo {
+    color: #A4AEBC;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    padding: 0px 20px 6px 20px;
 }
 
-QPushButton:pressed {
-    background-color: #a80500;
+QPushButton#navLateral {
+    background-color: transparent;
+    color: #A4AEBC;
+    text-align: left;
+    border: none;
+    border-left: 2px solid transparent;
+    border-radius: 0px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
-QPushButton:disabled {
-    background-color: #2a2a33;
-    color: #6a6a74;
+QPushButton#navLateral:hover {
+    background-color: #1B2029;
+    color: #F3F6F9;
+}
+
+QPushButton#navLateral:checked {
+    background-color: #1B2029;
+    color: #F3F6F9;
+    border-left: 2px solid #E10600;
+}
+
+QPushButton#navLateral:focus {
+    background-color: #1B2029;
+    color: #F3F6F9;
+    border-left: 2px solid #E10600;
 }
 
 /* ---------- Selector de año ---------- */
 
+QPushButton#botonAnio {
+    background-color: transparent;
+    color: #CAD2DC;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+    padding: 0px;
+}
+
+QPushButton#botonAnio:hover {
+    background-color: #262D38;
+    color: #F3F6F9;
+}
+
+QPushButton#botonAnio:pressed {
+    background-color: #0C0E12;
+}
+
+QPushButton#botonAnio:disabled {
+    background-color: transparent;
+    color: #5A6370;
+    border-color: #202631;
+}
+
+QPushButton#botonAnio:focus {
+    border: 1px solid #E10600;
+}
+
 QLineEdit {
-    background-color: #1e1e26;
-    border: 1px solid #3a3a45;
-    border-radius: 4px;
-    padding: 5px 6px;
-    color: #f0f0f0;
+    background-color: #1B2029;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+    padding: 4px 8px;
+    color: #F3F6F9;
     font-weight: 600;
 }
 
 QLineEdit:focus {
-    border: 1px solid #e10600;
+    border: 1px solid #E10600;
 }
 
-/* ---------- Tarjetas de calendario ---------- */
+/* El año se lee como un número grande, no como un campo de formulario: el
+   borde sólo aparece al enfocarlo (mismo ancho, otro color). */
+QLineEdit#campoAnio {
+    background-color: transparent;
+    border: 1px solid transparent;
+    font-family: Consolas;
+    font-size: 19px;
+    padding: 0px;
+}
+
+QLineEdit#campoAnio:hover {
+    border: 1px solid #2D3541;
+}
+
+QLineEdit#campoAnio:focus {
+    border: 1px solid #E10600;
+}
+
+/* ---------- Encabezados ---------- */
+
+/* Display liviano y apenas apretado: es lo que separa un título "de lujo"
+   de un título "de dashboard". */
+QLabel#titulo {
+    font-family: "Titillium Web";
+    font-size: 25px;
+    font-weight: 300;
+    letter-spacing: -0.3px;
+    color: #F3F6F9;
+    padding: 0px;
+}
+
+QLabel#subtitulo {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    color: #A4AEBC;
+    padding-top: 2px;
+}
+
+QLabel#badgeRonda {
+    background-color: #1B2029;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+    color: #A4AEBC;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 4px 8px;
+    margin-top: 6px;
+}
+
+QLabel#textoProgreso {
+    color: #A4AEBC;
+    font-size: 12px;
+}
+
+QProgressBar#progresoTemporada {
+    background-color: #2D3541;
+    border: none;
+    border-radius: 2px;
+}
+
+QProgressBar#progresoTemporada::chunk {
+    background-color: #52DEEC;
+    border-radius: 2px;
+}
+
+/* ---------- Botones genéricos ----------
+   Neutros: el rojo se reserva para estado y foco. */
+
+QPushButton {
+    background-color: #1B2029;
+    color: #F3F6F9;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+    padding: 8px 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+QPushButton:hover {
+    background-color: #262D38;
+    border-color: #3F4957;
+}
+
+QPushButton:pressed {
+    background-color: #0C0E12;
+}
+
+QPushButton:focus {
+    border: 1px solid #E10600;
+}
+
+QPushButton:disabled {
+    background-color: #12161C;
+    color: #5A6370;
+    border-color: #202631;
+}
+
+/* ---------- Próxima carrera (fijo arriba del calendario) ---------- */
+
+QFrame#bloqueProxima {
+    background-color: #261519;
+    border: 1px solid #2D3541;
+    border-left: 2px solid #E10600;
+    border-radius: 4px;
+}
+
+QFrame#bloqueProxima:hover {
+    border-color: #3F4957;
+    border-left: 2px solid #F5200F;
+}
+
+QFrame#bloqueProxima:focus {
+    border-color: #E10600;
+}
+
+QWidget#columnaProxima {
+    background-color: transparent;
+    border-left: 1px solid #2D3541;
+}
+
+QLabel#nombreProxima {
+    font-family: "Titillium Web";
+    font-size: 21px;
+    font-weight: 600;
+}
+
+QLabel#lugarProxima {
+    color: #CAD2DC;
+    font-size: 12px;
+}
+
+QFrame#cajaCuenta {
+    background-color: #0C0E12;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+    min-width: 54px;
+}
+
+QLabel#numeroCuenta {
+    color: #52DEEC;
+    font-family: Consolas;
+    font-size: 21px;
+}
+
+QLabel#unidadCuenta {
+    color: #A4AEBC;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+}
+
+QLabel#sesionHorario {
+    color: #CAD2DC;
+}
+
+QLabel#sesionCarrera {
+    color: #F3F6F9;
+    font-weight: 600;
+}
+
+QLabel#horaSesion {
+    color: #A4AEBC;
+    font-family: Consolas;
+    font-size: 12px;
+}
+
+/* ---------- Calendario: meses y tarjetas ---------- */
+
+QLabel#encabezadoMes {
+    color: #CAD2DC;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    border-bottom: 1px solid #2D3541;
+    padding: 18px 6px 6px 6px;
+}
+
+/* La barra izquierda de 2px es el único indicador de color del estado, y
+   siempre está presente (transparente cuando no aplica) para que el
+   contenido no se corra. El texto de la tarjeta dice lo mismo que el
+   color: R1, PRÓXIMA y la fecha. */
 
 QWidget#tarjetaEvento {
-    background-color: #1e1e26;
-    border: 1px solid #2a2a33;
-    border-left: 4px solid #3a3a45;
-    border-radius: 6px;
+    background-color: #1B2029;
+    border: 1px solid #2D3541;
+    border-left: 2px solid #2D3541;
+    border-radius: 4px;
 }
 
 QWidget#tarjetaEvento[estado="proxima"] {
-    border-left: 4px solid #e10600;
-    background-color: #241a1a;
+    background-color: #261519;
+    border-left: 2px solid #E10600;
 }
 
+/* "Pasado" no lleva barra (el color del borde = el de la caja): la carrera ya
+   pasó, no pide atención. Además se le baja el nombre a text-secondary, que es
+   lo que de verdad distingue una tarjeta terminada de una pendiente. */
 QWidget#tarjetaEvento[estado="pasado"] {
-    border-left: 4px solid #4a4a54;
+    border-left: 2px solid #2D3541;
+}
+
+QWidget#tarjetaEvento[estado="pasado"] QLabel#nombreEvento {
+    color: #CAD2DC;
 }
 
 QWidget#tarjetaEvento[estado="futuro"] {
-    border-left: 4px solid #1f5fa8;
+    border-left: 2px solid #6E7D8F;
 }
 
-/* Reacción al pasar el mouse: además del crecimiento animado en Python,
-   la superficie se aclara y el borde de acento se enciende un poco. */
 QWidget#tarjetaEvento:hover {
-    background-color: #262631;
-    border: 1px solid #3a3a45;
+    background-color: #262D38;
+    border-color: #3F4957;
 }
 
 QWidget#tarjetaEvento[estado="proxima"]:hover {
-    background-color: #2c1e1e;
-    border-left: 4px solid #ff2410;
+    background-color: #331B20;
+    border-left: 2px solid #F5200F;
 }
 
 QWidget#tarjetaEvento[estado="pasado"]:hover {
-    border-left: 4px solid #6a6a76;
+    border-left: 2px solid #3F4957;
+}
+
+QWidget#tarjetaEvento[estado="pasado"]:hover QLabel#nombreEvento {
+    color: #F3F6F9;
 }
 
 QWidget#tarjetaEvento[estado="futuro"]:hover {
-    border-left: 4px solid #2f7bd1;
+    border-left: 2px solid #A4AEBC;
 }
 
 /* Foco de teclado. No se usa el pseudo-estado :focus porque el foco lo recibe
    el contenedor (CalendarEventCard), no este hijo, que es el que se pinta: la
    tarjeta expone una propiedad Qt "foco" desde focusInEvent/focusOutEvent. */
 QWidget#tarjetaEvento[foco="true"] {
-    background-color: #262631;
-    border: 1px solid #e10600;
+    background-color: #262D38;
+    border: 1px solid #E10600;
+    border-left: 2px solid #E10600;
 }
 
-/* Mientras se mantiene apretado el click: la superficie se hunde un tono. */
 QWidget#tarjetaEvento[presionada="true"] {
-    background-color: #1a1a22;
+    background-color: #0C0E12;
 }
 
 QLabel#nombreEvento {
-    font-weight: 700;
+    font-weight: 600;
     font-size: 13px;
     background: transparent;
-    color: #f5f5f5;
-}
-
-QLabel#paisEvento {
-    background: transparent;
-    color: #b6b6bd;
-    font-size: 12px;
+    color: #F3F6F9;
 }
 
 QLabel#fechaEvento {
     background: transparent;
-    color: #7d7d87;
+    color: #A4AEBC;
+    font-family: Consolas;
     font-size: 11px;
 }
 
 QLabel#etiquetaRonda {
     background: transparent;
-    color: #7d7d87;
+    color: #A4AEBC;
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
 }
 
 QLabel#etiquetaProxima {
-    background-color: #e10600;
-    color: white;
+    background-color: #E10600;
+    color: #FFFFFF;
     font-size: 9px;
     font-weight: 700;
-    border-radius: 3px;
-    padding: 2px 5px;
+    letter-spacing: 0.8px;
+    border-radius: 2px;
+    padding: 3px 6px;
 }
 
-/* ---------- Pestañas de sesión (event detail, estilo broadcast) ---------- */
+/* ---------- Detalle: miga ---------- */
+
+QPushButton#migaVolver {
+    background-color: transparent;
+    color: #CAD2DC;
+    border: 1px solid transparent;
+    padding: 2px 4px;
+    font-size: 12px;
+}
+
+QPushButton#migaVolver:hover {
+    background-color: transparent;
+    color: #F3F6F9;
+}
+
+QPushButton#migaVolver:focus {
+    border: 1px solid #E10600;
+}
+
+QLabel#migaSeparador {
+    color: #A4AEBC;
+    font-size: 12px;
+}
+
+/* ---------- Detalle: tira de sesiones ----------
+   Cinco segmentos pegados. La barra inferior de 2px está siempre (del color
+   del borde cuando no aplica) para que el texto no salte al seleccionar. */
 
 QPushButton#tabSesion {
-    background-color: #17171d;
-    color: #b6b6bd;
+    background-color: #12161C;
+    color: #F3F6F9;
     text-align: left;
-    border: 1px solid #2a2a33;
-    border-left: 3px solid transparent;
-    border-radius: 4px;
-    padding: 12px 16px;
-    font-size: 14px;
+    border: 1px solid #2D3541;
+    border-bottom: 2px solid #2D3541;
+    border-radius: 0px;
+    padding: 8px 14px;
+    font-size: 13px;
     font-weight: 600;
+    letter-spacing: 0.2px;
 }
 
 QPushButton#tabSesion:hover:enabled {
-    background-color: #1e1e26;
-    color: #f0f0f0;
-    border-left: 3px solid #5a1a17;
+    background-color: #1B2029;
+    border-color: #3F4957;
 }
 
 QPushButton#tabSesion:checked {
-    background-color: #241a1a;
-    color: #ffffff;
-    border-left: 3px solid #e10600;
-    border-top: 1px solid #3a3a45;
-    border-right: 1px solid #3a3a45;
-    border-bottom: 1px solid #3a3a45;
+    background-color: #1B2029;
+    border-bottom: 2px solid #E10600;
 }
 
 QPushButton#tabSesion:disabled {
-    background-color: #141418;
-    color: #4a4a52;
-    border-left: 3px solid transparent;
+    background-color: #0C0E12;
+    color: #5A6370;
+    border-color: #202631;
 }
 
 QPushButton#tabSesion:focus:enabled {
-    border-top: 1px solid #e10600;
-    border-right: 1px solid #e10600;
-    border-bottom: 1px solid #e10600;
+    border: 1px solid #E10600;
+    border-bottom: 2px solid #E10600;
 }
 
 /* Estado por fecha (independiente de si está seleccionada o no).
    La "próxima" usa la MISMA paleta roja que la tarjeta "PRÓXIMA" del
    calendario, para que ambas se lean como el mismo indicador. */
-QPushButton#tabSesion[estadoSesion="pasada"] {
-    color: #ffffff;
-}
-
 QPushButton#tabSesion[estadoSesion="futura"] {
-    color: #9a9aa5;
+    color: #A4AEBC;
 }
 
 QPushButton#tabSesion[estadoSesion="proxima"] {
-    background-color: #241a1a;
-    border-left: 3px solid #e10600;
-    color: #ffffff;
+    background-color: #261519;
+    color: #F3F6F9;
 }
 
 QPushButton#tabSesion[estadoSesion="proxima"]:hover:enabled {
-    background-color: #2c1e1e;
-    border-left: 3px solid #ff2410;
+    background-color: #331B20;
+}
+
+/* ---------- Detalle: sesión sin resultados ---------- */
+
+QWidget#panelPendiente {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 4px;
+}
+
+QLabel#tituloPendiente {
+    font-family: "Titillium Web";
+    font-size: 17px;
+    font-weight: 600;
+}
+
+QLabel#textoPendiente {
+    color: #A4AEBC;
+}
+
+/* ---------- Detalle: columna del circuito ---------- */
+
+QWidget#panelInfoCircuito {
+    background-color: transparent;
+}
+
+QLabel#imagenCircuito {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 4px;
+    padding: 16px;
+}
+
+QLabel#textoInfoCircuito {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 4px;
+    padding: 12px 14px;
+}
+
+/* ---------- Clasificación ----------
+   Los dos botones van pegados y la pieza se lee como un control único. El
+   activo se marca con una barra inferior de acento, no pintando el botón
+   entero de rojo. */
+
+QPushButton#tabHorizontalIzq,
+QPushButton#tabHorizontalDer {
+    background-color: #12161C;
+    color: #A4AEBC;
+    border: 1px solid #2D3541;
+    border-bottom: 2px solid #2D3541;
+    border-radius: 0px;
+    padding: 6px 18px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+}
+
+QPushButton#tabHorizontalIzq:hover:!checked,
+QPushButton#tabHorizontalDer:hover:!checked {
+    color: #F3F6F9;
+}
+
+QPushButton#tabHorizontalIzq:checked,
+QPushButton#tabHorizontalDer:checked {
+    background-color: #1B2029;
+    color: #F3F6F9;
+    border-bottom: 2px solid #E10600;
+}
+
+QPushButton#tabHorizontalIzq:focus,
+QPushButton#tabHorizontalDer:focus {
+    color: #F3F6F9;
+    border-bottom: 2px solid #E10600;
+}
+
+QFrame#kpi {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 4px;
+}
+
+QLabel#valorKpi {
+    font-family: "Titillium Web";
+    font-size: 19px;
+    font-weight: 600;
+}
+
+QLabel#detalleKpi {
+    color: #A4AEBC;
+    font-size: 12px;
 }
 
 /* ---------- Estado (cargando / error) ---------- */
 
 QLabel#estadoCargando {
-    color: #d9a441;
-    font-style: italic;
+    color: #E8B931;
     padding: 4px 0px;
 }
 
 QLabel#estadoError {
-    color: #ff4d4d;
+    color: #FF6B57;
     font-weight: 600;
     padding: 4px 0px;
 }
 
 QLabel#estadoVacio {
-    color: #9a9aa5;
-    font-style: italic;
+    color: #A4AEBC;
     padding: 4px 0px;
 }
 
-/* ---------- Tabla de resultados, estilo pantalla de timing ---------- */
+/* ---------- Tablas ----------
+   El header es una superficie con hairline y el peso tipográfico hace el
+   trabajo. */
 
 QTableWidget {
-    background-color: #17171d;
-    alternate-background-color: #1b1b22;
-    gridline-color: #262631;
-    border: 1px solid #2a2a33;
+    background-color: #12161C;
+    alternate-background-color: #161B23;
+    gridline-color: #202631;
+    border: 1px solid #2D3541;
     border-radius: 4px;
-    selection-background-color: #2a2a33;
-    selection-color: #f0f0f0;
+    selection-background-color: #262D38;
+    selection-color: #F3F6F9;
+}
+
+QTableWidget#tablaStandings {
+    font-size: 13px;
 }
 
 QTableWidget::item {
-    padding: 4px 6px;
-    border-bottom: 1px solid #232329;
+    padding: 6px 8px;
+    border-bottom: 1px solid #202631;
 }
 
 /* ponytail: Qt repinta solo la celda bajo el cursor, no la fila entera. El
    hover de fila completa necesitaría un QStyledItemDelegate; si hace falta,
    ese es el camino. La selección (SelectRows) sí resalta la fila completa. */
 QTableWidget::item:hover {
-    background-color: #232330;
+    background-color: #202631;
 }
 
 QTableWidget::item:selected {
-    background-color: #2f2f3d;
-    color: #ffffff;
+    background-color: #262D38;
+    color: #F3F6F9;
 }
 
 QHeaderView::section {
-    background-color: #e10600;
-    color: white;
-    padding: 7px 6px;
+    background-color: #12161C;
+    color: #A4AEBC;
+    padding: 10px 8px;
     border: none;
-    border-right: 1px solid #a80500;
-    font-weight: 700;
-    font-size: 11px;
+    border-bottom: 1px solid #2D3541;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 1.2px;
 }
 
-QTableWidget QScrollBar:vertical {
-    background: #17171d;
-    width: 10px;
+/* ---------- Barras de scroll ----------
+   Mismo tratamiento en tablas y en el calendario: una sola regla. */
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
     margin: 0px;
 }
 
-QTableWidget QScrollBar::handle:vertical {
-    background: #3a3a45;
-    border-radius: 5px;
-    min-height: 24px;
+QScrollBar::handle:vertical {
+    background: #3F4957;
+    border-radius: 4px;
+    min-height: 32px;
 }
 
-QTableWidget QScrollBar::handle:vertical:hover {
-    background: #4a4a58;
+QScrollBar::handle:vertical:hover {
+    background: #4C5767;
 }
 
-QTableWidget QScrollBar::add-line:vertical,
-QTableWidget QScrollBar::sub-line:vertical {
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
     height: 0px;
 }
 
-/* ---------- ScrollArea del calendario ---------- */
+QScrollBar:horizontal {
+    background: transparent;
+    height: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #3F4957;
+    border-radius: 4px;
+    min-width: 32px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #4C5767;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical,
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: transparent;
+}
 
 QScrollArea {
     border: none;
     background: transparent;
-}
-
-QScrollArea QScrollBar:vertical {
-    background: #0b0b0e;
-    width: 10px;
-    margin: 0px;
-}
-
-QScrollArea QScrollBar::handle:vertical {
-    background: #3a3a45;
-    border-radius: 5px;
-    min-height: 24px;
-}
-
-QScrollArea QScrollBar::handle:vertical:hover {
-    background: #e10600;
-}
-
-QScrollArea QScrollBar::add-line:vertical,
-QScrollArea QScrollBar::sub-line:vertical {
-    height: 0px;
 }

@@ -85,6 +85,8 @@ EVENTOS_ES = {
     "Azerbaijan Grand Prix": "Gran Premio de Azerbaiyán",
     "Las Vegas Grand Prix": "Gran Premio de Las Vegas",
     "São Paulo Grand Prix": "Gran Premio de São Paulo",
+    "Mexico City Grand Prix": "Gran Premio de la Ciudad de México",
+    "Barcelona Grand Prix": "Gran Premio de Barcelona",
 }
 
 

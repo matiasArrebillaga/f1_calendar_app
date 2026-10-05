@@ -1,20 +1,38 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QStackedWidget,
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QStackedWidget, QFrame,
     QTableWidget, QTableWidgetItem, QLabel, QSizePolicy, QHeaderView
 )
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QColor, QFont
 from PySide6.QtCore import Qt
+
+from core.equipos import color_equipo
+from ui.delegados import BarraPuntos, MedallaPosicion
+from ui.icons import franja_equipo, DATO
 from workers.standings_worker import StandingsWorker
+
+PUNTOS_POR_CARRERA = {0: 25, 1: 25 + 18}   # pilotos / equipos (1º + 2º), sin sprints
 
 
 class StandingsView(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("vistaPrincipal")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.year = None
         self._year_pedido = None
-        self._cache_por_anio = {}   # {year: (pilotos, equipos)} | {year: None} si no hay datos
+        self._cache_por_anio = {}   # {year: datos del worker} | {year: None} si no hay datos
+        self._datos = None
         self._workers_activos = []  # referencias vivas mientras corren, evita el crash
+
+        # --- Encabezado: título + selector Pilotos/Equipos ---
+        self.eyebrow = QLabel()
+        self.eyebrow.setObjectName("etiquetaRonda")
+        titulo = QLabel("Clasificación")
+        titulo.setObjectName("titulo")
+        columna_titulo = QVBoxLayout()
+        columna_titulo.setSpacing(0)
+        columna_titulo.addWidget(self.eyebrow)
+        columna_titulo.addWidget(titulo)
 
         self.boton_pilotos = QPushButton("Pilotos")
         self.boton_pilotos.setObjectName("tabHorizontalIzq")
@@ -22,46 +40,44 @@ class StandingsView(QWidget):
         self.boton_equipos.setObjectName("tabHorizontalDer")
         for boton in (self.boton_pilotos, self.boton_equipos):
             boton.setCheckable(True)
-            boton.setMinimumHeight(38)
+            boton.setMinimumHeight(34)
             boton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             boton.setCursor(Qt.PointingHandCursor)
         self.boton_pilotos.setChecked(True)
         self.boton_pilotos.setToolTip("Clasificación de pilotos")
         self.boton_equipos.setToolTip("Clasificación de constructores")
 
-        layout_tabs = QHBoxLayout()
-        layout_tabs.setContentsMargins(12, 10, 12, 8)
-        layout_tabs.addWidget(self.boton_pilotos)
-        layout_tabs.addWidget(self.boton_equipos)
-        layout_tabs.addStretch()
+        encabezado = QHBoxLayout()
+        encabezado.setSpacing(0)   # los dos botones pegados: se leen como un solo control
+        encabezado.addLayout(columna_titulo)
+        encabezado.addStretch()
+        encabezado.addWidget(self.boton_pilotos, alignment=Qt.AlignBottom)
+        encabezado.addWidget(self.boton_equipos, alignment=Qt.AlignBottom)
 
-        self.tabla_pilotos = QTableWidget()
-        self.tabla_pilotos.setObjectName("tablaStandings")
-        self.tabla_pilotos.setAlternatingRowColors(True)
-        self.tabla_pilotos.setShowGrid(True)
-        self.tabla_pilotos.verticalHeader().setVisible(False)
-        self.tabla_pilotos.setWordWrap(True)
-        self.tabla_pilotos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.tabla_pilotos.setFont(QFont("Segoe UI", 12))
-        self.tabla_pilotos.setSelectionBehavior(QTableWidget.SelectRows)
-        self.tabla_pilotos.setSelectionMode(QTableWidget.SingleSelection)
-        self.tabla_pilotos.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.tabla_pilotos.horizontalHeader().setStretchLastSection(True)
-        self.tabla_pilotos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # --- Indicadores: líder, ventaja, puntos en juego ---
+        self._kpis = []
+        fila_kpis = QHBoxLayout()
+        fila_kpis.setSpacing(10)
+        for nombre in ("LÍDER", "VENTAJA", "EN JUEGO"):
+            caja = QFrame()
+            caja.setObjectName("kpi")
+            etiqueta = QLabel(nombre)
+            etiqueta.setObjectName("etiquetaRonda")
+            valor = QLabel()
+            valor.setObjectName("valorKpi")
+            detalle = QLabel()
+            detalle.setObjectName("detalleKpi")
+            layout_caja = QVBoxLayout(caja)
+            layout_caja.setContentsMargins(14, 10, 14, 10)
+            layout_caja.setSpacing(2)
+            layout_caja.addWidget(etiqueta)
+            layout_caja.addWidget(valor)
+            layout_caja.addWidget(detalle)
+            fila_kpis.addWidget(caja, 1)
+            self._kpis.append((caja, valor, detalle))
 
-        self.tabla_equipos = QTableWidget()
-        self.tabla_equipos.setObjectName("tablaStandings")
-        self.tabla_equipos.setAlternatingRowColors(True)
-        self.tabla_equipos.setShowGrid(True)
-        self.tabla_equipos.verticalHeader().setVisible(False)
-        self.tabla_equipos.setWordWrap(True)
-        self.tabla_equipos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.tabla_equipos.setFont(QFont("Segoe UI", 12))
-        self.tabla_equipos.setSelectionBehavior(QTableWidget.SelectRows)
-        self.tabla_equipos.setSelectionMode(QTableWidget.SingleSelection)
-        self.tabla_equipos.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.tabla_equipos.horizontalHeader().setStretchLastSection(True)
-        self.tabla_equipos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tabla_pilotos = self._crear_tabla()
+        self.tabla_equipos = self._crear_tabla()
 
         self.estado = QLabel()
         self.estado.setObjectName("estadoVacio")
@@ -72,8 +88,10 @@ class StandingsView(QWidget):
         self.stack_interno.addWidget(self.tabla_equipos)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addLayout(layout_tabs)
+        layout.setContentsMargins(22, 20, 22, 16)
+        layout.setSpacing(12)
+        layout.addLayout(encabezado)
+        layout.addLayout(fila_kpis)
         layout.addWidget(self.estado)
         layout.addWidget(self.stack_interno, 1)
         self.setLayout(layout)
@@ -81,10 +99,31 @@ class StandingsView(QWidget):
         self.boton_pilotos.clicked.connect(lambda: self._cambiar_tab(0))
         self.boton_equipos.clicked.connect(lambda: self._cambiar_tab(1))
 
+    def _crear_tabla(self):
+        tabla = QTableWidget()
+        tabla.setObjectName("tablaStandings")
+        tabla.setAlternatingRowColors(True)
+        tabla.setShowGrid(False)   # sólo hairlines horizontales
+        tabla.verticalHeader().setVisible(False)
+        tabla.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        tabla.setSelectionBehavior(QTableWidget.SelectRows)
+        tabla.setSelectionMode(QTableWidget.SingleSelection)
+        tabla.setEditTriggers(QTableWidget.NoEditTriggers)
+        # Las columnas estiran para llenar el ancho: no hay nada que scrollear
+        # en horizontal, y la barra igual aparecía porque la vertical se come
+        # unos píxeles.
+        tabla.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # Referencias vivas: setItemDelegate no le pasa la propiedad a la tabla.
+        tabla._medalla = MedallaPosicion(tabla)
+        tabla._barra = BarraPuntos(tabla)
+        tabla.setItemDelegateForColumn(0, tabla._medalla)
+        return tabla
+
     def _cambiar_tab(self, indice):
         self.boton_pilotos.setChecked(indice == 0)
         self.boton_equipos.setChecked(indice == 1)
         self.stack_interno.setCurrentIndex(indice)
+        self._actualizar_kpis()
 
     def _set_estado(self, texto, tipo=""):
         # ponytail: mismas 4 líneas que EventDetailView._set_estado. Dos usos no
@@ -93,6 +132,7 @@ class StandingsView(QWidget):
                    "error": "estadoError", "vacio": "estadoVacio"}
         self.estado.setObjectName(nombres.get(tipo, "estadoVacio"))
         self.estado.setText(texto)
+        self.estado.setVisible(bool(texto))
         self.estado.style().unpolish(self.estado)
         self.estado.style().polish(self.estado)
 
@@ -110,6 +150,7 @@ class StandingsView(QWidget):
 
     def cargar_datos(self, year):
         self.year = year
+        self.eyebrow.setText(f"TEMPORADA {year}")
 
         if year in self._cache_por_anio:
             cacheado = self._cache_por_anio[year]
@@ -117,11 +158,12 @@ class StandingsView(QWidget):
                 self._mostrar_sin_datos(year)
             else:
                 self._set_estado("")
-                self._llenar_tabla_pilotos(cacheado[0])
-                self._llenar_tabla_equipos(cacheado[1])
+                self._mostrar(cacheado)
             return
 
         self._set_estado(f"Cargando clasificación {year}...", "cargando")
+        self._datos = None
+        self._actualizar_kpis()
         self.tabla_pilotos.setRowCount(0)
         self.tabla_equipos.setRowCount(0)
 
@@ -137,15 +179,14 @@ class StandingsView(QWidget):
         if worker in self._workers_activos:
             self._workers_activos.remove(worker)
 
-    def on_standings_cargados(self, standings_pilotos, standings_equipos):
+    def on_standings_cargados(self, datos):
         worker = self.sender()
+        self._cache_por_anio[worker.year] = datos
         if worker.year != self.year:
             return  # llegó tarde: el usuario ya cambió de año, ignoramos este resultado
 
-        self._cache_por_anio[worker.year] = (standings_pilotos, standings_equipos)
         self._set_estado("")
-        self._llenar_tabla_pilotos(standings_pilotos)
-        self._llenar_tabla_equipos(standings_equipos)
+        self._mostrar(datos)
 
     def on_error(self, mensaje):
         worker = self.sender()
@@ -159,53 +200,118 @@ class StandingsView(QWidget):
 
     def _mostrar_sin_datos(self, year):
         self._set_estado(f"No hay clasificación disponible para {year}.", "vacio")
+        self._datos = None
+        self._actualizar_kpis()
         self.tabla_pilotos.setRowCount(0)
         self.tabla_equipos.setRowCount(0)
 
-    def _llenar_tabla_pilotos(self, df):
-        etiquetas = ['Pos', 'Cod', 'Piloto', 'Equipo', 'Pts', 'Victorias']
+    def _mostrar(self, datos):
+        self._datos = datos
+        if datos['ronda']:
+            self.eyebrow.setText(f"TEMPORADA {self.year}   ·   TRAS R{datos['ronda']}")
+        pilotos = [
+            (f"{row['driverCode']}   {row['givenName']} {row['familyName']}",
+             " / ".join(row['constructorNames']),
+             color_equipo(row['constructorIds'][-1]) if len(row['constructorIds']) else None,
+             int(row['points']), int(row['wins']))
+            for _, row in datos['pilotos'].iterrows()
+        ]
+        equipos = [
+            (row['constructorName'], None, color_equipo(row['constructorId']),
+             int(row['points']), int(row['wins']))
+            for _, row in datos['equipos'].iterrows()
+        ]
+        self._llenar_tabla(self.tabla_pilotos, pilotos, ['Pos', 'Piloto', 'Equipo'])
+        self._llenar_tabla(self.tabla_equipos, equipos, ['Pos', 'Equipo'])
+        self._actualizar_kpis()
 
-        self.tabla_pilotos.setColumnCount(len(etiquetas))
-        self.tabla_pilotos.setHorizontalHeaderLabels(etiquetas)
-        self.tabla_pilotos.setRowCount(len(df))
-        self.tabla_pilotos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+    def _llenar_tabla(self, tabla, filas, etiquetas_nombre):
+        """`filas`: [(nombre, equipo | None, color | None, puntos, victorias)],
+        ya en orden de posición."""
+        con_equipo = len(etiquetas_nombre) == 3
+        etiquetas = etiquetas_nombre + ['Puntos', 'Dif.', 'Vict.']
+        col_puntos = len(etiquetas_nombre)
+        tabla.setColumnCount(len(etiquetas))
+        tabla.setHorizontalHeaderLabels(etiquetas)
+        tabla.setRowCount(len(filas))
+        tabla.setItemDelegateForColumn(col_puntos, tabla._barra)
 
-        for fila, (_, row) in enumerate(df.iterrows()):
-            fila_datos = [
-                str(int(row['position'])),
-                str(row['driverCode']),
-                f"{row['givenName']} {row['familyName']}",
-                " / ".join(row['constructorNames']),
-                str(int(row['points'])),
-                str(int(row['wins'])),
-            ]
+        fuente_datos = QFont("Consolas")
+        fuente_datos.setStyleHint(QFont.Monospace)
+        puntos_lider = max(filas[0][3], 1) if filas else 1
 
-            for col, texto in enumerate(fila_datos):
+        for fila, (nombre, equipo, color, puntos, victorias) in enumerate(filas):
+            celdas = [str(fila + 1), nombre]
+            if con_equipo:
+                celdas.append(equipo)
+            celdas += [str(puntos), "—" if fila == 0 else f"−{filas[0][3] - puntos}", str(victorias)]
+
+            for col, texto in enumerate(celdas):
                 item = QTableWidgetItem(texto)
-                item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-                item.setFont(QFont("Segoe UI", 12))
                 item.setToolTip(texto)
-                self.tabla_pilotos.setItem(fila, col, item)
+                if col == 0:
+                    item.setTextAlignment(Qt.AlignCenter)
+                    item.setData(Qt.UserRole, fila + 1)   # medalla del podio
+                elif col >= col_puntos:
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    item.setFont(fuente_datos)
+                if col == col_puntos:
+                    item.setData(Qt.UserRole, puntos / puntos_lider)
+                if col == col_puntos + 1 and fila > 0:
+                    item.setForeground(QColor(DATO))
+                # La franja va en la columna del equipo (o del nombre, en la
+                # tabla de equipos).
+                if col == len(etiquetas_nombre) - 1:
+                    franja = franja_equipo(color)
+                    if franja is not None:
+                        item.setIcon(franja)
+                tabla.setItem(fila, col, item)
 
-        self.tabla_pilotos.resizeRowsToContents()
+        cabecera = tabla.horizontalHeader()
+        cabecera.setSectionResizeMode(QHeaderView.Stretch)
+        for col, ancho in ((0, 60), (len(etiquetas) - 2, 90), (len(etiquetas) - 1, 80)):
+            cabecera.setSectionResizeMode(col, QHeaderView.Fixed)
+            tabla.setColumnWidth(col, ancho)
 
-    def _llenar_tabla_equipos(self, df):
-        columnas = ['position', 'constructorName', 'points', 'wins']
-        etiquetas = ['Pos', 'Equipo', 'Pts', 'Victorias']
+    def _actualizar_kpis(self):
+        datos = self._datos
+        for caja, _, _ in self._kpis:
+            caja.setVisible(datos is not None)
+        if datos is None:
+            return
 
-        self.tabla_equipos.setColumnCount(len(columnas))
-        self.tabla_equipos.setHorizontalHeaderLabels(etiquetas)
-        self.tabla_equipos.setRowCount(len(df))
-        self.tabla_equipos.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        es_equipos = self.stack_interno.currentIndex() == 1
+        df = datos['equipos'] if es_equipos else datos['pilotos']
+        if df.empty:
+            return
 
-        for fila, (_, row) in enumerate(df.iterrows()):
-            for col, nombre_col in enumerate(columnas):
-                valor = row[nombre_col]
-                texto = str(int(valor)) if nombre_col in ('position', 'wins', 'points') else str(valor)
-                item = QTableWidgetItem(texto)
-                item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-                item.setFont(QFont("Segoe UI", 12))
-                item.setToolTip(texto)
-                self.tabla_equipos.setItem(fila, col, item)
+        def nombre(row):
+            return row['constructorName'] if es_equipos else f"{row['givenName']} {row['familyName']}"
 
-        self.tabla_equipos.resizeRowsToContents()
+        lider = df.iloc[0]
+        (_, valor_lider, detalle_lider), (_, valor_ventaja, detalle_ventaja), \
+            (_, valor_juego, detalle_juego) = self._kpis
+        valor_lider.setText(nombre(lider))
+        detalle_lider.setText(f"{int(lider['points'])} puntos")
+
+        if len(df) > 1:
+            segundo = df.iloc[1]
+            valor_ventaja.setText(f"<span style='color:{DATO};'>+{int(lider['points'] - segundo['points'])}</span>")
+            detalle_ventaja.setText(f"sobre {nombre(segundo)}")
+        else:
+            valor_ventaja.setText("—")
+            detalle_ventaja.setText("")
+
+        if datos['ronda'] is None or datos['total_rondas'] is None:
+            valor_juego.setText("—")
+            detalle_juego.setText("sin datos del calendario")
+        elif datos['total_rondas'] - datos['ronda'] <= 0:
+            valor_juego.setText("—")
+            detalle_juego.setText("Temporada terminada")
+        else:
+            restantes = datos['total_rondas'] - datos['ronda']
+            puntos = restantes * PUNTOS_POR_CARRERA[int(es_equipos)]
+            valor_juego.setText(f"<span style='color:{DATO};'>{puntos}</span> pts")
+            detalle_juego.setText(
+                f"{restantes} {'carrera restante' if restantes == 1 else 'carreras restantes'}, "
+                "sin contar sprints")

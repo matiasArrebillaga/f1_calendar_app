@@ -16,42 +16,43 @@ _app = QApplication.instance() or QApplication([])
 import pandas as pd
 
 import ui.calendar_view as calendar_view
-from ui.topbar import TopBar
+from ui.selector_temporada import SelectorTemporada
 from ui.calendar_view import CalendarView
 from ui.calendar_event_card import CalendarEventCard
 from ui.event_detail_view import EventDetailView
+from ui.icons import PODIO
 from PySide6.QtGui import QPixmap
 
 
 def test_ir_a_anio_clampea_los_dos_extremos():
-    barra = TopBar()
+    barra = SelectorTemporada()
     emitidos = []
     barra.anio_cambiado.connect(emitidos.append)
     # El debounce real es de 150 ms; acá lo colapsamos a 0 para no dormir.
     barra._timer_emision.setInterval(0)
 
-    barra.ir_a_anio(TopBar.ANIO_MIN - 50)
-    assert barra.anio_actual == TopBar.ANIO_MIN
-    assert barra.campo_anio.text() == str(TopBar.ANIO_MIN)
+    barra.ir_a_anio(SelectorTemporada.ANIO_MIN - 50)
+    assert barra.anio_actual == SelectorTemporada.ANIO_MIN
+    assert barra.campo_anio.text() == str(SelectorTemporada.ANIO_MIN)
     assert not barra.boton_anio_anterior.isEnabled()
     # El campo y los botones se actualizan en el acto; lo que se posterga es
     # sólo la emisión que dispara la carga de datos.
     assert emitidos == []
     _app.processEvents()
 
-    barra.ir_a_anio(TopBar.ANIO_MAX + 50)
-    assert barra.anio_actual == TopBar.ANIO_MAX
+    barra.ir_a_anio(SelectorTemporada.ANIO_MAX + 50)
+    assert barra.anio_actual == SelectorTemporada.ANIO_MAX
     assert not barra.boton_anio_siguiente.isEnabled()
     _app.processEvents()
 
-    assert emitidos == [TopBar.ANIO_MIN, TopBar.ANIO_MAX]
+    assert emitidos == [SelectorTemporada.ANIO_MIN, SelectorTemporada.ANIO_MAX]
 
 
 def test_el_debounce_colapsa_una_rafaga_en_una_sola_carga():
     """El auto-repeat del teclado dispara ~30 pulsaciones por segundo. Si cada
     una emitiera, mantener la flecha apretada arrancaba un QThread y una carga
     de datos por año recorrido."""
-    barra = TopBar()
+    barra = SelectorTemporada()
     emitidos = []
     barra.anio_cambiado.connect(emitidos.append)
     barra._timer_emision.setInterval(0)
@@ -61,7 +62,7 @@ def test_el_debounce_colapsa_una_rafaga_en_una_sola_carga():
     assert emitidos == [], "emitió durante la ráfaga"
 
     _app.processEvents()
-    assert emitidos == [TopBar.ANIO_MAX - 10], emitidos
+    assert emitidos == [SelectorTemporada.ANIO_MAX - 10], emitidos
 
 
 def test_el_calendario_no_trae_los_tests_de_pretemporada():
@@ -176,6 +177,81 @@ def test_distancia_coherente_con_longitud_por_vueltas():
             f"(difieren {diferencia:.3f} km)")
 
 
+def _ratio_contraste(hex_a, hex_b):
+    """Ratio de contraste WCAG 2.1 entre dos colores #RRGGBB."""
+    def luminancia(h):
+        canales = [int(h.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        lineal = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+                  for c in canales]
+        return 0.2126 * lineal[0] + 0.7152 * lineal[1] + 0.0722 * lineal[2]
+
+    a, b = luminancia(hex_a), luminancia(hex_b)
+    return (max(a, b) + 0.05) / (min(a, b) + 0.05)
+
+
+def test_contraste_de_la_paleta():
+    """Los pares texto/fondo de la cabecera de style.qss tienen que pasar WCAG AA.
+
+    Ojo con text-muted: el fondo más claro donde aparece es bg-surface-hover,
+    así que oscurecerlo o aclarar ese fondo es lo primero que rompe esto.
+    """
+    AA_TEXTO, AA_UI = 4.5, 3.0
+    pares = [
+        ("text-primary / bg-app",       "#F3F6F9", "#090A0D", AA_TEXTO),
+        ("text-primary / bg-surface",   "#F3F6F9", "#1B2029", AA_TEXTO),
+        ("text-secondary / bg-surface", "#CAD2DC", "#1B2029", AA_TEXTO),
+        ("text-muted / bg-app",         "#A4AEBC", "#090A0D", AA_TEXTO),
+        ("text-muted / bg-surface",     "#A4AEBC", "#1B2029", AA_TEXTO),
+        ("text-muted / bg-panel",       "#A4AEBC", "#12161C", AA_TEXTO),
+        ("text-muted / bg-hover",       "#A4AEBC", "#262D38", AA_TEXTO),
+        ("cargando / bg-app",           "#E8B931", "#090A0D", AA_TEXTO),
+        ("error / bg-app",              "#FF6B57", "#090A0D", AA_TEXTO),
+        # El rojo de acento sólo pinta bordes de foco: es UI, no texto.
+        ("foco accent / bg-app",        "#E10600", "#090A0D", AA_UI),
+        ("foco accent / bg-surface",    "#E10600", "#1B2029", AA_UI),
+        ("blanco / chip accent",        "#FFFFFF", "#E10600", AA_TEXTO),
+        ("dato / bg-panel",             "#52DEEC", "#12161C", AA_TEXTO),
+        ("dato / bg-sunken",            "#52DEEC", "#0C0E12", AA_TEXTO),
+        # Bloque de próxima carrera: horarios y lugar sobre accent-wash.
+        ("text-muted / accent-wash",    "#A4AEBC", "#261519", AA_TEXTO),
+        ("text-secondary / accent-wash", "#CAD2DC", "#261519", AA_TEXTO),
+        # Número de las medallas contra el tono más oscuro de su degradé.
+        *((f"medalla {i + 1}", texto, abajo, AA_TEXTO)
+          for i, (_, abajo, texto) in enumerate(PODIO)),
+    ]
+    for nombre, fg, bg, minimo in pares:
+        ratio = _ratio_contraste(fg, bg)
+        assert ratio >= minimo, f"{nombre}: {ratio:.2f}:1, hace falta {minimo}:1"
+
+
+def test_qss_no_tiene_reglas_muertas():
+    """Un selector #objectName que ningún widget usa es estilo que no se aplica
+    y nadie nota. Antes de este chequeo había tres: #selectorTabs,
+    #panelInfoCircuito y #textoInfoCircuito.
+
+    Se comparan contra TODOS los literales de los módulos de ui/ y no sólo
+    contra setObjectName("..."), porque _set_estado asigna el nombre desde un
+    dict (estadoCargando / estadoError nunca aparecen como literal en la
+    llamada).
+    """
+    import glob
+    import re
+
+    qss = open("style.qss", encoding="utf-8").read()
+    sin_comentarios = re.sub(r"/\*.*?\*/", "", qss, flags=re.S)
+    selectores = set(re.findall(r"[A-Za-z][A-Za-z0-9_]*#([A-Za-z_][A-Za-z0-9_]*)",
+                                sin_comentarios))
+    assert selectores, "no se extrajo ningún selector: el regex se rompió"
+
+    literales = set()
+    for archivo in glob.glob("ui/*.py") + ["main.py"]:
+        literales |= set(re.findall(r"[\"']([A-Za-z_][A-Za-z0-9_]*)[\"']",
+                                    open(archivo, encoding="utf-8").read()))
+
+    muertos = sorted(selectores - literales)
+    assert not muertos, f"selectores sin widget que los use: {muertos}"
+
+
 CARRERAS_POR_ANIO = {2026: 5, 2025: 7, 2024: 9, 2023: 6,
                      2022: 8, 2021: 4, 2020: 3, 2019: 5}
 
@@ -251,7 +327,8 @@ def test_cambiar_de_anio_no_deja_tarjetas_del_anio_anterior():
             assert len(visibles) == CARRERAS_POR_ANIO[year], (
                 f"{year}: {len(visibles)} tarjetas visibles, "
                 f"se esperaban {CARRERAS_POR_ANIO[year]}")
-            assert vista.grid.count() == CARRERAS_POR_ANIO[year]
+            en_grid = [vista.grid.itemAt(i).widget() for i in range(vista.grid.count())]
+            assert sum(isinstance(w, CalendarEventCard) for w in en_grid) == CARRERAS_POR_ANIO[year]
             assert anios == {str(year)}, f"{year}: años superpuestos {sorted(anios)}"
     finally:
         calendar_view.CalendarWorker = original
@@ -276,6 +353,38 @@ def test_el_cache_de_anios_tiene_tope():
         assert len(vista._cache_por_anio) == CalendarView.MAX_ANIOS_CACHEADOS
         # El año que se está mirando es el último insertado: nunca se desaloja.
         assert anios[-1] in vista._cache_por_anio
+    finally:
+        calendar_view.CalendarWorker = original
+        _WorkerFalso.vista = None
+
+
+def test_el_calendario_abre_en_el_mes_actual():
+    """Los meses anteriores quedan arriba (se llega scrolleando para arriba) y
+    los siguientes abajo. 2025 falso: carreras de marzo a agosto."""
+    original = calendar_view.CalendarWorker
+    calendar_view.CalendarWorker = _WorkerFalso
+    try:
+        vista = CalendarView()
+        _WorkerFalso.vista = vista
+        vista.resize(1130, 500)
+        vista.show()
+        vista.cargar_calendario(2025)
+
+        assert [m for m, _ in vista._encabezados] == [3, 4, 5, 6, 7, 8]
+        assert vista.mes_destino(pd.Timestamp("2025-06-15")) == 6
+        # enero no tiene carreras: el próximo mes que sí
+        assert vista.mes_destino(pd.Timestamp("2025-01-10")) == 3
+        # temporada terminada: el último mes
+        assert vista.mes_destino(pd.Timestamp("2025-12-01")) == 8
+        # otro año que el que se mira: desde el principio
+        assert vista.mes_destino(pd.Timestamp("2026-06-15")) == 3
+
+        vista._ir_al_mes_actual(pd.Timestamp("2025-06-15"))
+        barra = vista.scroll.verticalScrollBar()
+        junio = dict(vista._encabezados)[6]
+        y_junio = junio.mapTo(vista.scroll.widget(), calendar_view.QPoint(0, 0)).y()
+        assert barra.value() > 0, "no scrolleó: marzo quedó arriba"
+        assert barra.value() == min(y_junio, barra.maximum())
     finally:
         calendar_view.CalendarWorker = original
         _WorkerFalso.vista = None
@@ -316,8 +425,11 @@ if __name__ == "__main__":
     test_el_mapa_no_se_re_escala_si_el_tamano_no_cambio()
     test_calcular_columnas_nunca_devuelve_cero()
     test_todos_los_alias_apuntan_a_un_circuito_real()
+    test_contraste_de_la_paleta()
+    test_qss_no_tiene_reglas_muertas()
     test_distancia_coherente_con_longitud_por_vueltas()
     test_cambiar_de_anio_no_deja_tarjetas_del_anio_anterior()
     test_el_cache_de_anios_tiene_tope()
+    test_el_calendario_abre_en_el_mes_actual()
     test_las_tarjetas_nunca_se_muestran_como_ventana()
     print("ok")

@@ -392,6 +392,21 @@ def test_sin_ninguna_foto_devuelve_none_y_no_reintenta():
         _restaurar_fotos(originales)
 
 
+def test_cara_a_cara_con_un_piloto_que_cambio_de_equipo_cuenta_solo_sus_puntos_ahi():
+    """Como Tsunoda y Lawson en 2025: el total del campeonato incluye lo que
+    sumaron con el otro equipo, que no es parte de este duelo."""
+    con = base_de_prueba()
+    # Piastri corre la R4 para Ferrari y suma 8: llega a 51 en el campeonato,
+    # pero con McLaren hizo 43.
+    con.execute("""UPDATE resultados SET constructor_id = 'ferrari', posicion = 5,
+                   posicion_texto = '5', puntos = 8
+                   WHERE temporada = 2025 AND ronda = 4 AND driver_id = 'piastri'""")
+    con.execute("""UPDATE campeonato_pilotos SET puntos = 51
+                   WHERE temporada = 2025 AND driver_id = 'piastri'""")
+    duelo = historial.cara_a_cara(con, 2025, "mclaren")
+    assert (duelo["a"]["driver_id"], duelo["puntos"]) == ("norris", (50, 43)), duelo["puntos"]
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

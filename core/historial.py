@@ -317,10 +317,24 @@ def cara_a_cara(con, anio, constructor_id):
         return None
     a, b = juntos.most_common(1)[0][0]
 
-    puntos = dict(con.execute("""SELECT driver_id, puntos FROM campeonato_pilotos
-                                  WHERE temporada = ? AND driver_id IN (?, ?)""",
-                              (anio, a, b)).fetchall())
-    if puntos.get(b, 0) > puntos.get(a, 0):
+    campeonato = dict(con.execute("""SELECT driver_id, puntos FROM campeonato_pilotos
+                                      WHERE temporada = ? AND driver_id IN (?, ?)""",
+                                  (anio, a, b)).fetchall())
+
+    def puntos_en_el_equipo(piloto):
+        # El total del campeonato incluye los sprints, que `resultados` no
+        # tiene; pero si corrió para otro equipo, también lo que sumó ahí.
+        cambio = con.execute("""SELECT 1 FROM resultados WHERE temporada = ?
+                                 AND driver_id = ? AND constructor_id != ?""",
+                             (anio, piloto, constructor_id)).fetchone()
+        if cambio is None:
+            return campeonato.get(piloto, 0)
+        return con.execute("""SELECT IFNULL(SUM(puntos), 0) FROM resultados
+                               WHERE temporada = ? AND driver_id = ? AND constructor_id = ?""",
+                           (anio, piloto, constructor_id)).fetchone()[0]
+
+    puntos = {piloto: puntos_en_el_equipo(piloto) for piloto in (a, b)}
+    if puntos[b] > puntos[a]:
         a, b = b, a
 
     rondas = [r for r, pilotos in por_ronda.items() if a in pilotos and b in pilotos]
@@ -359,7 +373,7 @@ def cara_a_cara(con, anio, constructor_id):
         "a": pilotos[a], "b": pilotos[b],
         "clasificacion": tuple(clasificacion),
         "carrera": tuple(carrera),
-        "puntos": (puntos.get(a, 0), puntos.get(b, 0)),
+        "puntos": (puntos[a], puntos[b]),
         "victorias": (contar(a, 1), contar(b, 1)),
         "podios": (contar(a, 3), contar(b, 3)),
     }

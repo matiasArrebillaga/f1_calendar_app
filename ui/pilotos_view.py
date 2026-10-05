@@ -85,9 +85,9 @@ class PilotosView(QWidget):
         self.stack_interno = QStackedWidget()
         self.stack_interno.setObjectName("transparente")
         self.stack_interno.addWidget(self.grilla_pilotos)
-        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_piloto, "Pilotos", GRILLA_PILOTOS))
+        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_piloto, GRILLA_PILOTOS))
         self.stack_interno.addWidget(self.grilla_equipos)
-        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_equipo, "Equipos", GRILLA_EQUIPOS))
+        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_equipo, GRILLA_EQUIPOS))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 16)
@@ -99,8 +99,8 @@ class PilotosView(QWidget):
         self.boton_pilotos.clicked.connect(lambda: self._cambiar_tab(GRILLA_PILOTOS))
         self.boton_equipos.clicked.connect(lambda: self._cambiar_tab(GRILLA_EQUIPOS))
 
-    def _pagina_ficha(self, ficha, volver_a, indice_grilla):
-        volver = QPushButton(f"Volver a {volver_a}")
+    def _pagina_ficha(self, ficha, indice_grilla):
+        volver = QPushButton("Volver")
         volver.setObjectName("botonVolver")
         volver.setIcon(icono("arrow-left", PRIMARIO, 18))
         volver.setIconSize(QSize(18, 18))

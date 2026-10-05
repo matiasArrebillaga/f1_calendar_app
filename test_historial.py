@@ -8,7 +8,7 @@ import os
 import sqlite3
 import tempfile
 
-from core import historial
+from core import fotos, historial
 
 historial.PAUSA_S = 0   # las páginas falsas no necesitan esperar
 
@@ -314,6 +314,82 @@ def test_cara_a_cara_antes_de_1994_compara_la_largada():
     duelo = historial.cara_a_cara(base_de_prueba(), 1988, "mclaren")
     assert (duelo["a"]["driver_id"], duelo["clasificacion"], duelo["carrera"]) == \
         ("senna", (1, 0), (1, 0))
+
+
+def _fotos_en_carpeta_temporal():
+    carpeta = tempfile.mkdtemp()
+    originales = (fotos.data_path, fotos.ruta_cache, fotos._bajar, fotos._url_wikipedia)
+    fotos.data_path = lambda nombre: carpeta
+    fotos.ruta_cache = lambda nombre, archivo: (os.path.join(carpeta, archivo), True)
+    fotos._fallidas.clear()
+    return carpeta, originales
+
+
+def _restaurar_fotos(originales):
+    fotos.data_path, fotos.ruta_cache, fotos._bajar, fotos._url_wikipedia = originales
+
+
+def _archivo_vacio(destino):
+    open(destino, "wb").close()
+
+
+def test_foto_oficial_primero_y_despues_del_cache():
+    carpeta, originales = _fotos_en_carpeta_temporal()
+    bajadas = []
+
+    def bajar(url, destino):
+        bajadas.append(url)
+        _archivo_vacio(destino)
+
+    def wikipedia(url_wiki):
+        raise AssertionError("con foto oficial no hacía falta Wikipedia")
+
+    fotos._bajar, fotos._url_wikipedia = bajar, wikipedia
+    try:
+        ruta = fotos.obtener_ruta_foto("norris", "https://f1/norris.png",
+                                       "http://en.wikipedia.org/wiki/Lando_Norris")
+        assert ruta == os.path.join(carpeta, "norris.png")
+        assert fotos.obtener_ruta_foto("norris", "https://f1/norris.png") == ruta
+        assert bajadas == ["https://f1/norris.png"], "la segunda vez tenía que salir del caché"
+    finally:
+        _restaurar_fotos(originales)
+
+
+def test_si_falla_la_oficial_usa_wikipedia():
+    carpeta, originales = _fotos_en_carpeta_temporal()
+
+    def bajar(url, destino):
+        if url.startswith("https://f1/"):
+            raise OSError("404")
+        _archivo_vacio(destino)
+
+    fotos._bajar = bajar
+    fotos._url_wikipedia = lambda url_wiki: "https://upload.wikimedia.org/senna.jpg"
+    try:
+        assert fotos.obtener_ruta_foto(
+            "senna", "https://f1/senna.png",
+            "http://en.wikipedia.org/wiki/Ayrton_Senna") == os.path.join(carpeta, "senna.jpg")
+    finally:
+        _restaurar_fotos(originales)
+
+
+def test_sin_ninguna_foto_devuelve_none_y_no_reintenta():
+    carpeta, originales = _fotos_en_carpeta_temporal()
+    intentos = []
+
+    def bajar(url, destino):
+        intentos.append(url)
+        raise OSError("sin red")
+
+    fotos._bajar = bajar
+    fotos._url_wikipedia = lambda url_wiki: "https://upload.wikimedia.org/x.jpg"
+    try:
+        for _ in range(2):
+            assert fotos.obtener_ruta_foto("nadie", "https://f1/x.png",
+                                           "http://en.wikipedia.org/wiki/X") is None
+        assert len(intentos) == 2, intentos   # oficial + Wikipedia, una sola vez
+    finally:
+        _restaurar_fotos(originales)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ import sqlite3
 import time
 import urllib.error
 import urllib.request
+from collections import Counter, defaultdict
+from itertools import combinations
 
 from core.paths import data_path, resource_path
 
@@ -287,3 +289,69 @@ def carrera_completa(con, driver_id):
                                          WHERE driver_id = ? AND posicion = 1""",
                                      (driver_id,)).fetchone()[0]
     return carrera
+
+
+def cara_a_cara(con, anio, constructor_id):
+    """Duelo entre los dos pilotos del equipo que más carreras largaron juntos.
+    None si el equipo nunca tuvo dos pilotos en una misma carrera."""
+    filas = _dicts(con.execute(f"""
+        SELECT ronda, driver_id, largada, posicion FROM resultados
+         WHERE temporada = ? AND constructor_id = ? AND {LARGO_SQL}""",
+        (anio, constructor_id)))
+    por_ronda = defaultdict(dict)
+    for fila in filas:
+        # Dos autos el mismo día (años 50): vale el primero.
+        por_ronda[fila["ronda"]].setdefault(fila["driver_id"], fila)
+
+    juntos = Counter(par for pilotos in por_ronda.values()
+                     for par in combinations(sorted(pilotos), 2))
+    if not juntos:
+        return None
+    a, b = juntos.most_common(1)[0][0]
+
+    puntos = dict(con.execute("""SELECT driver_id, puntos FROM campeonato_pilotos
+                                  WHERE temporada = ? AND driver_id IN (?, ?)""",
+                              (anio, a, b)).fetchall())
+    if puntos.get(b, 0) > puntos.get(a, 0):
+        a, b = b, a
+
+    rondas = [r for r, pilotos in por_ronda.items() if a in pilotos and b in pilotos]
+    if anio >= ANIO_CLASIFICACION:
+        grilla = defaultdict(dict)
+        for ronda, piloto, posicion in con.execute(
+                """SELECT ronda, driver_id, posicion FROM clasificacion
+                    WHERE temporada = ? AND driver_id IN (?, ?)""", (anio, a, b)):
+            grilla[ronda][piloto] = posicion
+    else:   # sin clasificación en Ergast: la grilla de largada (0 = boxes, no cuenta)
+        grilla = {r: {p: f["largada"] or None for p, f in pilotos.items()}
+                  for r, pilotos in por_ronda.items()}
+
+    clasificacion, carrera = [0, 0], [0, 0]
+    for ronda in rondas:
+        qa, qb = grilla.get(ronda, {}).get(a), grilla.get(ronda, {}).get(b)
+        if qa and qb:
+            clasificacion[0 if qa < qb else 1] += 1
+        pa, pb = por_ronda[ronda][a]["posicion"], por_ronda[ronda][b]["posicion"]
+        if pa is None and pb is None:
+            continue   # abandonaron los dos: la carrera no cuenta
+        if pb is None or (pa is not None and pa < pb):
+            carrera[0] += 1
+        else:
+            carrera[1] += 1
+
+    def contar(piloto, maximo):
+        return sum(1 for f in filas
+                   if f["driver_id"] == piloto and f["posicion"] is not None
+                   and f["posicion"] <= maximo)
+
+    pilotos = {p["driver_id"]: p for p in _dicts(con.execute(
+        """SELECT driver_id, codigo, nombre, apellido, headshot_url, url_wiki
+             FROM pilotos WHERE driver_id IN (?, ?)""", (a, b)))}
+    return {
+        "a": pilotos[a], "b": pilotos[b],
+        "clasificacion": tuple(clasificacion),
+        "carrera": tuple(carrera),
+        "puntos": (puntos.get(a, 0), puntos.get(b, 0)),
+        "victorias": (contar(a, 1), contar(b, 1)),
+        "podios": (contar(a, 3), contar(b, 3)),
+    }

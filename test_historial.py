@@ -289,6 +289,33 @@ def test_carrera_completa():
         "victorias": 0, "podios": 0, "gps": 0, "debut": None, "titulos": 0}
 
 
+def test_cara_a_cara_entre_companeros():
+    con = base_de_prueba()
+    duelo = historial.cara_a_cara(con, 2025, "mclaren")
+    # Lawson corrió una sola carrera para McLaren: el duelo es Norris-Piastri,
+    # que corrieron juntos las cuatro. Norris primero por tener más puntos.
+    assert (duelo["a"]["driver_id"], duelo["b"]["driver_id"]) == ("norris", "piastri")
+    assert duelo["clasificacion"] == (3, 1)
+    # R1 Norris, R2 Piastri, R3 abandonaron los dos (no cuenta),
+    # R4 Norris terminó y Piastri no.
+    assert duelo["carrera"] == (2, 1)
+    assert duelo["puntos"] == (50, 43)
+    assert duelo["victorias"] == (1, 1)
+    assert duelo["podios"] == (2, 2)
+
+
+def test_cara_a_cara_sin_companero_es_none():
+    con = base_de_prueba()
+    assert historial.cara_a_cara(con, 2025, "ferrari") is None
+    assert historial.cara_a_cara(con, 2025, "no_existe") is None
+
+
+def test_cara_a_cara_antes_de_1994_compara_la_largada():
+    duelo = historial.cara_a_cara(base_de_prueba(), 1988, "mclaren")
+    assert (duelo["a"]["driver_id"], duelo["clasificacion"], duelo["carrera"]) == \
+        ("senna", (1, 0), (1, 0))
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

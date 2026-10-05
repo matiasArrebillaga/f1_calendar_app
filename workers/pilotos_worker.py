@@ -5,7 +5,7 @@ from PySide6.QtCore import QThread, Signal
 from core import historial
 from core.fotos import obtener_ruta_foto
 
-# Temporadas en curso ya refrescadas en esta sesión de la app: la API se
+# Temporadas incompletas ya refrescadas en esta sesión de la app: la API se
 # consulta una vez por arranque, no cada vez que se vuelve a la pestaña.
 _ACTUALIZADAS = set()
 
@@ -40,10 +40,9 @@ class PilotosWorker(QThread):
         self.terminado.emit(datos)
 
     def _actualizar(self, con):
-        guardada = historial.temporada_guardada(con, self.year)
-        en_curso = self.year >= anio_actual()
-        if guardada and (not en_curso or self.year in _ACTUALIZADAS):
+        if historial.temporada_completa(con, self.year) or self.year in _ACTUALIZADAS:
             return
+        guardada = historial.temporada_guardada(con, self.year)
         try:
             historial.descargar_temporada(con, self.year)
         except Exception:
@@ -51,7 +50,7 @@ class PilotosWorker(QThread):
                 raise     # no hay nada guardado que mostrar
             return        # sin red: se muestra lo último guardado
         _ACTUALIZADAS.add(self.year)
-        if en_curso:
+        if self.year >= anio_actual():
             try:
                 historial.completar_headshots(con, self.year)
             except Exception:

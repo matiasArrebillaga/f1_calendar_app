@@ -426,10 +426,14 @@ def test_las_tarjetas_nunca_se_muestran_como_ventana():
         _WorkerFalso.vista = None
 
 
-def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True):
+def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True, actualizada=None):
     """Corre PilotosWorker.run() en el hilo del test, con la base falsa y la
-    descarga reemplazada. Devuelve (emitidos por terminado, emitidos por error)."""
+    descarga reemplazada. Devuelve (emitidos por terminado, emitidos por error).
+    `actualizada` pisa la fecha en que se guardó la temporada `year`."""
     base = base_de_prueba()   # antes de reemplazar descargar_temporada: la usa
+    if actualizada is not None:
+        base.execute("UPDATE temporadas SET actualizada = ? WHERE temporada = ?",
+                     (actualizada, year))
     h = pilotos_worker.historial
     originales = (h.abrir_base, h.descargar_temporada, h.completar_headshots,
                   pilotos_worker.anio_actual)
@@ -463,7 +467,8 @@ def test_temporada_terminada_y_guardada_no_toca_la_red():
 
 
 def test_temporada_en_curso_sin_red_muestra_lo_guardado():
-    datos, errores = _correr_pilotos_worker(2025, _sin_red, anio_actual=2025)
+    datos, errores = _correr_pilotos_worker(2025, _sin_red, anio_actual=2025,
+                                            actualizada="2025-06-01 12:00:00")
     assert not errores, errores
     assert len(datos[0]["pilotos"]) == 4
 
@@ -475,9 +480,23 @@ def test_temporada_que_falta_y_sin_red_da_error():
 
 def test_la_temporada_en_curso_se_baja_una_sola_vez_por_sesion():
     llamadas = []
-    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025)
     _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025,
-                           limpiar=False)
+                           actualizada="2025-06-01 12:00:00")
+    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025,
+                           limpiar=False, actualizada="2025-06-01 12:00:00")
+    assert llamadas == [2025], llamadas
+
+
+def test_una_temporada_guardada_a_mitad_de_anio_se_completa_cuando_termina():
+    """Guardada en noviembre, con dos carreras por correr: en enero ya no es la
+    temporada en curso, pero le faltan esas carreras y el campeón."""
+    llamadas = []
+    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2026,
+                           actualizada="2025-11-20 10:00:00")
+    assert llamadas == [2025], llamadas
+    # Bajada después de fin de año ya está completa: no se vuelve a pedir.
+    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2026,
+                           actualizada="2026-01-03 10:00:00")
     assert llamadas == [2025], llamadas
 
 

@@ -186,6 +186,14 @@ def temporada_guardada(con, anio):
                        (anio,)).fetchone() is not None
 
 
+def temporada_completa(con, anio):
+    """Guardada después de que terminó el año: ya no le pueden faltar carreras.
+    Una guardada a mitad de temporada hay que volver a bajarla aunque ese año
+    ya haya pasado."""
+    return con.execute("SELECT 1 FROM temporadas WHERE temporada = ? AND actualizada >= ?",
+                       (anio, f"{anio + 1}-01-01")).fetchone() is not None
+
+
 def abrir_base():
     """Conexión a la copia escribible. La primera vez la copia desde el build
     (que es de sólo lectura); si no hay ninguna, arranca vacía."""

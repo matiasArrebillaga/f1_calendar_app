@@ -1,4 +1,5 @@
 import glob
+import os
 import sys
 import fastf1
 from PySide6.QtCore import QLocale, Qt, QPropertyAnimation, QEasingCurve
@@ -16,6 +17,8 @@ from ui.pilotos_view import PilotosView
 from core.paths import resource_path, data_path
 
 
+# enable_cache no crea la carpeta, y en %LOCALAPPDATA% la primera vez no existe.
+os.makedirs(data_path('cache'), exist_ok=True)
 fastf1.Cache.enable_cache(data_path('cache'))
 QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
 

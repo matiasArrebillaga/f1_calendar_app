@@ -4,6 +4,7 @@ Sin frameworks ni fixtures: un QApplication offscreen y asserts. Corre tanto con
 `pytest test_ui.py` como con `python test_ui.py`.
 """
 import os
+from datetime import date
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -76,20 +77,23 @@ def test_el_calendario_no_trae_los_tests_de_pretemporada():
     """Los tests de pretemporada vienen con RoundNumber 0, y
     get_session(year, 0, ...) tira 'Cannot get testing event by round number!':
     todos los botones de sesión de esas tarjetas terminaban en error."""
+    import fastf1
     import workers.calendar_worker as cw
 
     llamadas = []
-    original = cw.fastf1.get_event_schedule
-    cw.fastf1.get_event_schedule = lambda year, **kw: llamadas.append((year, kw)) or "df"
+    original = fastf1.get_event_schedule
+    fastf1.get_event_schedule = lambda year, **kw: llamadas.append((year, kw)) or "df"
     try:
-        worker = cw.CalendarWorker(2026)
+        # El año en curso: los terminados salen de cache_calendarios sin pedir nada.
+        anio = date.today().year
+        worker = cw.CalendarWorker(anio)
         emitidos = []
         worker.terminado.connect(emitidos.append)
         worker.run()
     finally:
-        cw.fastf1.get_event_schedule = original
+        fastf1.get_event_schedule = original
 
-    assert llamadas == [(2026, {"include_testing": False})], llamadas
+    assert llamadas == [(anio, {"include_testing": False})], llamadas
     assert emitidos == ["df"]
 
 
@@ -427,10 +431,12 @@ def test_las_tarjetas_nunca_se_muestran_como_ventana():
         _WorkerFalso.vista = None
 
 
-def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True, actualizada=None):
-    """Corre PilotosWorker.run() en el hilo del test, con la base falsa y la
-    descarga reemplazada. Devuelve (emitidos por terminado, emitidos por error).
-    `actualizada` pisa la fecha en que se guardó la temporada `year`."""
+def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True, actualizada=None,
+                           clase=None):
+    """Corre PilotosWorker.run() (u otro worker que lea la base, con `clase`) en
+    el hilo del test, con la base falsa y la descarga reemplazada. Devuelve
+    (emitidos por terminado, emitidos por error). `actualizada` pisa la fecha en
+    que se guardó la temporada `year`."""
     base = base_de_prueba()   # antes de reemplazar descargar_temporada: la usa
     if actualizada is not None:
         base.execute("UPDATE temporadas SET actualizada = ? WHERE temporada = ?",
@@ -445,7 +451,7 @@ def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True, actualiza
     if limpiar:
         pilotos_worker._ACTUALIZADAS.clear()
     try:
-        worker = pilotos_worker.PilotosWorker(year)
+        worker = (clase or pilotos_worker.PilotosWorker)(year)
         datos, errores = [], []
         worker.terminado.connect(datos.append)
         worker.error.connect(errores.append)
@@ -456,7 +462,7 @@ def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True, actualiza
          pilotos_worker.anio_actual) = originales
 
 
-def _sin_red(con, anio):
+def _sin_red(con, anio, desde=None):
     raise OSError("sin red")
 
 
@@ -465,6 +471,7 @@ def test_temporada_terminada_y_guardada_no_toca_la_red():
     assert not errores, errores
     assert [p["driver_id"] for p in datos[0]["pilotos"]] == ["norris", "piastri", "leclerc", "lawson"]
     assert [e["constructor_id"] for e in datos[0]["equipos"]] == ["mclaren", "ferrari"]
+    assert len(datos) == 1, datos   # terminada: no hay nada que actualizar
 
 
 def test_temporada_en_curso_sin_red_muestra_lo_guardado():
@@ -481,9 +488,9 @@ def test_temporada_que_falta_y_sin_red_da_error():
 
 def test_la_temporada_en_curso_se_baja_una_sola_vez_por_sesion():
     llamadas = []
-    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025,
+    _correr_pilotos_worker(2025, lambda con, anio, desde=None: llamadas.append(anio), anio_actual=2025,
                            actualizada="2025-06-01 12:00:00")
-    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025,
+    _correr_pilotos_worker(2025, lambda con, anio, desde=None: llamadas.append(anio), anio_actual=2025,
                            limpiar=False, actualizada="2025-06-01 12:00:00")
     assert llamadas == [2025], llamadas
 
@@ -492,11 +499,11 @@ def test_una_temporada_guardada_a_mitad_de_anio_se_completa_cuando_termina():
     """Guardada en noviembre, con dos carreras por correr: en enero ya no es la
     temporada en curso, pero le faltan esas carreras y el campeón."""
     llamadas = []
-    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2026,
+    _correr_pilotos_worker(2025, lambda con, anio, desde=None: llamadas.append(anio), anio_actual=2026,
                            actualizada="2025-11-20 10:00:00")
     assert llamadas == [2025], llamadas
     # Bajada después de fin de año ya está completa: no se vuelve a pedir.
-    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2026,
+    _correr_pilotos_worker(2025, lambda con, anio, desde=None: llamadas.append(anio), anio_actual=2026,
                            actualizada="2026-01-03 10:00:00")
     assert llamadas == [2025], llamadas
 
@@ -735,6 +742,148 @@ def test_las_flechas_siguen_cambiando_de_anio_desde_la_pestania_pilotos():
                 assert not evento.isAccepted(), f"{type(scroll).__name__} se comió {tecla}"
     finally:
         _restaurar_pilotos()
+
+
+def test_en_juego_cuenta_los_sprints_que_faltan():
+    from ui.standings_view import StandingsView
+    vista = StandingsView()
+    pilotos = [{"nombre": "Kimi", "apellido": "Antonelli", "puntos": 320.0}]
+    equipos = [{"nombre": "Mercedes", "puntos": 500.0}]
+    vista._datos = {"pilotos": pilotos, "equipos": equipos, "ronda": 20,
+                    "total_rondas": 24, "sprints_restantes": 2}
+    _, valor, detalle = vista._kpis[2]
+
+    vista._cambiar_tab(0)
+    assert ">116<" in valor.text(), valor.text()          # 4 × 25 + 2 × 8
+    assert detalle.text() == "4 carreras y 2 sprints restantes", detalle.text()
+    vista._cambiar_tab(1)
+    assert ">202<" in valor.text(), valor.text()          # 4 × 43 + 2 × 15
+
+    vista._datos["sprints_restantes"] = 0
+    vista._actualizar_kpis()
+    assert detalle.text() == "4 carreras restantes", detalle.text()
+
+
+def _correr_standings_worker(*args, **kwargs):
+    """Como _correr_pilotos_worker, con un calendario de 6 fechas (la 5 con
+    sprint) en lugar del de FastF1."""
+    import workers.standings_worker as standings_worker
+    calendario = pd.DataFrame({"RoundNumber": range(1, 7),
+                               "EventFormat": ["conventional"] * 4 + ["sprint_qualifying", "conventional"]})
+    original = standings_worker.obtener_calendario
+    standings_worker.obtener_calendario = lambda anio: calendario
+    try:
+        return _correr_pilotos_worker(*args, clase=standings_worker.StandingsWorker, **kwargs)
+    finally:
+        standings_worker.obtener_calendario = original
+
+
+def test_la_clasificacion_sale_de_la_base_sin_pedirle_nada_a_ergast():
+    datos, errores = _correr_standings_worker(2025, _sin_red, anio_actual=2026)
+    assert not errores, errores
+    assert len(datos) == 1, datos   # terminada: no hay segunda emisión
+    d = datos[0]
+    assert [p["driver_id"] for p in d["pilotos"]] == ["norris", "piastri", "leclerc", "lawson"]
+    assert [e["constructor_id"] for e in d["equipos"]] == ["mclaren", "ferrari"]
+    assert (d["ronda"], d["total_rondas"], d["sprints_restantes"]) == (4, 6, 1)
+
+
+def test_la_clasificacion_de_sesion_baja_vueltas_solo_si_ergast_no_la_tiene():
+    import workers.session_worker as session_worker
+
+    class SesionFalsa:
+        def __init__(self, posiciones):
+            self.cargas = []
+            self.results = pd.DataFrame({"Position": posiciones, "Q1": pd.NaT,
+                                         "Q2": pd.NaT, "Q3": pd.NaT})
+
+        def load(self, **opciones):
+            self.cargas.append((opciones["laps"], opciones["messages"]))
+
+    def cargas(codigo, posiciones):
+        sesion = SesionFalsa(posiciones)
+        original = session_worker.fastf1.get_session
+        session_worker.fastf1.get_session = lambda *args: sesion
+        try:
+            session_worker.SessionWorker(2026, 1, codigo).run()
+        finally:
+            session_worker.fastf1.get_session = original
+        return sesion.cargas
+
+    assert cargas("Q", [1.0, 2.0]) == [(False, False)]
+    # Recién terminada: Ergast todavía no la publicó y FastF1 la calcula de las
+    # vueltas, para lo que necesita los mensajes (vueltas borradas).
+    assert cargas("Q", [None, None]) == [(False, False), (True, True)]
+    assert cargas("SQ", [None, None]) == [(True, True)]
+    assert cargas("R", [1.0, 2.0]) == [(False, False)]
+
+
+def _subir_puntos(con, anio, desde=None):
+    """Descarga falsa: la temporada nueva trae 10 puntos más para todos."""
+    con.execute("UPDATE campeonato_pilotos SET puntos = puntos + 10 WHERE temporada = ?", (anio,))
+
+
+def test_temporada_en_curso_muestra_lo_guardado_y_despues_lo_nuevo():
+    for correr in (_correr_pilotos_worker, _correr_standings_worker):
+        datos, errores = correr(2025, _subir_puntos, anio_actual=2025,
+                                actualizada="2025-06-01 12:00:00")
+        assert not errores, errores
+        assert [(d["actualizando"], d["pilotos"][0]["puntos"]) for d in datos] ==             [(True, 50), (False, 60)], correr
+
+
+def test_la_clasificacion_y_pilotos_se_actualizan_sin_aviso():
+    from ui.standings_view import StandingsView
+    from ui.pilotos_view import PilotosView
+    for correr, Vista in ((_correr_standings_worker, StandingsView),
+                          (_correr_pilotos_worker, PilotosView)):
+        datos, _ = correr(2025, _subir_puntos, anio_actual=2025,
+                          actualizada="2025-06-01 12:00:00")
+        vista = Vista()
+        vista.year = 2025
+        vista._mostrar(datos[0])
+        assert vista.estado.text() == "", (Vista, vista.estado.text())
+
+
+def test_la_temporada_en_curso_baja_solo_desde_la_ronda_que_falta():
+    """La guardada llega a la R4: se pide desde la 5. Una ya terminada se baja
+    entera una última vez, por si corrigieron resultados después de guardarla."""
+    llamadas = []
+
+    def anotar(con, anio, desde=None):
+        llamadas.append(desde)
+
+    _correr_pilotos_worker(2025, anotar, anio_actual=2025, actualizada="2025-06-01 12:00:00")
+    _correr_pilotos_worker(2025, anotar, anio_actual=2026, actualizada="2025-11-20 10:00:00")
+    assert llamadas == [5, None], llamadas
+
+
+def test_el_mapa_y_la_ficha_se_abren_con_un_clic():
+    from PySide6.QtCore import QEvent, QPointF
+    from PySide6.QtGui import QKeyEvent, QMouseEvent
+    from ui.vista_ampliada import VistaAmpliada
+
+    vista = EventDetailView()
+    vista.resize(1200, 800)
+    vista._pixmap_mapa = QPixmap(400, 400)
+    vista._ficha_actual = ("Bahrain International Circuit", None, None)
+
+    def abiertas():
+        return [w for w in QApplication.topLevelWidgets()
+                if isinstance(w, VistaAmpliada) and w.isVisible()]
+
+    clic = QMouseEvent(QEvent.MouseButtonRelease, QPointF(5, 5), QPointF(5, 5),
+                       Qt.LeftButton, Qt.NoButton, Qt.NoModifier)
+    QApplication.sendEvent(vista.imagen_circuito, clic)
+    capa = abiertas()
+    assert len(capa) == 1, capa
+    QApplication.sendEvent(capa[0], QKeyEvent(QEvent.KeyPress, Qt.Key_Escape, Qt.NoModifier))
+    assert not abiertas()
+
+    # La ficha de datos también se abre con un clic (sin circuit_id no pide nada a la red).
+    QApplication.sendEvent(vista.texto_info, clic)
+    capa = abiertas()
+    assert len(capa) == 1, capa
+    capa[0].reject()
 
 
 if __name__ == "__main__":

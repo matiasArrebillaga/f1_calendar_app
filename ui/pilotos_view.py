@@ -203,7 +203,9 @@ class PilotosView(QWidget):
 
     def _mostrar(self, datos):
         self._datos = datos
-        if datos["pilotos"]:
+        # Mientras baja lo nuevo se muestra lo guardado sin avisar: el aviso
+        # quedaba mucho tiempo en pantalla y parecía colgado.
+        if datos["pilotos"] or datos.get("actualizando"):
             self._set_estado("")
         else:
             self._set_estado(f"Todavía no hay resultados de {self.year}.", "vacio")

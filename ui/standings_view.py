@@ -11,7 +11,14 @@ from ui.icons import franja_equipo, DATO
 from ui.estado import aplicar_estado
 from workers.standings_worker import StandingsWorker
 
-PUNTOS_POR_CARRERA = {0: 25, 1: 25 + 18}   # pilotos / equipos (1º + 2º), sin sprints
+PUNTOS_POR_CARRERA = {0: 25, 1: 25 + 18}   # pilotos / equipos (1º + 2º)
+PUNTOS_POR_SPRINT = {0: 8, 1: 8 + 7}
+
+
+def _nombre_piloto(piloto):
+    nombre = f"{piloto['nombre']} {piloto['apellido']}"
+    # Ergast no tiene siglas antes de los 2000.
+    return f"{piloto['codigo']}   {nombre}" if piloto['codigo'] else nombre
 
 
 class StandingsView(QWidget):
@@ -150,7 +157,6 @@ class StandingsView(QWidget):
             if cacheado is None:
                 self._mostrar_sin_datos(year)
             else:
-                self._set_estado("")
                 self._mostrar(cacheado)
             return
 
@@ -178,7 +184,6 @@ class StandingsView(QWidget):
         if worker.year != self.year:
             return  # llegó tarde: el usuario ya cambió de año, ignoramos este resultado
 
-        self._set_estado("")
         self._mostrar(datos)
 
     def on_error(self, mensaje):
@@ -200,19 +205,21 @@ class StandingsView(QWidget):
 
     def _mostrar(self, datos):
         self._datos = datos
+        # Mientras baja lo nuevo se muestra lo guardado sin avisar: el aviso
+        # quedaba mucho tiempo en pantalla y parecía colgado.
+        self._set_estado("")
         if datos['ronda']:
             self.eyebrow.setText(f"TEMPORADA {self.year}   ·   TRAS R{datos['ronda']}")
         pilotos = [
-            (f"{row['driverCode']}   {row['givenName']} {row['familyName']}",
-             " / ".join(row['constructorNames']),
-             color_equipo(row['constructorIds'][-1]) if len(row['constructorIds']) else None,
-             int(row['points']), int(row['wins']))
-            for _, row in datos['pilotos'].iterrows()
+            (_nombre_piloto(p),
+             " / ".join(p['equipos']), color_equipo(p['constructor_id']),
+             int(p['puntos'] or 0), int(p['victorias'] or 0))
+            for p in datos['pilotos']
         ]
         equipos = [
-            (row['constructorName'], None, color_equipo(row['constructorId']),
-             int(row['points']), int(row['wins']))
-            for _, row in datos['equipos'].iterrows()
+            (e['nombre'], None, color_equipo(e['constructor_id']),
+             int(e['puntos'] or 0), int(e['victorias'] or 0))
+            for e in datos['equipos']
         ]
         self._llenar_tabla(self.tabla_pilotos, pilotos, ['Pos', 'Piloto', 'Equipo'])
         self._llenar_tabla(self.tabla_equipos, equipos, ['Pos', 'Equipo'])
@@ -226,6 +233,12 @@ class StandingsView(QWidget):
         col_puntos = len(etiquetas_nombre)
         tabla.setColumnCount(len(etiquetas))
         tabla.setHorizontalHeaderLabels(etiquetas)
+        # Cada título alineado como su columna: Pos al centro, nombres a la
+        # izquierda, números a la derecha.
+        for col in range(len(etiquetas)):
+            tabla.horizontalHeaderItem(col).setTextAlignment(
+                Qt.AlignCenter if col == 0
+                else (Qt.AlignRight if col >= col_puntos else Qt.AlignLeft) | Qt.AlignVCenter)
         tabla.setRowCount(len(filas))
         tabla.setItemDelegateForColumn(col_puntos, tabla._barra)
 
@@ -274,22 +287,23 @@ class StandingsView(QWidget):
             return
 
         es_equipos = self.stack_interno.currentIndex() == 1
-        df = datos['equipos'] if es_equipos else datos['pilotos']
-        if df.empty:
+        filas = datos['equipos'] if es_equipos else datos['pilotos']
+        if not filas:
             return
 
-        def nombre(row):
-            return row['constructorName'] if es_equipos else f"{row['givenName']} {row['familyName']}"
+        def nombre(fila):
+            return fila['nombre'] if es_equipos else f"{fila['nombre']} {fila['apellido']}"
 
-        lider = df.iloc[0]
+        lider = filas[0]
         (_, valor_lider, detalle_lider), (_, valor_ventaja, detalle_ventaja), \
             (_, valor_juego, detalle_juego) = self._kpis
         valor_lider.setText(nombre(lider))
-        detalle_lider.setText(f"{int(lider['points'])} puntos")
+        detalle_lider.setText(f"{int(lider['puntos'] or 0)} puntos")
 
-        if len(df) > 1:
-            segundo = df.iloc[1]
-            valor_ventaja.setText(f"<span style='color:{DATO};'>+{int(lider['points'] - segundo['points'])}</span>")
+        if len(filas) > 1:
+            segundo = filas[1]
+            ventaja = int((lider['puntos'] or 0) - (segundo['puntos'] or 0))
+            valor_ventaja.setText(f"<span style='color:{DATO};'>+{ventaja}</span>")
             detalle_ventaja.setText(f"sobre {nombre(segundo)}")
         else:
             valor_ventaja.setText("—")
@@ -303,8 +317,12 @@ class StandingsView(QWidget):
             detalle_juego.setText("Temporada terminada")
         else:
             restantes = datos['total_rondas'] - datos['ronda']
-            puntos = restantes * PUNTOS_POR_CARRERA[int(es_equipos)]
+            sprints = datos.get('sprints_restantes', 0)
+            puntos = (restantes * PUNTOS_POR_CARRERA[int(es_equipos)]
+                      + sprints * PUNTOS_POR_SPRINT[int(es_equipos)])
             valor_juego.setText(f"<span style='color:{DATO};'>{puntos}</span> pts")
-            detalle_juego.setText(
-                f"{restantes} {'carrera restante' if restantes == 1 else 'carreras restantes'}, "
-                "sin contar sprints")
+            texto = f"{restantes} {'carrera' if restantes == 1 else 'carreras'}"
+            if sprints:
+                texto += f" y {sprints} {'sprint' if sprints == 1 else 'sprints'}"
+            plural = restantes > 1 or sprints > 0
+            detalle_juego.setText(f"{texto} {'restantes' if plural else 'restante'}")

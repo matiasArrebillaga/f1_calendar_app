@@ -1,42 +1,60 @@
-import fastf1
-from fastf1.ergast import Ergast
 from PySide6.QtCore import QThread, Signal
 
+from core import historial
+from core.calendario import obtener_calendario
+from workers.pilotos_worker import cargar_temporada
+
+
 class StandingsWorker(QThread):
-    # emite {'pilotos', 'equipos', 'ronda', 'total_rondas'}; ronda y
-    # total_rondas pueden ser None si no se pudieron averiguar
+    # emite {'pilotos': [dict], 'equipos': [dict], 'ronda', 'total_rondas',
+    # 'sprints_restantes', 'actualizando'}; ronda y total_rondas pueden ser
+    # None si no se pudieron averiguar. Con la temporada en curso emite dos
+    # veces: lo guardado (actualizando=True) y lo recién bajado.
     terminado = Signal(object)
     error = Signal(str)
 
     def __init__(self, year):
         super().__init__()
         self.year = year
-        self.ergast = Ergast()
 
     def run(self):
+        # Sale de la base del historial (la misma de la pestaña Pilotos): las
+        # temporadas terminadas vienen en el build y no piden nada a la red.
         try:
-            respuesta_pilotos = self.ergast.get_driver_standings(season=self.year)
-            respuesta_equipos = self.ergast.get_constructor_standings(season=self.year)
-            datos = {
-                'pilotos': respuesta_pilotos.content[0],
-                'equipos': respuesta_equipos.content[0],
-                'ronda': None,
-                'total_rondas': None,
-            }
+            con = historial.abrir_base()
         except Exception as e:
             self.error.emit(str(e))
             return
+        try:
+            cargar_temporada(con, self.year, self._leer, self.terminado.emit)
+        except Exception as e:
+            self.error.emit(str(e))
+        finally:
+            con.close()
 
-        # Lo que sigue sólo alimenta los indicadores ("tras R17", puntos en
-        # juego): si falla, la tabla se muestra igual.
+    def _leer(self, con):
+        datos = {
+            'pilotos': historial.pilotos_temporada(con, self.year),
+            'equipos': historial.equipos_temporada(con, self.year),
+            'ronda': historial.ultima_ronda(con, self.year),
+            'total_rondas': None,
+            'sprints_restantes': 0,
+        }
+        if not datos['pilotos']:
+            raise ValueError(f"Sin clasificación para {self.year}")
+
+        # Lo que sigue sólo alimenta "puntos en juego": si falla, la tabla se
+        # muestra igual.
         try:
-            datos['ronda'] = int(respuesta_pilotos.description['round'].iloc[0])
+            # Ya lo bajó CalendarView: sale del caché.
+            calendario = obtener_calendario(self.year)
+            datos['total_rondas'] = len(calendario)
+            if datos['ronda'] is not None:
+                # EventFormat: 'sprint', 'sprint_shootout' o 'sprint_qualifying'
+                # según el año; los fines de semana normales son 'conventional'.
+                faltan = calendario[calendario['RoundNumber'] > datos['ronda']]
+                datos['sprints_restantes'] = int(
+                    faltan['EventFormat'].str.contains('sprint').sum())
         except Exception:
             pass
-        try:
-            # Sale del caché de fastf1: el calendario ya lo bajó CalendarView.
-            datos['total_rondas'] = len(
-                fastf1.get_event_schedule(self.year, include_testing=False))
-        except Exception:
-            pass
-        self.terminado.emit(datos)
+        return datos

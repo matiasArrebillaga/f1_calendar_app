@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QButtonGroup, QHeaderView, QSizePolicy, QStackedWidget,
     QGraphicsDropShadowEffect
 )
-from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtCore import Signal, Qt, QSize, QEvent
 from PySide6.QtGui import QColor, QFont, QPixmap
 import pandas as pd
 
@@ -11,9 +11,11 @@ from core.circuits import obtener_datos_circuito
 from core.fechas import a_gmt_menos_3, dia_hora, rango_fechas
 from core.i18n import traducir_evento, traducir_pais, traducir_sesion
 from core.track_map import obtener_ruta_mapa
+from ui.datos_circuito import PanelDatosCircuito, ficha_html, filas_ficha
 from ui.delegados import MedallaPosicion
 from ui.icons import icono, franja_equipo, MUTED, PRIMARIO, DATO
 from ui.spinner_widget import SpinnerWidget
+from ui.vista_ampliada import VistaAmpliada
 from ui.estado import aplicar_estado
 from workers.session_worker import SessionWorker
 from workers.track_map_worker import TrackMapWorker
@@ -147,9 +149,16 @@ class EventDetailView(QWidget):
         self.imagen_circuito.setAlignment(Qt.AlignCenter)
         # Sin esto el minimumSizeHint del QLabel es el tamaño del pixmap.
         self.imagen_circuito.setMinimumSize(1, 1)
+        self._hacer_clickeable(self.imagen_circuito, "Ampliar mapa")
+        # Pista de que el mapa se amplía, fija en la esquina (la columna es de ancho fijo).
+        pista_mapa = QLabel(self.imagen_circuito)
+        pista_mapa.setPixmap(icono("maximize-2", MUTED, 16).pixmap(16, 16))
+        pista_mapa.setStyleSheet("background: transparent; border: none; padding: 0;")
+        pista_mapa.move(self.ANCHO_COLUMNA_CIRCUITO - 28, 12)
         self._pixmap_mapa = None   # original sin escalar
         self._tamano_mapa_pintado = None   # (ancho, alto) del último scaled()
         self._location_mapa = None         # circuito cuyo mapa estamos esperando
+        self._ficha_actual = (None, None, None)   # (nombre, datos, oficial) del circuito abierto
         sombra_imagen = QGraphicsDropShadowEffect()
         sombra_imagen.setColor(QColor(0, 0, 0, 160))
         sombra_imagen.setOffset(0, 4)
@@ -159,6 +168,7 @@ class EventDetailView(QWidget):
         self.texto_info.setObjectName("textoInfoCircuito")
         self.texto_info.setWordWrap(True)
         self.texto_info.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self._hacer_clickeable(self.texto_info, "Ficha completa y ganadores en este circuito")
         layout_panel_info = QVBoxLayout(self.panel_info)
         layout_panel_info.setContentsMargins(0, 0, 0, 0)
         layout_panel_info.setSpacing(12)
@@ -425,40 +435,76 @@ class EventDetailView(QWidget):
         for col, nombre_col in enumerate(columnas):
             if nombre_col in ('FullName', 'TeamName'):
                 cabecera.setSectionResizeMode(col, QHeaderView.Stretch)
+            # El título alineado como sus celdas (el header centra por defecto).
+            self.tabla_resultados.horizontalHeaderItem(col).setTextAlignment(
+                Qt.AlignCenter if nombre_col in ('Position', 'Points', 'Laps', 'GridPosition')
+                else Qt.AlignLeft | Qt.AlignVCenter)
 
     def _mostrar_info_circuito(self):
         """Ficha del circuito en la columna derecha + su mapa."""
         location = self.evento_actual.get('Location')
         datos = obtener_datos_circuito(location)
 
-        filas = []
-        if datos:
-            nombre = datos['nombre_completo']
-            filas = [
-                ("Longitud", f"{datos['longitud_km']} km"),
-                ("Vueltas", datos['vueltas']),
-                ("Distancia total", f"{datos['distancia_km']} km"),
-                ("Curvas", datos['curvas']),
-                ("Récord de vuelta", datos['record_vuelta']),
-                ("Primer GP", datos['primer_gp']),
-            ]
-        else:
-            nombre = location or "—"
-
-        html = (f"<div style='font-size:15px; font-weight:600; color:{PRIMARIO}; "
-                f"margin-bottom:8px;'>{nombre}</div>")
-        if filas:
-            html += "<table width='100%' cellspacing='0' cellpadding='3'>" + "".join(
-                f"<tr><td style='color:{MUTED};'>{etiqueta}</td>"
-                f"<td align='right' style='color:{PRIMARIO}; font-weight:600;'>{valor}</td></tr>"
-                for etiqueta, valor in filas
-            ) + "</table>"
+        nombre = datos['nombre_completo'] if datos else (location or "—")
         oficial = self.evento_actual.get('OfficialEventName')
-        if oficial and str(oficial) != 'nan':
-            html += f"<div style='color:{MUTED}; font-size:11px; margin-top:10px;'>{oficial}</div>"
-        self.texto_info.setText(html)
+        oficial = oficial if oficial and str(oficial) != 'nan' else None
+        self.texto_info.setText(
+            ficha_html(nombre, filas_ficha(datos), oficial)
+            + f"<div style='color:{PRIMARIO}; font-weight:600; margin-top:12px;'>"
+              "Más datos del circuito&nbsp;&nbsp;›</div>")
+        self._ficha_actual = (nombre, datos, oficial)
 
         self._cargar_mapa(location)
+
+    def _ampliar_mapa(self):
+        if self._pixmap_mapa is None or self._pixmap_mapa.isNull():
+            return
+        ventana = self.window()
+        mapa = QLabel()
+        mapa.setObjectName("imagenCircuito")   # mismo panel que el mapa chico
+        mapa.setPixmap(self._pixmap_mapa.scaled(
+            int(ventana.width() * 0.85), int(ventana.height() * 0.78),
+            Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        VistaAmpliada(self._ficha_actual[0], mapa, self).open()
+
+    def _ampliar_datos(self):
+        nombre, datos, oficial = self._ficha_actual
+        panel = PanelDatosCircuito(nombre, datos, oficial, self._workers_activos)
+        panel.setFixedSize(min(980, int(self.window().width() * 0.85)),
+                           int(self.window().height() * 0.75))
+        VistaAmpliada("Datos del circuito", panel, self).open()
+
+    def _hacer_clickeable(self, etiqueta, tooltip):
+        """Mapa y ficha se abren en grande: cursor de mano, foco con Tab y la
+        propiedad `clickeable`, que en style.qss les da hover, foco y presionado."""
+        etiqueta.setProperty("clickeable", True)
+        etiqueta.setProperty("presionada", False)
+        etiqueta.setAttribute(Qt.WA_Hover, True)
+        etiqueta.setCursor(Qt.PointingHandCursor)
+        etiqueta.setFocusPolicy(Qt.StrongFocus)
+        etiqueta.setToolTip(tooltip)
+        etiqueta.installEventFilter(self)
+
+    def eventFilter(self, obj, evento):
+        # Se abren con un clic, o con Enter / espacio si tienen el foco.
+        # getattr: el mapa ya recibe eventos mientras se arma la ficha.
+        if obj is self.imagen_circuito:
+            accion = self._ampliar_mapa
+        elif obj is getattr(self, "texto_info", None):
+            accion = self._ampliar_datos
+        else:
+            return super().eventFilter(obj, evento)
+        tipo = evento.type()
+        if tipo in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease):
+            obj.setProperty("presionada", tipo == QEvent.MouseButtonPress)
+            obj.style().unpolish(obj)
+            obj.style().polish(obj)
+        if tipo == QEvent.MouseButtonRelease or (
+                tipo == QEvent.KeyPress
+                and evento.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space)):
+            accion()
+            return True
+        return super().eventFilter(obj, evento)
 
     def _mostrar_pendiente(self, codigo_sesion):
         """Panel de la izquierda cuando no hay resultados que mostrar."""

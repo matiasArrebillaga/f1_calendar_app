@@ -55,16 +55,8 @@ class CalendarEventCard(QWidget):
         self._interior.setAttribute(Qt.WA_Hover, True)
         self._interior.setCursor(Qt.PointingHandCursor)
         self._interior.installEventFilter(self)
-        self._interior.setGeometry(
-            self.MARGEN, self.MARGEN,
-            self._ancho - 2 * self.MARGEN, self._alto - 2 * self.MARGEN
-        )
-
-        self._geometria_normal = QRect(
-            self.MARGEN, self.MARGEN,
-            self._ancho - 2 * self.MARGEN, self._alto - 2 * self.MARGEN
-        )
-        self._geometria_hover = QRect(0, 0, self._ancho, self._alto)
+        self._bandera = None
+        self._aplicar_geometria()
 
         self.setToolTip(f"{nombre_evento_es} — {evento['EventDate'].date()}")
 
@@ -127,11 +119,36 @@ class CalendarEventCard(QWidget):
             self._bandera.setPixmap(self._pixmap_bandera)
             self._bandera.setFixedSize(self._pixmap_bandera.size())
             self._bandera.setStyleSheet("background: transparent;")
-            self._bandera.move(
-                self._ancho - self._pixmap_bandera.width() - self.margen_bandera,
-                self.margen_bandera
-            )
+            self._mover_bandera()
             self._bandera.raise_()
+
+    def set_ancho(self, ancho):
+        """La grilla del calendario reparte el ancho disponible entre las
+        columnas, así las tarjetas llegan hasta el borde derecho."""
+        if ancho == self._ancho:
+            return
+        self._ancho = ancho
+        # Una animación de hover a medio camino terminaría en el ancho viejo.
+        self._animacion_tamano.stop()
+        self._aplicar_geometria()
+
+    def _aplicar_geometria(self):
+        self.setFixedSize(self._ancho, self._alto)
+        self._geometria_normal = QRect(
+            self.MARGEN, self.MARGEN,
+            self._ancho - 2 * self.MARGEN, self._alto - 2 * self.MARGEN
+        )
+        self._geometria_hover = QRect(0, 0, self._ancho, self._alto)
+        en_hover = self.hasFocus() or self._interior.underMouse()
+        self._interior.setGeometry(self._geometria_hover if en_hover else self._geometria_normal)
+        if self._bandera is not None:
+            self._mover_bandera()
+
+    def _mover_bandera(self):
+        self._bandera.move(
+            self._ancho - self._pixmap_bandera.width() - self.margen_bandera,
+            self.margen_bandera
+        )
 
     def eventFilter(self, obj, event):
         if obj is self._interior:

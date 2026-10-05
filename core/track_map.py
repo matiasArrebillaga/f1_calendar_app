@@ -25,7 +25,9 @@ def _rotar(x, y, angulo_grados):
 def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
 
-    rotacion = circuito_info.rotation
+    # Circuitos nuevos (Madrid 2026) todavía no tienen info en FastF1: se
+    # dibuja el trazado sin rotar y sin numerar las curvas.
+    rotacion = circuito_info.rotation if circuito_info is not None else 0
     x, y = telemetria['X'].to_numpy(), telemetria['Y'].to_numpy()
     x_rot, y_rot = _rotar(x, y, rotacion)
 
@@ -33,13 +35,15 @@ def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
     fig.patch.set_alpha(0)
     ax.set_facecolor('none')
 
-    ax.plot(x_rot, y_rot, color='#e10600', linewidth=3)
+    ax.plot(x_rot, y_rot, color='#52DEEC', linewidth=3)
 
-    for _, curva in circuito_info.corners.iterrows():
-        cx, cy = _rotar(curva['X'], curva['Y'], rotacion)
-        ax.scatter(cx, cy, color='#12161C', s=180, zorder=5, edgecolors='#e10600', linewidths=1.5)
-        ax.text(cx, cy, str(int(curva['Number'])), color='white',
-                ha='center', va='center', fontsize=8, fontweight='bold', zorder=6)
+    curvas = circuito_info.corners if circuito_info is not None else None
+    if curvas is not None:
+        for _, curva in curvas.iterrows():
+            cx, cy = _rotar(curva['X'], curva['Y'], rotacion)
+            ax.scatter(cx, cy, color='#12161C', s=180, zorder=5, edgecolors='#52DEEC', linewidths=1.5)
+            ax.text(cx, cy, str(int(curva['Number'])), color='white',
+                    ha='center', va='center', fontsize=8, fontweight='bold', zorder=6)
 
     ax.set_aspect('equal')
     ax.axis('off')
@@ -64,13 +68,13 @@ def obtener_ruta_mapa(location):
 
 def buscar_referencia(location, year_actual):
     import pandas as pd
-    import fastf1
+    from core.calendario import obtener_calendario
 
     location_normalizado = normalizar_location(location)
 
     for year in range(year_actual, year_actual - 6, -1):
         try:
-            calendario = fastf1.get_event_schedule(year)
+            calendario = obtener_calendario(year)
         except Exception:
             continue
 
@@ -107,7 +111,10 @@ def generar_o_obtener_mapa(location, year_actual):
 
     vuelta_rapida = sesion.laps.pick_fastest()
     telemetria = vuelta_rapida.get_telemetry()
-    circuito_info = sesion.get_circuit_info()
+    try:
+        circuito_info = sesion.get_circuit_info()
+    except Exception:
+        circuito_info = None
 
     location_normalizado = normalizar_location(location)
     nombre_archivo = location_normalizado.lower().replace(" ", "_") + ".png"

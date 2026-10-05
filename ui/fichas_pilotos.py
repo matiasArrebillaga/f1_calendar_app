@@ -142,7 +142,7 @@ class FotoPiloto(QWidget):
 
         if self._numero and self.width() >= 100:
             fuente = QFont()
-            fuente.setPixelSize(13)
+            fuente.setPixelSize(14)
             fuente.setBold(True)
             pintor.setFont(fuente)
             pintor.setPen(QColor(PRIMARIO))
@@ -257,7 +257,7 @@ class LogoEquipo(QWidget):
         pintor.setPen(QPen(QColor(BORDE), 1))
         pintor.drawPath(borde)
         fuente = QFont()
-        fuente.setPixelSize(14)
+        fuente.setPixelSize(15)
         fuente.setBold(True)
         pintor.setFont(fuente)
         pintor.setPen(QColor(PRIMARIO))
@@ -561,7 +561,7 @@ class GraficoPosiciones(QWidget):
         pintor = QPainter(self)
         pintor.setRenderHint(QPainter.Antialiasing)
         fuente = QFont()
-        fuente.setPixelSize(11)
+        fuente.setPixelSize(12)
         pintor.setFont(fuente)
         if not self._filas:
             pintor.setPen(QColor(MUTED))

@@ -52,6 +52,9 @@ def normalizar_location(location):
 DATOS_CIRCUITOS = {
     "Monza": {
         "nombre_completo": "Autodromo Nazionale Monza",
+        "circuit_id": "monza",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.793,
         "vueltas": 53,
         "distancia_km": 306.720,
@@ -61,6 +64,9 @@ DATOS_CIRCUITOS = {
     },
     "Sakhir": {
         "nombre_completo": "Bahrain International Circuit",
+        "circuit_id": "bahrain",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.412,
         "vueltas": 57,
         "distancia_km": 308.238,
@@ -70,6 +76,9 @@ DATOS_CIRCUITOS = {
     },
     "Jeddah": {
         "nombre_completo": "Jeddah Corniche Circuit",
+        "circuit_id": "jeddah",
+        "tipo": "Callejero",
+        "sentido": "Antihorario",
         "longitud_km": 6.174,
         "vueltas": 50,
         "distancia_km": 308.450,
@@ -79,6 +88,9 @@ DATOS_CIRCUITOS = {
     },
     "Melbourne": {
         "nombre_completo": "Albert Park Circuit",
+        "circuit_id": "albert_park",
+        "tipo": "Semipermanente",
+        "sentido": "Horario",
         "longitud_km": 5.278,
         "vueltas": 58,
         "distancia_km": 306.124,
@@ -88,6 +100,9 @@ DATOS_CIRCUITOS = {
     },
     "Imola": {
         "nombre_completo": "Autodromo Enzo e Dino Ferrari",
+        "circuit_id": "imola",
+        "tipo": "Permanente",
+        "sentido": "Antihorario",
         "longitud_km": 4.909,
         "vueltas": 63,
         "distancia_km": 309.049,
@@ -97,6 +112,9 @@ DATOS_CIRCUITOS = {
     },
     "Miami": {
         "nombre_completo": "Miami International Autodrome",
+        "circuit_id": "miami",
+        "tipo": "Semipermanente",
+        "sentido": "Antihorario",
         "longitud_km": 5.412,
         "vueltas": 57,
         "distancia_km": 308.326,
@@ -106,6 +124,9 @@ DATOS_CIRCUITOS = {
     },
     "Barcelona": {
         "nombre_completo": "Circuit de Barcelona-Catalunya",
+        "circuit_id": "catalunya",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.657,
         "vueltas": 66,
         "distancia_km": 307.236,
@@ -115,6 +136,9 @@ DATOS_CIRCUITOS = {
     },
     "Madrid": {
         "nombre_completo": "Madring",
+        "circuit_id": "madring",
+        "tipo": "Semipermanente",
+        "sentido": "Horario",
         "longitud_km": 5.414,
         "vueltas": 57,
         "distancia_km": 308.399,
@@ -124,6 +148,9 @@ DATOS_CIRCUITOS = {
     },
     "Monaco": {
         "nombre_completo": "Circuit de Monaco",
+        "circuit_id": "monaco",
+        "tipo": "Callejero",
+        "sentido": "Horario",
         "longitud_km": 3.337,
         "vueltas": 78,
         "distancia_km": 260.286,
@@ -133,6 +160,9 @@ DATOS_CIRCUITOS = {
     },
     "Montreal": {
         "nombre_completo": "Circuit Gilles-Villeneuve",
+        "circuit_id": "villeneuve",
+        "tipo": "Semipermanente",
+        "sentido": "Horario",
         "longitud_km": 4.361,
         "vueltas": 70,
         "distancia_km": 305.270,
@@ -142,6 +172,9 @@ DATOS_CIRCUITOS = {
     },
     "Spielberg": {
         "nombre_completo": "Red Bull Ring",
+        "circuit_id": "red_bull_ring",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.318,
         "vueltas": 71,
         "distancia_km": 306.452,
@@ -151,6 +184,9 @@ DATOS_CIRCUITOS = {
     },
     "Silverstone": {
         "nombre_completo": "Silverstone Circuit",
+        "circuit_id": "silverstone",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.891,
         "vueltas": 52,
         "distancia_km": 306.198,
@@ -160,6 +196,9 @@ DATOS_CIRCUITOS = {
     },
     "Budapest": {
         "nombre_completo": "Hungaroring",
+        "circuit_id": "hungaroring",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.381,
         "vueltas": 70,
         "distancia_km": 306.630,
@@ -169,6 +208,9 @@ DATOS_CIRCUITOS = {
     },
     "Spa-Francorchamps": {
         "nombre_completo": "Circuit de Spa-Francorchamps",
+        "circuit_id": "spa",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 7.004,
         "vueltas": 44,
         "distancia_km": 308.052,
@@ -178,6 +220,9 @@ DATOS_CIRCUITOS = {
     },
     "Zandvoort": {
         "nombre_completo": "Circuit Zandvoort",
+        "circuit_id": "zandvoort",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.259,
         "vueltas": 72,
         "distancia_km": 306.587,
@@ -187,6 +232,9 @@ DATOS_CIRCUITOS = {
     },
     "Baku": {
         "nombre_completo": "Baku City Circuit",
+        "circuit_id": "baku",
+        "tipo": "Callejero",
+        "sentido": "Antihorario",
         "longitud_km": 6.003,
         "vueltas": 51,
         "distancia_km": 306.049,
@@ -196,6 +244,9 @@ DATOS_CIRCUITOS = {
     },
     "Marina Bay": {
         "nombre_completo": "Marina Bay Street Circuit",
+        "circuit_id": "marina_bay",
+        "tipo": "Callejero",
+        "sentido": "Antihorario",
         "longitud_km": 4.940,
         "vueltas": 62,
         "distancia_km": 306.143,
@@ -205,6 +256,9 @@ DATOS_CIRCUITOS = {
     },
     "Suzuka": {
         "nombre_completo": "Suzuka International Racing Course",
+        "circuit_id": "suzuka",
+        "tipo": "Permanente",
+        "sentido": "En forma de 8",
         "longitud_km": 5.807,
         "vueltas": 53,
         "distancia_km": 307.471,
@@ -214,6 +268,9 @@ DATOS_CIRCUITOS = {
     },
     "Shanghai": {
         "nombre_completo": "Shanghai International Circuit",
+        "circuit_id": "shanghai",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.451,
         "vueltas": 56,
         "distancia_km": 305.066,
@@ -223,6 +280,9 @@ DATOS_CIRCUITOS = {
     },
     "Austin": {
         "nombre_completo": "Circuit of The Americas",
+        "circuit_id": "americas",
+        "tipo": "Permanente",
+        "sentido": "Antihorario",
         "longitud_km": 5.513,
         "vueltas": 56,
         "distancia_km": 308.405,
@@ -232,6 +292,9 @@ DATOS_CIRCUITOS = {
     },
     "Mexico City": {
         "nombre_completo": "Autódromo Hermanos Rodríguez",
+        "circuit_id": "rodriguez",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.304,
         "vueltas": 71,
         "distancia_km": 305.354,
@@ -241,6 +304,9 @@ DATOS_CIRCUITOS = {
     },
     "São Paulo": {
         "nombre_completo": "Autódromo José Carlos Pace",
+        "circuit_id": "interlagos",
+        "tipo": "Permanente",
+        "sentido": "Antihorario",
         "longitud_km": 4.309,
         "vueltas": 71,
         "distancia_km": 305.879,
@@ -250,6 +316,9 @@ DATOS_CIRCUITOS = {
     },
     "Las Vegas": {
         "nombre_completo": "Las Vegas Strip Circuit",
+        "circuit_id": "vegas",
+        "tipo": "Callejero",
+        "sentido": "Antihorario",
         "longitud_km": 6.201,
         "vueltas": 50,
         "distancia_km": 310.050,
@@ -259,6 +328,9 @@ DATOS_CIRCUITOS = {
     },
     "Lusail": {
         "nombre_completo": "Lusail International Circuit",
+        "circuit_id": "losail",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.419,
         "vueltas": 57,
         "distancia_km": 308.611,
@@ -268,6 +340,9 @@ DATOS_CIRCUITOS = {
     },
     "Yas Marina": {
         "nombre_completo": "Yas Marina Circuit",
+        "circuit_id": "yas_marina",
+        "tipo": "Permanente",
+        "sentido": "Antihorario",
         "longitud_km": 5.281,
         "vueltas": 58,
         "distancia_km": 306.183,
@@ -279,6 +354,9 @@ DATOS_CIRCUITOS = {
     # --- Circuitos que ya no están en el calendario ---
     "Le Castellet": {
         "nombre_completo": "Circuit Paul Ricard",
+        "circuit_id": "ricard",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.842,
         "vueltas": 53,
         "distancia_km": 309.690,
@@ -288,6 +366,9 @@ DATOS_CIRCUITOS = {
     },
     "Portimão": {
         "nombre_completo": "Algarve International Circuit",
+        "circuit_id": "portimao",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.653,
         "vueltas": 66,
         "distancia_km": 306.828,
@@ -297,6 +378,9 @@ DATOS_CIRCUITOS = {
     },
     "Sochi": {
         "nombre_completo": "Sochi Autodrom",
+        "circuit_id": "sochi",
+        "tipo": "Semipermanente",
+        "sentido": "Horario",
         "longitud_km": 5.848,
         "vueltas": 53,
         "distancia_km": 309.745,
@@ -306,6 +390,9 @@ DATOS_CIRCUITOS = {
     },
     "Istanbul": {
         "nombre_completo": "Istanbul Park",
+        "circuit_id": "istanbul",
+        "tipo": "Permanente",
+        "sentido": "Antihorario",
         "longitud_km": 5.338,
         "vueltas": 58,
         "distancia_km": 309.396,
@@ -315,6 +402,9 @@ DATOS_CIRCUITOS = {
     },
     "Hockenheim": {
         "nombre_completo": "Hockenheimring",
+        "circuit_id": "hockenheimring",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.574,
         "vueltas": 67,
         "distancia_km": 306.458,
@@ -324,6 +414,9 @@ DATOS_CIRCUITOS = {
     },
     "Nürburgring": {
         "nombre_completo": "Nürburgring",
+        "circuit_id": "nurburgring",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.148,
         "vueltas": 60,
         "distancia_km": 308.623,
@@ -333,6 +426,9 @@ DATOS_CIRCUITOS = {
     },
     "Mugello": {
         "nombre_completo": "Autodromo Internazionale del Mugello",
+        "circuit_id": "mugello",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.245,
         "vueltas": 59,
         "distancia_km": 309.497,
@@ -342,6 +438,9 @@ DATOS_CIRCUITOS = {
     },
     "Indianapolis": {
         "nombre_completo": "Indianapolis Motor Speedway (trazado mixto)",
+        "circuit_id": "indianapolis",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.192,
         "vueltas": 73,
         "distancia_km": 306.016,
@@ -351,6 +450,9 @@ DATOS_CIRCUITOS = {
     },
     "Magny Cours": {
         "nombre_completo": "Circuit de Nevers Magny-Cours",
+        "circuit_id": "magny_cours",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.411,
         "vueltas": 70,
         "distancia_km": 308.586,
@@ -360,6 +462,9 @@ DATOS_CIRCUITOS = {
     },
     "Oyama": {
         "nombre_completo": "Fuji Speedway",
+        "circuit_id": "fuji",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 4.563,
         "vueltas": 67,
         "distancia_km": 305.721,
@@ -369,6 +474,9 @@ DATOS_CIRCUITOS = {
     },
     "Uttar Pradesh": {
         "nombre_completo": "Buddh International Circuit",
+        "circuit_id": "buddh",
+        "tipo": "Permanente",
+        "sentido": "Horario",
         "longitud_km": 5.125,
         "vueltas": 60,
         "distancia_km": 307.249,
@@ -378,6 +486,9 @@ DATOS_CIRCUITOS = {
     },
     "Valencia": {
         "nombre_completo": "Valencia Street Circuit",
+        "circuit_id": "valencia",
+        "tipo": "Callejero",
+        "sentido": "Horario",
         "longitud_km": 5.419,
         "vueltas": 57,
         "distancia_km": 308.883,
@@ -387,6 +498,9 @@ DATOS_CIRCUITOS = {
     },
     "Yeongam County": {
         "nombre_completo": "Korea International Circuit",
+        "circuit_id": "yeongam",
+        "tipo": "Semipermanente",
+        "sentido": "Antihorario",
         "longitud_km": 5.615,
         "vueltas": 55,
         "distancia_km": 308.630,

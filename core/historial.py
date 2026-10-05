@@ -125,20 +125,46 @@ def _guardar_equipo(con, e):
                 (e["constructorId"], e.get("name")))
 
 
-def descargar_temporada(con, anio, pedir=pedir_json):
-    """Baja la temporada entera y la reemplaza en una sola transacción.
+def _rondas_desde(anio, desde, pedir):
+    """Resultados y clasificación de a una ronda, desde `desde` hasta la
+    primera que todavía no se corrió."""
+    carreras, clasificacion = [], []
+    ronda = desde
+    while nuevas := _carreras(f"{anio}/{ronda}/results", pedir):
+        carreras += nuevas
+        if anio >= ANIO_CLASIFICACION:
+            clasificacion += _carreras(f"{anio}/{ronda}/qualifying", pedir)
+        ronda += 1
+    return carreras, clasificacion
+
+
+def descargar_temporada(con, anio, pedir=pedir_json, desde=None):
+    """Baja la temporada y la reemplaza en una sola transacción.
+
+    Con `desde`, sólo las rondas a partir de esa: las anteriores ya están
+    guardadas. Los campeonatos se bajan enteros siempre (incluyen los sprints,
+    que pueden sumar sin que haya carrera nueva).
 
     Primero se pide todo y recién después se escribe: si la red se corta a
     mitad de camino, la base queda exactamente como estaba."""
-    carreras = _carreras(f"{anio}/results", pedir)
-    clasificacion = (_carreras(f"{anio}/qualifying", pedir)
-                     if anio >= ANIO_CLASIFICACION else [])
+    if desde is None:
+        carreras = _carreras(f"{anio}/results", pedir)
+        clasificacion = (_carreras(f"{anio}/qualifying", pedir)
+                         if anio >= ANIO_CLASIFICACION else [])
+    else:
+        carreras, clasificacion = _rondas_desde(anio, desde, pedir)
     camp_pilotos = _standings(f"{anio}/driverStandings", "DriverStandings", pedir)
     camp_equipos = _standings(f"{anio}/constructorStandings", "ConstructorStandings", pedir)
 
     with con:
         for tabla in TABLAS_POR_TEMPORADA:
-            con.execute(f"DELETE FROM {tabla} WHERE temporada = ?", (anio,))
+            if desde is not None and tabla in ("carreras", "resultados", "clasificacion"):
+                # Puede haber una clasificación guardada de una ronda que
+                # todavía no tenía carrera.
+                con.execute(f"DELETE FROM {tabla} WHERE temporada = ? AND ronda >= ?",
+                            (anio, desde))
+            else:
+                con.execute(f"DELETE FROM {tabla} WHERE temporada = ?", (anio,))
 
         for carrera in carreras:
             ronda = int(carrera["round"])
@@ -216,11 +242,12 @@ def _dicts(cursor):
 
 def pilotos_temporada(con, anio):
     """Pilotos del campeonato en orden; los que no tienen posición, al final.
-    `numero` es el del último resultado: antes de 2014 cambiaba por carrera."""
-    return _dicts(con.execute("""
+    `numero` es el del último resultado: antes de 2014 cambiaba por carrera.
+    `equipos`: todos por los que corrió en el año, en orden."""
+    pilotos = _dicts(con.execute("""
         SELECT c.driver_id, p.codigo, p.nombre, p.apellido, p.nacionalidad,
                p.nacimiento, p.url_wiki, p.headshot_url, c.constructor_id,
-               e.nombre AS equipo, c.posicion, c.puntos,
+               e.nombre AS equipo, c.posicion, c.puntos, c.victorias,
                (SELECT r.numero FROM resultados r
                  WHERE r.temporada = c.temporada AND r.driver_id = c.driver_id
                  ORDER BY r.ronda DESC LIMIT 1) AS numero
@@ -230,12 +257,27 @@ def pilotos_temporada(con, anio):
          WHERE c.temporada = ?
          ORDER BY c.posicion IS NULL, c.posicion, c.puntos DESC""", (anio,)))
 
+    equipos = defaultdict(list)
+    for driver_id, nombre in con.execute("""
+            SELECT r.driver_id, e.nombre FROM resultados r
+              JOIN equipos e ON e.constructor_id = r.constructor_id
+             WHERE r.temporada = ?
+             GROUP BY r.driver_id, r.constructor_id
+             ORDER BY MIN(r.ronda)""", (anio,)):
+        equipos[driver_id].append(nombre)
+    for p in pilotos:
+        p["equipos"] = equipos.get(p["driver_id"]) or ([p["equipo"]] if p["equipo"] else [])
+    return pilotos
+
 
 def equipos_temporada(con, anio):
     """Campeonato de constructores. No existe antes de 1958: ahí se suman los
     puntos de los resultados y los equipos quedan sin posición."""
     filas = _dicts(con.execute("""
-        SELECT c.constructor_id, e.nombre, c.posicion, c.puntos
+        SELECT c.constructor_id, e.nombre, c.posicion, c.puntos,
+               (SELECT COUNT(*) FROM resultados r
+                 WHERE r.temporada = c.temporada AND r.constructor_id = c.constructor_id
+                   AND r.posicion = 1) AS victorias
           FROM campeonato_equipos c
           JOIN equipos e ON e.constructor_id = c.constructor_id
          WHERE c.temporada = ?
@@ -243,12 +285,19 @@ def equipos_temporada(con, anio):
     if filas:
         return filas
     return _dicts(con.execute("""
-        SELECT r.constructor_id, e.nombre, NULL AS posicion, SUM(r.puntos) AS puntos
+        SELECT r.constructor_id, e.nombre, NULL AS posicion, SUM(r.puntos) AS puntos,
+               IFNULL(SUM(r.posicion = 1), 0) AS victorias
           FROM resultados r
           JOIN equipos e ON e.constructor_id = r.constructor_id
          WHERE r.temporada = ?
          GROUP BY r.constructor_id, e.nombre
          ORDER BY puntos DESC, e.nombre""", (anio,)))
+
+
+def ultima_ronda(con, anio):
+    """Última carrera con resultados; None si todavía no se corrió ninguna."""
+    return con.execute("SELECT MAX(ronda) FROM resultados WHERE temporada = ?",
+                       (anio,)).fetchone()[0]
 
 
 def stats_temporada(con, anio, driver_id):
@@ -293,8 +342,12 @@ def carrera_completa(con, driver_id):
                MIN(CASE WHEN {LARGO_SQL} THEN temporada END) AS debut
           FROM resultados
          WHERE driver_id = ?""", (driver_id,)))[0]
-    carrera["titulos"] = con.execute("""SELECT COUNT(*) FROM campeonato_pilotos
-                                         WHERE driver_id = ? AND posicion = 1""",
+    # Sólo temporadas terminadas (mismo criterio que temporada_completa): el
+    # que va primero a mitad de año todavía no es campeón.
+    carrera["titulos"] = con.execute("""SELECT COUNT(*) FROM campeonato_pilotos c
+                                          JOIN temporadas t ON t.temporada = c.temporada
+                                         WHERE c.driver_id = ? AND c.posicion = 1
+                                           AND t.actualizada >= (c.temporada + 1) || '-01-01'""",
                                      (driver_id,)).fetchone()[0]
     return carrera
 
@@ -407,8 +460,7 @@ def completar_headshots(con, anio):
     FastF1 la trae vacía en temporadas viejas (en 2018 ya no viene)."""
     import fastf1   # pesado: sólo se importa cuando hace falta
 
-    ultima = con.execute("SELECT MAX(ronda) FROM resultados WHERE temporada = ?",
-                         (anio,)).fetchone()[0]
+    ultima = ultima_ronda(con, anio)
     if ultima is None:
         return
     sesion = fastf1.get_session(anio, ultima, "R")
@@ -420,3 +472,49 @@ def completar_headshots(con, anio):
                 # /1col/ son 93 px; /2col/ son 206, que alcanzan para la ficha.
                 con.execute("UPDATE pilotos SET headshot_url = ? WHERE driver_id = ?",
                             (url.replace("/1col/", "/2col/"), fila["DriverId"]))
+
+
+CARPETA_GANADORES = "cache_ganadores"
+VIGENCIA_GANADORES_S = 7 * 24 * 3600   # a lo sumo una carrera nueva por circuito por año
+
+
+def ganadores_circuito(circuit_id, pedir=pedir_json):
+    """Ganadores de cada GP corrido en el circuito, del más nuevo al más viejo:
+    [{"anio", "gp", "piloto", "equipo"}]. Va por circuito y no por nombre del
+    GP: el GP de España, por ejemplo, se corrió en cuatro circuitos.
+
+    Se guarda en un JSON por circuito y se vuelve a pedir pasada una semana;
+    si la red falla, sirve el guardado aunque esté vencido."""
+    ruta = os.path.join(data_path(CARPETA_GANADORES), f"{circuit_id}.json")
+    if os.path.exists(ruta) and time.time() - os.path.getmtime(ruta) < VIGENCIA_GANADORES_S:
+        with open(ruta, encoding="utf-8") as archivo:
+            return json.load(archivo)
+    try:
+        carreras = _carreras(f"circuits/{circuit_id}/results/1", pedir)
+    except Exception:
+        if not os.path.exists(ruta):
+            raise
+        with open(ruta, encoding="utf-8") as archivo:
+            return json.load(archivo)
+
+    # En los años 50 una victoria podía ser compartida: vienen los dos.
+    ganadores = [
+        {"anio": int(c["season"]), "ronda": int(c["round"]), "gp": c["raceName"],
+         "piloto": f"{r['Driver']['givenName']} {r['Driver']['familyName']}",
+         "equipo": r["Constructor"]["name"]}
+        for c in carreras for r in c["Results"]
+    ]
+    ganadores.sort(key=lambda g: (g["anio"], g["ronda"]), reverse=True)
+    os.makedirs(os.path.dirname(ruta), exist_ok=True)
+    with open(ruta, "w", encoding="utf-8") as archivo:
+        json.dump(ganadores, archivo, ensure_ascii=False)
+    return ganadores
+
+
+def mas_victorias(ganadores):
+    """("Lewis Hamilton", 5) del que más ganó; en un empate, los nombres juntos."""
+    conteo = Counter(g["piloto"] for g in ganadores).most_common()
+    if not conteo:
+        return None
+    tope = conteo[0][1]
+    return ", ".join(p for p, n in conteo if n == tope), tope

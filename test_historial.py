@@ -6,9 +6,10 @@ y con `python test_historial.py`.
 """
 import os
 import sqlite3
+import sys
 import tempfile
 
-from core import fotos, historial
+from core import calendario, fotos, historial, paths
 
 historial.PAUSA_S = 0   # las páginas falsas no necesitan esperar
 
@@ -95,17 +96,23 @@ CONSTRUCTORES = {
 
 
 def pedir_falso(ruta, offset=0):
-    anio, recurso = ruta.split("/")
-    anio = int(anio)
+    """"2025/results" (temporada) o "2025/3/results" (una ronda)."""
+    partes = ruta.split("/")
+    anio, recurso = int(partes[0]), partes[-1]
+    ronda = int(partes[1]) if len(partes) == 3 else None
+
+    def de_la_ronda(filas):
+        return [f for f in filas if ronda is None or f[0] == ronda]
+
     if recurso == "results":
         filas = [(r, gp, {"number": num, "positionText": pt, "points": str(pts),
                           "grid": str(grid), "status": st, "Driver": d, "Constructor": c})
                  for r, gp, d, c, num, grid, pt, pts, st in RESULTADOS.get(anio, [])]
-        return _pagina_carreras(anio, filas, offset, "Results")
+        return _pagina_carreras(anio, de_la_ronda(filas), offset, "Results")
     if recurso == "qualifying":
         filas = [(r, gp, {"position": str(pos), "Driver": d, "Constructor": c})
                  for r, gp, d, c, pos in CLASIFICACION.get(anio, [])]
-        return _pagina_carreras(anio, filas, offset, "QualifyingResults")
+        return _pagina_carreras(anio, de_la_ronda(filas), offset, "QualifyingResults")
     if recurso == "driverStandings":
         filas = [{**({"position": str(pos)} if pos else {}),
                   "positionText": str(pos) if pos else "-",
@@ -457,6 +464,143 @@ def test_cara_a_cara_con_un_piloto_que_cambio_de_equipo_cuenta_solo_sus_puntos_a
                    WHERE temporada = 2025 AND driver_id = 'piastri'""")
     duelo = historial.cara_a_cara(con, 2025, "mclaren")
     assert (duelo["a"]["driver_id"], duelo["puntos"]) == ("norris", (50, 43)), duelo["puntos"]
+
+
+def test_la_temporada_en_curso_no_suma_titulo():
+    """Antonelli lideraba 2026 a mitad de año y la ficha le daba un título."""
+    con = base_de_prueba()
+    assert historial.carrera_completa(con, "norris")["titulos"] == 1
+    con.execute("UPDATE temporadas SET actualizada = '2025-06-01' WHERE temporada = 2025")
+    assert historial.carrera_completa(con, "norris")["titulos"] == 0
+
+
+def test_la_clasificacion_trae_victorias_y_todos_los_equipos_del_piloto():
+    con = base_de_prueba()
+    # Piastri corre la R4 para Ferrari: la tabla lo muestra con los dos equipos.
+    con.execute("""UPDATE resultados SET constructor_id = 'ferrari'
+                   WHERE temporada = 2025 AND ronda = 4 AND driver_id = 'piastri'""")
+    pilotos = {p["driver_id"]: p for p in historial.pilotos_temporada(con, 2025)}
+    assert pilotos["piastri"]["equipos"] == ["McLaren", "Ferrari"]
+    assert (pilotos["norris"]["equipos"], pilotos["norris"]["victorias"]) == (["McLaren"], 1)
+    assert [(e["constructor_id"], e["victorias"])
+            for e in historial.equipos_temporada(con, 2025)] == [("mclaren", 2), ("ferrari", 1)]
+    assert [(e["constructor_id"], e["victorias"])
+            for e in historial.equipos_temporada(con, 1988)] == [("mclaren", 1)]
+    assert historial.ultima_ronda(con, 2025) == 4
+    assert historial.ultima_ronda(con, 2026) is None
+
+
+def test_en_el_exe_los_datos_van_a_localappdata():
+    """Al lado del .exe puede no haber permiso de escritura (Program Files)."""
+    originales = getattr(sys, "frozen", None), os.environ.get("LOCALAPPDATA")
+    sys.frozen, os.environ["LOCALAPPDATA"] = True, r"C:\local"
+    try:
+        assert paths.data_path("cache") == os.path.join(r"C:\local", "F1CalendarApp", "cache")
+    finally:
+        if originales[0] is None:
+            del sys.frozen
+        if originales[1] is None:   # en el CI (Linux) no existe
+            del os.environ["LOCALAPPDATA"]
+        else:
+            os.environ["LOCALAPPDATA"] = originales[1]
+
+
+def test_con_desde_baja_solo_las_rondas_nuevas_y_los_campeonatos():
+    con = base_de_prueba()
+    # Como si se hubiera guardado después de la R2: faltan la 3 y la 4.
+    for tabla in ("carreras", "resultados", "clasificacion"):
+        con.execute(f"DELETE FROM {tabla} WHERE temporada = 2025 AND ronda > 2")
+    con.execute("UPDATE campeonato_pilotos SET puntos = 0 WHERE temporada = 2025")
+    pedidas = []
+
+    def pedir_anotando(ruta, offset=0):
+        pedidas.append(ruta)
+        return pedir_falso(ruta, offset)
+
+    historial.descargar_temporada(con, 2025, pedir=pedir_anotando, desde=3)
+    assert pedidas == ["2025/3/results", "2025/3/qualifying", "2025/4/results",
+                       "2025/4/qualifying", "2025/5/results",
+                       "2025/driverStandings", "2025/constructorStandings"], pedidas
+    assert _contar(con, "SELECT COUNT(*) FROM resultados WHERE temporada = 2025") == 13
+    assert _contar(con, "SELECT COUNT(*) FROM carreras WHERE temporada = 2025") == 4
+    assert _contar(con, "SELECT puntos FROM campeonato_pilotos WHERE driver_id = 'norris'") == 50
+    # Las otras temporadas no se tocan.
+    assert _contar(con, "SELECT COUNT(*) FROM resultados WHERE temporada = 1988") > 0
+
+
+def test_con_desde_y_sin_rondas_nuevas_solo_baja_los_campeonatos():
+    con = base_de_prueba()
+    pedidas = []
+
+    def pedir_anotando(ruta, offset=0):
+        pedidas.append(ruta)
+        return pedir_falso(ruta, offset)
+
+    historial.descargar_temporada(con, 2025, pedir=pedir_anotando, desde=5)
+    assert pedidas == ["2025/5/results", "2025/driverStandings",
+                       "2025/constructorStandings"], pedidas
+    assert _contar(con, "SELECT COUNT(*) FROM resultados WHERE temporada = 2025") == 13
+
+
+def test_los_calendarios_de_anios_terminados_se_guardan_y_no_se_vuelven_a_pedir():
+    import fastf1
+    import pandas as pd
+    carpeta = tempfile.mkdtemp()
+    pedidos = []
+
+    def get_event_schedule(anio, include_testing):
+        pedidos.append((anio, include_testing))
+        return pd.DataFrame({"RoundNumber": [1, 2]})
+
+    originales = (calendario.ruta_cache, calendario.data_path, fastf1.get_event_schedule)
+    calendario.data_path = lambda nombre: os.path.join(carpeta, nombre)
+    calendario.ruta_cache = lambda nombre, archivo: (os.path.join(carpeta, nombre, archivo), True)
+    fastf1.get_event_schedule = get_event_schedule
+    try:
+        actual = calendario.anio_actual()
+        for _ in range(2):
+            assert list(calendario.obtener_calendario(2010)["RoundNumber"]) == [1, 2]
+            calendario.obtener_calendario(actual)
+    finally:
+        calendario.ruta_cache, calendario.data_path, fastf1.get_event_schedule = originales
+    # 2010 se pidió una sola vez; el año en curso puede cambiar y se pide siempre.
+    assert pedidos == [(2010, False), (actual, False), (actual, False)], pedidos
+
+
+def _pagina_ganadores(carreras, offset):
+    pagina = carreras[offset:offset + LIMITE]
+    return {"limit": str(LIMITE), "offset": str(offset), "total": str(len(carreras)),
+            "RaceTable": {"Races": pagina}}
+
+
+def test_ganadores_del_circuito_ordenados_y_guardados():
+    def carrera(anio, ronda, *pilotos):
+        return {"season": str(anio), "round": str(ronda), "raceName": "Bahrain Grand Prix",
+                "Results": [{"Driver": p, "Constructor": {"name": "McLaren"}} for p in pilotos]}
+    VER = _piloto("max_verstappen", "Max", "Verstappen")
+    carreras = [carrera(2004 + i, 1, NOR if i % 2 else VER) for i in range(7)]
+    carreras.append(carrera(2020, 16, NOR, VER))   # dos ganadores: victoria compartida
+    pedidos = []
+
+    def pedir(ruta, offset=0):
+        pedidos.append((ruta, offset))
+        return _pagina_ganadores(carreras, offset)
+
+    carpeta = tempfile.mkdtemp()
+    original = historial.data_path
+    historial.data_path = lambda nombre: os.path.join(carpeta, nombre)
+    try:
+        ganadores = historial.ganadores_circuito("bahrain", pedir)
+        assert [(g["anio"], g["piloto"]) for g in ganadores[:3]] ==             [(2020, "Lando Norris"), (2020, "Max Verstappen"), (2010, "Max Verstappen")], ganadores
+        assert len(ganadores) == 9
+        assert historial.mas_victorias(ganadores) == ("Max Verstappen", 5)
+        # La segunda vez sale del JSON guardado, sin pedir nada.
+        cantidad = len(pedidos)
+        assert historial.ganadores_circuito("bahrain", pedir) == ganadores
+        assert len(pedidos) == cantidad
+    finally:
+        historial.data_path = original
+    assert pedidos[0][0] == "circuits/bahrain/results/1"
 
 
 if __name__ == "__main__":

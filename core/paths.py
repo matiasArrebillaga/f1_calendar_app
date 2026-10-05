@@ -10,10 +10,12 @@ def resource_path(ruta_relativa):
 
 
 def data_path(nombre_carpeta):
-    """Carpeta de datos ESCRIBIBLE, generada en runtime, siempre al lado
-    del .exe (o del proyecto, si corrés como script)."""
+    """Carpeta de datos ESCRIBIBLE, generada en runtime: %LOCALAPPDATA% en el
+    .exe (al lado del exe puede no haber permiso, p. ej. en Program Files) o
+    el proyecto, si corrés como script."""
     if getattr(sys, 'frozen', False):
-        base = os.path.dirname(sys.executable)
+        base = os.path.join(os.environ.get('LOCALAPPDATA') or os.path.expanduser('~'),
+                            'F1CalendarApp')
     else:
         base = os.path.abspath(".")
     return os.path.join(base, nombre_carpeta)

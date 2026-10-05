@@ -14,8 +14,15 @@ class SessionWorker(QThread):
     def run(self):
         try:
             sesion = fastf1.get_session(self.year, self.gp, self.codigo_sesion)
-            necesita_vueltas = self.codigo_sesion in ('FP1', 'FP2', 'FP3', 'Q', 'SQ')
-            sesion.load(laps=necesita_vueltas, telemetry=False, weather=False)
+            # Las vueltas son lo más pesado. Q1/Q2/Q3 de la Q vienen de Ergast; la
+            # SQ no está en Ergast y FastF1 la calcula de las vueltas, para lo que
+            # también necesita los mensajes de dirección (vueltas borradas).
+            calcula_de_vueltas = self.codigo_sesion == 'SQ'
+            sesion.load(laps=calcula_de_vueltas or self.codigo_sesion in ('FP1', 'FP2', 'FP3'),
+                        telemetry=False, weather=False, messages=calcula_de_vueltas)
+            if self.codigo_sesion == 'Q' and sesion.results['Position'].isna().all():
+                # Recién terminada: Ergast tarda unas horas en publicarla.
+                sesion.load(laps=True, telemetry=False, weather=False, messages=True)
             if self.codigo_sesion in ('FP1', 'FP2', 'FP3'):
                 self._agregar_datos_practica(sesion)
             elif self.codigo_sesion in ('Q', 'SQ'):

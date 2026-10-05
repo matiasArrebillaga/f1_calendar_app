@@ -309,15 +309,28 @@ class CalendarView(QWidget):
         aplicar_estado(self.estado, texto, tipo)
 
     def _calcular_columnas(self):
+        # La última columna no lleva espaciado a la derecha.
         ancho_disponible = self.scroll.viewport().width() - self.RESERVA_LATERAL
         ancho_por_tarjeta = self.ANCHO_TARJETA + self.ESPACIADO
-        return max(1, ancho_disponible // ancho_por_tarjeta)
+        return max(1, (ancho_disponible + self.ESPACIADO) // ancho_por_tarjeta)
 
     def _reorganizar_grid(self):
         if not self._orden:
             return
 
+        # ANCHO_TARJETA es el mínimo: lo que sobra se reparte entre las
+        # columnas, así la grilla llega al mismo borde que la próxima carrera.
         columnas = self._calcular_columnas()
+        ancho_disponible = self.scroll.viewport().width() - self.RESERVA_LATERAL
+        ancho = max(self.ANCHO_TARJETA,
+                    (ancho_disponible - self.ESPACIADO * (columnas - 1)) // columnas)
+        for tarjeta in self._tarjetas:
+            tarjeta.set_ancho(ancho)
+        # QGridLayout deja en 0 una columna sin tarjetas: en un mes con menos
+        # carreras que columnas, la línea del mes quedaba corta.
+        for col in range(max(columnas, self.grid.columnCount())):
+            self.grid.setColumnMinimumWidth(col, ancho if col < columnas else 0)
+
         if columnas == self._columnas_actual:
             return
         self._columnas_actual = columnas

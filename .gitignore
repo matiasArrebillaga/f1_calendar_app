@@ -5,6 +5,7 @@ cache_flags/
 cache_tracks/
 assets/
 cache_circuitos/
+cache_ganadores/
 cache_historial/
 cache_fotos/
 cache_logos/
@@ -17,3 +18,5 @@ dist/
 build/
 .vscode/
 graphify-out/
+cache_calendarios/
+dist_nuevo/

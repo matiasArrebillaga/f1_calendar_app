@@ -32,7 +32,7 @@ class SpinnerWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        pen = QPen(QColor("#e10600"))
+        pen = QPen(QColor("#E8B931"))  # estado-cargando de style.qss
         pen.setWidth(self.grosor)
         pen.setCapStyle(Qt.RoundCap)
         painter.setPen(pen)

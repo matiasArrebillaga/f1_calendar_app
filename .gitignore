@@ -5,8 +5,11 @@ cache_flags/
 cache_tracks/
 assets/
 cache_circuitos/
+cache_historial/
+cache_fotos/
 precache.py
 precache_tracks.py
+precache_historial.py
 test.py
 F1CalendarApp.spec
 dist/

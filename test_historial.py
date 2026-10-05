@@ -392,6 +392,27 @@ def test_sin_ninguna_foto_devuelve_none_y_no_reintenta():
         _restaurar_fotos(originales)
 
 
+def test_jpg_de_wikipedia_viejo_no_tapa_la_oficial():
+    carpeta, originales = _fotos_en_carpeta_temporal()
+    _archivo_vacio(os.path.join(carpeta, "norris.jpg"))
+    _archivo_vacio(os.path.join(carpeta, "piastri.jpg"))
+
+    def bajar(url, destino):
+        if url == "https://f1/piastri.png":
+            raise OSError("404")
+        _archivo_vacio(destino)
+
+    def wikipedia(url_wiki):
+        raise AssertionError("ya había JPG: no hacía falta volver a Wikipedia")
+
+    fotos._bajar, fotos._url_wikipedia = bajar, wikipedia
+    try:
+        assert fotos.obtener_ruta_foto("norris", "https://f1/norris.png", "http://w/N") ==             os.path.join(carpeta, "norris.png")
+        assert fotos.obtener_ruta_foto("piastri", "https://f1/piastri.png", "http://w/P") ==             os.path.join(carpeta, "piastri.jpg")
+    finally:
+        _restaurar_fotos(originales)
+
+
 def test_cara_a_cara_con_un_piloto_que_cambio_de_equipo_cuenta_solo_sus_puntos_ahi():
     """Como Tsunoda y Lawson en 2025: el total del campeonato incluye lo que
     sumaron con el otro equipo, que no es parte de este duelo."""

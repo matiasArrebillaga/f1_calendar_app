@@ -19,6 +19,9 @@ def _bajar(url, destino):
     pedido = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(pedido, timeout=20) as respuesta:
         datos = respuesta.read()
+    # Si F1 no tiene la foto devuelve una silueta gris de ~1,4 KB: no sirve.
+    if len(datos) < 2048:
+        raise ValueError(f"imagen demasiado chica: {url}")
     # Se escribe recién con todo bajado: un corte de red no deja un archivo a medias.
     with open(destino, "wb") as archivo:
         archivo.write(datos)
@@ -34,17 +37,20 @@ def _url_wikipedia(url_wiki):
 
 
 def obtener_ruta_foto(driver_id, headshot_url=None, url_wiki=None):
-    for extension in ("png", "jpg"):
-        ruta, _ = ruta_cache(CARPETA, f"{driver_id}.{extension}")
-        if os.path.exists(ruta):
-            return ruta
-    if driver_id in _fallidas:
-        return None
+    png, _ = ruta_cache(CARPETA, f"{driver_id}.png")
+    if os.path.exists(png):
+        return png
+    # Un JPG de Wikipedia guardado antes de tener la oficial no la tapa: se
+    # intenta la oficial y, si falla, se sigue usando el JPG.
+    jpg, _ = ruta_cache(CARPETA, f"{driver_id}.jpg")
+    respaldo = jpg if os.path.exists(jpg) else None
+    if driver_id in _fallidas or (respaldo and not headshot_url):
+        return respaldo
 
     fuentes = []
     if headshot_url:
         fuentes.append(("png", lambda: headshot_url))
-    if url_wiki:
+    if url_wiki and not respaldo:
         fuentes.append(("jpg", lambda: _url_wikipedia(url_wiki)))
 
     os.makedirs(data_path(CARPETA), exist_ok=True)
@@ -59,4 +65,4 @@ def obtener_ruta_foto(driver_id, headshot_url=None, url_wiki=None):
         except Exception:
             continue
     _fallidas.add(driver_id)
-    return None
+    return respaldo

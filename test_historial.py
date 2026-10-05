@@ -230,6 +230,65 @@ def test_abrir_base_copia_la_empaquetada_la_primera_vez():
         historial.data_path, historial.resource_path = originales
 
 
+def test_pilotos_ordenados_por_campeonato_y_sin_posicion_al_final():
+    con = base_de_prueba()
+    pilotos = historial.pilotos_temporada(con, 2025)
+    assert [p["driver_id"] for p in pilotos] == ["norris", "piastri", "leclerc", "lawson"]
+    nor = pilotos[0]
+    assert (nor["codigo"], nor["numero"], nor["equipo"], nor["puntos"]) == ("NOR", "4", "McLaren", 50)
+
+    pilotos_1990 = historial.pilotos_temporada(con, 1990)
+    assert [p["driver_id"] for p in pilotos_1990] == ["senna", "prost", "nadie"]
+    assert pilotos_1990[0]["codigo"] is None   # Ergast no tiene siglas de esa época
+    assert historial.pilotos_temporada(con, 2026) == []
+
+
+def test_equipos_sin_campeonato_de_constructores_suman_resultados():
+    con = base_de_prueba()
+    assert [(e["constructor_id"], e["posicion"], e["puntos"])
+            for e in historial.equipos_temporada(con, 2025)] == [("mclaren", 1, 97), ("ferrari", 2, 43)]
+    assert [(e["constructor_id"], e["posicion"], e["puntos"])
+            for e in historial.equipos_temporada(con, 1988)] == [("mclaren", None, 15)]
+
+
+def test_stats_de_temporada():
+    con = base_de_prueba()
+    assert historial.stats_temporada(con, 2025, "norris") == {
+        "victorias": 1, "podios": 2, "abandonos": 1, "prom_llegada": 3.0,
+        "prom_largada": 3.0, "poles": 1, "posicion": 1, "puntos": 50}
+    lec = historial.stats_temporada(con, 2025, "leclerc")
+    # R1 roto (R) y R4 descalificado (D) son abandonos; largar desde boxes
+    # (largada 0) no entra al promedio de largada.
+    assert (lec["abandonos"], lec["prom_largada"], lec["poles"]) == (2, 2.0, 2)
+
+
+def test_antes_de_1994_la_pole_sale_de_la_largada_y_no_clasificar_no_es_abandonar():
+    con = base_de_prueba()
+    assert historial.stats_temporada(con, 1990, "senna")["poles"] == 1
+    assert historial.stats_temporada(con, 1990, "prost")["abandonos"] == 1
+    assert historial.stats_temporada(con, 1990, "nadie")["abandonos"] == 0
+
+
+def test_tira_de_resultados():
+    con = base_de_prueba()
+    tira = historial.tira_resultados(con, 2025, "norris")
+    assert [(f["ronda"], f["gp"], f["largada"], f["posicion"], f["posicion_texto"]) for f in tira] == [
+        (1, "Australian Grand Prix", 1, 1, "1"),
+        (2, "Chinese Grand Prix", 4, 3, "3"),
+        (3, "Japanese Grand Prix", 2, None, "R"),
+        (4, "Bahrain Grand Prix", 5, 5, "5"),
+    ]
+
+
+def test_carrera_completa():
+    con = base_de_prueba()
+    assert historial.carrera_completa(con, "senna") == {
+        "victorias": 2, "podios": 2, "gps": 2, "debut": 1988, "titulos": 2}
+    # Ergast lo anota en los resultados, pero no largó: no suma GP ni debut.
+    assert historial.carrera_completa(con, "nadie") == {
+        "victorias": 0, "podios": 0, "gps": 0, "debut": None, "titulos": 0}
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

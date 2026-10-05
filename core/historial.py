@@ -197,3 +197,93 @@ def abrir_base():
     con = sqlite3.connect(ruta, timeout=10)
     con.executescript(ESQUEMA)
     return con
+
+
+def _dicts(cursor):
+    columnas = [c[0] for c in cursor.description]
+    return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+
+def pilotos_temporada(con, anio):
+    """Pilotos del campeonato en orden; los que no tienen posición, al final.
+    `numero` es el del último resultado: antes de 2014 cambiaba por carrera."""
+    return _dicts(con.execute("""
+        SELECT c.driver_id, p.codigo, p.nombre, p.apellido, p.nacionalidad,
+               p.nacimiento, p.url_wiki, p.headshot_url, c.constructor_id,
+               e.nombre AS equipo, c.posicion, c.puntos,
+               (SELECT r.numero FROM resultados r
+                 WHERE r.temporada = c.temporada AND r.driver_id = c.driver_id
+                 ORDER BY r.ronda DESC LIMIT 1) AS numero
+          FROM campeonato_pilotos c
+          JOIN pilotos p ON p.driver_id = c.driver_id
+          LEFT JOIN equipos e ON e.constructor_id = c.constructor_id
+         WHERE c.temporada = ?
+         ORDER BY c.posicion IS NULL, c.posicion, c.puntos DESC""", (anio,)))
+
+
+def equipos_temporada(con, anio):
+    """Campeonato de constructores. No existe antes de 1958: ahí se suman los
+    puntos de los resultados y los equipos quedan sin posición."""
+    filas = _dicts(con.execute("""
+        SELECT c.constructor_id, e.nombre, c.posicion, c.puntos
+          FROM campeonato_equipos c
+          JOIN equipos e ON e.constructor_id = c.constructor_id
+         WHERE c.temporada = ?
+         ORDER BY c.posicion IS NULL, c.posicion""", (anio,)))
+    if filas:
+        return filas
+    return _dicts(con.execute("""
+        SELECT r.constructor_id, e.nombre, NULL AS posicion, SUM(r.puntos) AS puntos
+          FROM resultados r
+          JOIN equipos e ON e.constructor_id = r.constructor_id
+         WHERE r.temporada = ?
+         GROUP BY r.constructor_id, e.nombre
+         ORDER BY puntos DESC, e.nombre""", (anio,)))
+
+
+def stats_temporada(con, anio, driver_id):
+    stats = _dicts(con.execute(f"""
+        SELECT IFNULL(SUM(posicion = 1), 0) AS victorias,
+               IFNULL(SUM(posicion <= 3), 0) AS podios,
+               IFNULL(SUM(posicion IS NULL AND {LARGO_SQL}), 0) AS abandonos,
+               AVG(posicion) AS prom_llegada,
+               AVG(CASE WHEN largada > 0 THEN largada END) AS prom_largada
+          FROM resultados
+         WHERE temporada = ? AND driver_id = ?""", (anio, driver_id)))[0]
+
+    if anio >= ANIO_CLASIFICACION:
+        sql_poles = """SELECT COUNT(*) FROM clasificacion
+                        WHERE temporada = ? AND driver_id = ? AND posicion = 1"""
+    else:   # sin clasificación en Ergast: el primero de la grilla
+        sql_poles = """SELECT COUNT(*) FROM resultados
+                        WHERE temporada = ? AND driver_id = ? AND largada = 1"""
+    stats["poles"] = con.execute(sql_poles, (anio, driver_id)).fetchone()[0]
+
+    campeonato = con.execute("""SELECT posicion, puntos FROM campeonato_pilotos
+                                 WHERE temporada = ? AND driver_id = ?""",
+                             (anio, driver_id)).fetchone() or (None, None)
+    stats["posicion"], stats["puntos"] = campeonato
+    return stats
+
+
+def tira_resultados(con, anio, driver_id):
+    return _dicts(con.execute("""
+        SELECT r.ronda, c.nombre AS gp, r.largada, r.posicion, r.posicion_texto
+          FROM resultados r
+          JOIN carreras c ON c.temporada = r.temporada AND c.ronda = r.ronda
+         WHERE r.temporada = ? AND r.driver_id = ?
+         ORDER BY r.ronda""", (anio, driver_id)))
+
+
+def carrera_completa(con, driver_id):
+    carrera = _dicts(con.execute(f"""
+        SELECT IFNULL(SUM(posicion = 1), 0) AS victorias,
+               IFNULL(SUM(posicion <= 3), 0) AS podios,
+               COUNT(DISTINCT CASE WHEN {LARGO_SQL} THEN temporada * 100 + ronda END) AS gps,
+               MIN(CASE WHEN {LARGO_SQL} THEN temporada END) AS debut
+          FROM resultados
+         WHERE driver_id = ?""", (driver_id,)))[0]
+    carrera["titulos"] = con.execute("""SELECT COUNT(*) FROM campeonato_pilotos
+                                         WHERE driver_id = ? AND posicion = 1""",
+                                     (driver_id,)).fetchone()[0]
+    return carrera

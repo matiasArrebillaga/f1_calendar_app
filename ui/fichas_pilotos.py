@@ -233,6 +233,7 @@ class GrillaTarjetas(QScrollArea):
     def set_tarjetas(self, tarjetas):
         for vieja in self._tarjetas:
             self._grilla.removeWidget(vieja)
+            vieja.hide()   # deleteLater tarda: sin esto sigue pintada fuera del layout
             vieja.deleteLater()
         self._tarjetas = list(tarjetas)
         for tarjeta in self._tarjetas:
@@ -332,6 +333,7 @@ class TiraResultados(QWidget):
         while self._grilla.count():
             item = self._grilla.takeAt(0)
             if item.widget() is not None:
+                item.widget().hide()   # deleteLater tarda: sin esto sigue pintada
                 item.widget().deleteLater()
         self._celdas = [_celda(fila) for fila in filas]
         for i, celda in enumerate(self._celdas):

@@ -651,6 +651,30 @@ def test_la_sidebar_lleva_a_pilotos():
     assert destinos == ["pilotos"]
 
 
+def test_cambiar_de_piloto_no_deja_celdas_ni_tarjetas_del_anterior():
+    """Lo que sale del layout queda pintado hasta que deleteLater lo borra de
+    verdad: sin ocultarlo, la tira de Senna 1988 mostraba al final celdas de
+    Norris 2025 (el mismo bug que tuvo el calendario con las tarjetas)."""
+    from PySide6.QtWidgets import QFrame
+    vista = _vista_pilotos()
+    try:
+        vista.show()
+        vista.cargar_datos(2025)
+        vista.abrir_piloto("norris")            # 4 celdas
+        vista.cargar_datos(1990)
+        vista.abrir_piloto("senna")             # 1 celda
+        celdas = [c for c in vista.ficha_piloto.tira.findChildren(QFrame, "celdaResultado")
+                  if c.isVisible()]
+        assert len(celdas) == 1, f"{len(celdas)} celdas visibles"
+        # La grilla está tapada por la ficha: lo que cuenta es si cada tarjeta
+        # quedó oculta a propósito, no si se ve en este momento.
+        tarjetas = [t for t in vista.grilla_pilotos.widget().children()
+                    if getattr(t, "clave", None) and not t.isHidden()]
+        assert sorted(t.clave for t in tarjetas) == ["nadie", "prost", "senna"],             sorted(t.clave for t in tarjetas)
+    finally:
+        _restaurar_pilotos()
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

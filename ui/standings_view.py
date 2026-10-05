@@ -3,10 +3,10 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QLabel, QSizePolicy, QHeaderView
 )
 from PySide6.QtGui import QColor, QFont
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 
 from core.equipos import color_equipo
-from ui.delegados import BarraPuntos, MedallaPosicion
+from ui.delegados import ficha_de, marcar_ficha, BarraPuntos, MedallaPosicion
 from ui.icons import franja_equipo, DATO
 from ui.estado import aplicar_estado
 from workers.standings_worker import StandingsWorker
@@ -22,6 +22,8 @@ def _nombre_piloto(piloto):
 
 
 class StandingsView(QWidget):
+    abrir_ficha = Signal(str, str)   # ("piloto" | "equipo", id)
+
     def __init__(self):
         super().__init__()
         self.setObjectName("vistaPrincipal")
@@ -125,7 +127,14 @@ class StandingsView(QWidget):
         tabla._medalla = MedallaPosicion(tabla)
         tabla._barra = BarraPuntos(tabla)
         tabla.setItemDelegateForColumn(0, tabla._medalla)
+        # activated: doble clic o Enter sobre la fila.
+        tabla.activated.connect(self._activar)
         return tabla
+
+    def _activar(self, indice):
+        ficha = ficha_de(indice)
+        if ficha:
+            self.abrir_ficha.emit(*ficha)
 
     def _cambiar_tab(self, indice):
         self.boton_pilotos.setChecked(indice == 0)
@@ -221,13 +230,16 @@ class StandingsView(QWidget):
              int(e['puntos'] or 0), int(e['victorias'] or 0))
             for e in datos['equipos']
         ]
-        self._llenar_tabla(self.tabla_pilotos, pilotos, ['Pos', 'Piloto', 'Equipo'])
-        self._llenar_tabla(self.tabla_equipos, equipos, ['Pos', 'Equipo'])
+        self._llenar_tabla(self.tabla_pilotos, pilotos, ['Pos', 'Piloto', 'Equipo'],
+                           [(p['driver_id'], p['constructor_id']) for p in datos['pilotos']])
+        self._llenar_tabla(self.tabla_equipos, equipos, ['Pos', 'Equipo'],
+                           [(None, e['constructor_id']) for e in datos['equipos']])
         self._actualizar_kpis()
 
-    def _llenar_tabla(self, tabla, filas, etiquetas_nombre):
+    def _llenar_tabla(self, tabla, filas, etiquetas_nombre, ids):
         """`filas`: [(nombre, equipo | None, color | None, puntos, victorias)],
-        ya en orden de posición."""
+        ya en orden de posición. `ids`: [(driver_id | None, constructor_id)] de
+        cada fila, para abrir su ficha."""
         con_equipo = len(etiquetas_nombre) == 3
         etiquetas = etiquetas_nombre + ['Puntos', 'Dif.', 'Vict.']
         col_puntos = len(etiquetas_nombre)
@@ -246,7 +258,7 @@ class StandingsView(QWidget):
         fuente_datos.setStyleHint(QFont.Monospace)
         puntos_lider = max(filas[0][3], 1) if filas else 1
 
-        for fila, (nombre, equipo, color, puntos, victorias) in enumerate(filas):
+        for fila, ((nombre, equipo, color, puntos, victorias), (driver_id, constructor_id))                 in enumerate(zip(filas, ids)):
             celdas = [str(fila + 1), nombre]
             if con_equipo:
                 celdas.append(equipo)
@@ -271,6 +283,12 @@ class StandingsView(QWidget):
                     franja = franja_equipo(color)
                     if franja is not None:
                         item.setIcon(franja)
+                # La columna Equipo abre la ficha del equipo; el resto, la del piloto.
+                if driver_id is None or (con_equipo and col == 2):
+                    if constructor_id:
+                        marcar_ficha(item, "equipo", constructor_id)
+                else:
+                    marcar_ficha(item, "piloto", driver_id)
                 tabla.setItem(fila, col, item)
 
         cabecera = tabla.horizontalHeader()

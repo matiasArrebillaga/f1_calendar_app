@@ -886,6 +886,47 @@ def test_el_mapa_y_la_ficha_se_abren_con_un_clic():
     capa[0].reject()
 
 
+def test_doble_clic_en_la_clasificacion_pide_la_ficha_del_piloto_o_del_equipo():
+    from ui.standings_view import StandingsView
+    datos, _ = _correr_standings_worker(2025, lambda *a, **k: None, anio_actual=2026)
+    vista = StandingsView()
+    vista.year = 2025
+    vista._mostrar(datos[-1])
+    pedidas = []
+    vista.abrir_ficha.connect(lambda tipo, id_: pedidas.append((tipo, id_)))
+    tabla = vista.tabla_pilotos
+    tabla.activated.emit(tabla.model().index(0, 1))   # nombre del líder
+    tabla.activated.emit(tabla.model().index(0, 2))   # su equipo
+    lider = datos[-1]["pilotos"][0]
+    assert pedidas == [("piloto", lider["driver_id"]), ("equipo", lider["constructor_id"])], pedidas
+
+
+def test_la_ficha_pedida_de_afuera_espera_los_datos_y_volver_avisa():
+    from ui.pilotos_view import PilotosView, FICHA_PILOTO, GRILLA_PILOTOS
+    datos, _ = _correr_pilotos_worker(2025, lambda *a, **k: None, anio_actual=2026)
+    vista = PilotosView()
+    vista._con = base_de_prueba()
+    vista.year = 2025
+    volvio = []
+    vista.volver_origen.connect(lambda: volvio.append(True))
+
+    # Un piloto que no corrió el campeonato no abre nada.
+    vista._mostrar(datos[-1])
+    vista.abrir_ficha_externa("piloto", "no_existe")
+    assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+
+    # Antes de que lleguen los datos queda pendiente; al llegar, se abre.
+    vista._datos = None
+    driver_id = datos[-1]["pilotos"][0]["driver_id"]
+    vista.abrir_ficha_externa("piloto", driver_id)
+    assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+    vista._mostrar(datos[-1])
+    assert vista.stack_interno.currentIndex() == FICHA_PILOTO
+
+    assert vista.volver_a_grilla() and volvio == [True]
+    assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

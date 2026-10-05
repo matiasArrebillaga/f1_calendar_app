@@ -7,12 +7,13 @@ from PySide6.QtCore import Signal, Qt, QSize, QEvent
 from PySide6.QtGui import QColor, QFont, QPixmap
 import pandas as pd
 
+from core import historial
 from core.circuits import obtener_datos_circuito
 from core.fechas import a_gmt_menos_3, dia_hora, rango_fechas
 from core.i18n import traducir_evento, traducir_pais, traducir_sesion
 from core.track_map import obtener_ruta_mapa
 from ui.datos_circuito import PanelDatosCircuito, ficha_html, filas_ficha
-from ui.delegados import MedallaPosicion
+from ui.delegados import MedallaPosicion, ficha_de, marcar_ficha
 from ui.icons import icono, franja_equipo, MUTED, PRIMARIO, DATO
 from ui.spinner_widget import SpinnerWidget
 from ui.vista_ampliada import VistaAmpliada
@@ -25,6 +26,7 @@ class EventDetailView(QWidget):
     """Detalle de un GP: sesiones en una tira arriba, resultados a la izquierda
     y el circuito (mapa + datos) siempre visible a la derecha."""
     volver = Signal()
+    abrir_ficha = Signal(str, str)   # ("piloto" | "equipo", id)
 
     TOTAL_SLOTS_SESION = 5
     ANCHO_COLUMNA_CIRCUITO = 300
@@ -117,6 +119,8 @@ class EventDetailView(QWidget):
         self.tabla_resultados.setShowGrid(False)
         self._medalla = MedallaPosicion(self.tabla_resultados)   # referencia viva
         self.tabla_resultados.setItemDelegateForColumn(0, self._medalla)
+        # activated: doble clic o Enter sobre la fila.
+        self.tabla_resultados.activated.connect(self._activar)
 
         self.panel_pendiente = QWidget()
         self.panel_pendiente.setObjectName("panelPendiente")
@@ -394,6 +398,7 @@ class EventDetailView(QWidget):
                         if 'BestLapTime' in resultados.columns and not es_clasificacion
                         else None)
         color_dato, color_primario = QColor(DATO), QColor(PRIMARIO)
+        con_ficha = self._ids_con_ficha(int(self.evento_actual['EventDate'].year))
 
         for fila, (_, row) in enumerate(resultados.iterrows()):
             posicion = row.get('Position')
@@ -424,6 +429,11 @@ class EventDetailView(QWidget):
                     franja = franja_equipo(row.get('TeamColor'))
                     if franja is not None:
                         item.setIcon(franja)
+                # El equipo abre su ficha; el resto de la fila, la del piloto.
+                tipo, id_ = (('equipo', row.get('TeamId')) if nombre_col == 'TeamName'
+                             else ('piloto', row.get('DriverId')))
+                if id_ in con_ficha[tipo]:
+                    marcar_ficha(item, tipo, id_)
                 if nombre_col in ('Time', 'BestLapTime'):
                     item.setForeground(color_primario if fila == 0 else color_dato)
                 self.tabla_resultados.setItem(fila, col, item)
@@ -439,6 +449,19 @@ class EventDetailView(QWidget):
             self.tabla_resultados.horizontalHeaderItem(col).setTextAlignment(
                 Qt.AlignCenter if nombre_col in ('Position', 'Points', 'Laps', 'GridPosition')
                 else Qt.AlignLeft | Qt.AlignVCenter)
+
+    def _ids_con_ficha(self, anio):
+        """Pilotos y equipos del campeonato de ese año: los únicos que tienen
+        ficha. Un reserva que sólo corrió una FP1 no está."""
+        if getattr(self, "_con_historial", None) is None:
+            self._con_historial = historial.abrir_base()
+        return {"piloto": {p['driver_id'] for p in historial.pilotos_temporada(self._con_historial, anio)},
+                "equipo": {e['constructor_id'] for e in historial.equipos_temporada(self._con_historial, anio)}}
+
+    def _activar(self, indice):
+        ficha = ficha_de(indice)
+        if ficha:
+            self.abrir_ficha.emit(*ficha)
 
     def _mostrar_info_circuito(self):
         """Ficha del circuito en la columna derecha + su mapa."""

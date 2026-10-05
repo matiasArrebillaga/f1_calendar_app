@@ -82,6 +82,10 @@ class MainWindow(QMainWindow):
         self.selector.anio_cambiado.connect(self.on_anio_cambiado)
         self.sidebar.logo_clickeado.connect(self.ir_a_calendario)
         self.sidebar.navegar.connect(self.on_navegar_sidebar)
+        self.standings_view.abrir_ficha.connect(self.abrir_ficha)
+        self.detail_view.abrir_ficha.connect(self.abrir_ficha)
+        self.pilotos_view.volver_origen.connect(self.volver_de_ficha)
+        self._origen_ficha = None   # vista desde la que se abrió la ficha
         # carga inicial
         self.on_anio_cambiado(self.selector.anio_actual)
 
@@ -126,6 +130,19 @@ class MainWindow(QMainWindow):
         self.detail_view.mostrar_evento(evento)
         self._mostrar_vista(1)
 
+    def abrir_ficha(self, tipo, id_):
+        """Doble clic en un piloto o equipo de Clasificación o de un GP."""
+        self._origen_ficha = self.stack.currentIndex()
+        self._mostrar_vista(3)   # primero: showEvent pide los datos si hacen falta
+        self.sidebar.marcar(3)
+        self.pilotos_view.abrir_ficha_externa(tipo, id_)
+
+    def volver_de_ficha(self):
+        if self._origen_ficha is not None:
+            self._mostrar_vista(self._origen_ficha)
+            self.sidebar.marcar(self._origen_ficha)
+            self._origen_ficha = None
+
     def volver_a_calendario(self):
         self.ir_a_calendario()
 
@@ -134,6 +151,7 @@ class MainWindow(QMainWindow):
         self.sidebar.marcar_calendario()
 
     def on_navegar_sidebar(self, destino):
+        self._origen_ficha = None   # navegó por su cuenta: Volver ya no lleva atrás
         if destino == "calendario":
             self._mostrar_vista(0)
         elif destino == "standings":

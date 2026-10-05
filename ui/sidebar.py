@@ -116,6 +116,13 @@ class Sidebar(QWidget):
     def marcar_calendario(self):
         self.boton_calendario.setChecked(True)
 
+    def marcar(self, indice_vista):
+        """Marca el botón de la vista del stack principal (el detalle de un GP
+        cuenta como Calendario)."""
+        boton = {2: self.boton_standings, 3: self.boton_pilotos}.get(indice_vista,
+                                                                    self.boton_calendario)
+        boton.setChecked(True)
+
     def alternar_colapso(self):
         self._colapsada = not self._colapsada
         self._animacion.stop()

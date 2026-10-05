@@ -62,3 +62,19 @@ class BarraPuntos(QStyledItemDelegate):
         y = area.center().y() - 2
         pintor.fillRect(QRect(area.left(), y, area.width(), 4), QColor(BORDE))
         pintor.fillRect(QRect(area.left(), y, round(area.width() * fraccion), 4), QColor(DATO))
+
+
+# Qué ficha abre una celda al activarla (doble clic o Enter): "piloto:<id>" o
+# "equipo:<id>". Texto y no tupla: PySide devuelve las tuplas como listas.
+ROL_FICHA = Qt.UserRole + 1
+
+
+def marcar_ficha(item, tipo, id_):
+    item.setData(ROL_FICHA, f"{tipo}:{id_}")
+    item.setToolTip(f"{item.toolTip()}\nDoble clic: ver ficha".lstrip())
+
+
+def ficha_de(indice):
+    """(tipo, id) de la celda activada, o None si no abre ninguna ficha."""
+    ficha = indice.data(ROL_FICHA)
+    return tuple(ficha.split(":", 1)) if ficha else None

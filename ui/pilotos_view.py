@@ -1,4 +1,4 @@
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget,
     QVBoxLayout, QWidget
@@ -25,6 +25,9 @@ class PilotosView(QWidget):
     recién cuando la vista se muestra. Las fichas leen la base local desde el
     hilo de la UI, porque son consultas de milisegundos.
     """
+    # "Volver" desde una ficha que se abrió desde otra vista (Clasificación o
+    # un GP): MainWindow vuelve a esa vista en vez de a la grilla.
+    volver_origen = Signal()
 
     def __init__(self):
         super().__init__()
@@ -39,6 +42,8 @@ class PilotosView(QWidget):
         self._con = None            # conexión de la UI, se abre con la primera ficha
         self._workers_activos = []  # referencias vivas mientras corren
         self._worker_fotos = None
+        self._ficha_pendiente = None   # (tipo, id) pedida antes de que lleguen los datos
+        self._ficha_externa = False    # la ficha abierta vino de otra vista
 
         # --- Encabezado: título + solapas Pilotos/Equipos ---
         self.eyebrow = QLabel()
@@ -85,9 +90,9 @@ class PilotosView(QWidget):
         self.stack_interno = QStackedWidget()
         self.stack_interno.setObjectName("transparente")
         self.stack_interno.addWidget(self.grilla_pilotos)
-        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_piloto, GRILLA_PILOTOS))
+        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_piloto))
         self.stack_interno.addWidget(self.grilla_equipos)
-        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_equipo, GRILLA_EQUIPOS))
+        self.stack_interno.addWidget(self._pagina_ficha(self.ficha_equipo))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 16)
@@ -99,13 +104,13 @@ class PilotosView(QWidget):
         self.boton_pilotos.clicked.connect(lambda: self._cambiar_tab(GRILLA_PILOTOS))
         self.boton_equipos.clicked.connect(lambda: self._cambiar_tab(GRILLA_EQUIPOS))
 
-    def _pagina_ficha(self, ficha, indice_grilla):
+    def _pagina_ficha(self, ficha):
         volver = QPushButton("Volver")
         volver.setObjectName("botonVolver")
         volver.setIcon(icono("arrow-left", PRIMARIO, 18))
         volver.setIconSize(QSize(18, 18))
         volver.setCursor(Qt.PointingHandCursor)
-        volver.clicked.connect(lambda: self.stack_interno.setCurrentIndex(indice_grilla))
+        volver.clicked.connect(self.volver_a_grilla)
         atajo = QLabel("Esc")
         atajo.setObjectName("atajoVolver")
         fila_volver = QHBoxLayout()
@@ -130,15 +135,36 @@ class PilotosView(QWidget):
         self.stack_interno.setCurrentIndex(indice)
 
     def volver_a_grilla(self):
-        """Esc desde una ficha vuelve a su grilla. False si ya estaba en una."""
+        """Volver (o Esc) desde una ficha: a su grilla, y si la ficha se abrió
+        desde otra vista, además avisa para volver ahí. False si no había ficha."""
         actual = self.stack_interno.currentIndex()
-        if actual == FICHA_PILOTO:
-            self.stack_interno.setCurrentIndex(GRILLA_PILOTOS)
-            return True
-        if actual == FICHA_EQUIPO:
-            self.stack_interno.setCurrentIndex(GRILLA_EQUIPOS)
-            return True
-        return False
+        if actual not in (FICHA_PILOTO, FICHA_EQUIPO):
+            return False
+        self.stack_interno.setCurrentIndex(
+            GRILLA_PILOTOS if actual == FICHA_PILOTO else GRILLA_EQUIPOS)
+        if self._ficha_externa:
+            self._ficha_externa = False
+            self.volver_origen.emit()
+        return True
+
+    def abrir_ficha_externa(self, tipo, id_):
+        """Ficha pedida desde Clasificación o un GP. Llamar con la vista ya
+        mostrada: si los datos del año todavía no llegaron, queda pendiente y la
+        abre _mostrar."""
+        if self._datos is None:
+            self._ficha_pendiente = (tipo, id_)
+            return
+        self._abrir(tipo, id_)
+
+    def _abrir(self, tipo, id_):
+        clave, lista = (("driver_id", "pilotos") if tipo == "piloto"
+                        else ("constructor_id", "equipos"))
+        if not any(x[clave] == id_ for x in self._datos[lista]):
+            return   # no corrió el campeonato de este año: no tiene ficha
+        self.boton_pilotos.setChecked(tipo == "piloto")
+        self.boton_equipos.setChecked(tipo == "equipo")
+        (self.abrir_piloto if tipo == "piloto" else self.abrir_equipo)(id_)
+        self._ficha_externa = True
 
     def _set_estado(self, texto, tipo=""):
         aplicar_estado(self.estado, texto, tipo)
@@ -237,6 +263,10 @@ class PilotosView(QWidget):
 
         self._pedir_fotos(datos["pilotos"], datos["equipos"])
 
+        if self._ficha_pendiente:
+            pendiente, self._ficha_pendiente = self._ficha_pendiente, None
+            self._abrir(*pendiente)
+
     # --- Fotos ---
 
     def _poner_foto(self, foto):
@@ -280,6 +310,7 @@ class PilotosView(QWidget):
         return self._con
 
     def abrir_piloto(self, driver_id):
+        self._ficha_externa = False   # desde la grilla; _abrir lo marca si vino de afuera
         piloto = next(p for p in self._datos["pilotos"] if p["driver_id"] == driver_id)
         con = self._conexion()
         self.ficha_piloto.mostrar(
@@ -291,6 +322,7 @@ class PilotosView(QWidget):
         self.stack_interno.setCurrentIndex(FICHA_PILOTO)
 
     def abrir_equipo(self, constructor_id):
+        self._ficha_externa = False
         equipo = next(e for e in self._datos["equipos"] if e["constructor_id"] == constructor_id)
         con = self._conexion()
         self.ficha_equipo.mostrar(equipo, color_equipo(constructor_id), self.year,

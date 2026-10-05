@@ -3,7 +3,6 @@ __pycache__/
 venv/
 cache_flags/
 cache_tracks/
-assets/
 cache_circuitos/
 cache_ganadores/
 cache_historial/

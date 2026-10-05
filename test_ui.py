@@ -857,9 +857,13 @@ def test_la_clasificacion_y_pilotos_se_actualizan_sin_aviso():
                           (_correr_pilotos_worker, PilotosView)):
         datos, _ = correr(2025, _subir_puntos, anio_actual=2025,
                           actualizada="2025-06-01 12:00:00")
-        vista = Vista()
-        vista.year = 2025
-        vista._mostrar(datos[0])
+        pilotos_view.FotosWorker = _FotosWorkerFalso   # el real baja fotos en un hilo
+        try:
+            vista = Vista()
+            vista.year = 2025
+            vista._mostrar(datos[0])
+        finally:
+            pilotos_view.FotosWorker = _WORKERS_PILOTOS[1]
         assert vista.estado.text() == "", (Vista, vista.estado.text())
 
 
@@ -921,29 +925,38 @@ def test_doble_clic_en_la_clasificacion_pide_la_ficha_del_piloto_o_del_equipo():
 
 
 def test_la_ficha_pedida_de_afuera_espera_los_datos_y_volver_avisa():
-    from ui.pilotos_view import PilotosView, FICHA_PILOTO, GRILLA_PILOTOS
+    from ui.pilotos_view import FICHA_PILOTO, GRILLA_PILOTOS
     datos, _ = _correr_pilotos_worker(2025, lambda *a, **k: None, anio_actual=2026)
-    vista = PilotosView()
-    vista._con = base_de_prueba()
-    vista.year = 2025
-    volvio = []
-    vista.volver_origen.connect(lambda: volvio.append(True))
+    vista = _vista_pilotos()
+    try:
+        vista.year = 2025
+        volvio = []
+        vista.volver_origen.connect(lambda: volvio.append(True))
 
-    # Un piloto que no corrió el campeonato no abre nada.
-    vista._mostrar(datos[-1])
-    vista.abrir_ficha_externa("piloto", "no_existe")
-    assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+        # Un piloto que no corrió el campeonato no abre nada.
+        vista._mostrar(datos[-1])
+        vista.abrir_ficha_externa("piloto", "no_existe")
+        assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
 
-    # Antes de que lleguen los datos queda pendiente; al llegar, se abre.
-    vista._datos = None
-    driver_id = datos[-1]["pilotos"][0]["driver_id"]
-    vista.abrir_ficha_externa("piloto", driver_id)
-    assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
-    vista._mostrar(datos[-1])
-    assert vista.stack_interno.currentIndex() == FICHA_PILOTO
+        # Antes de que lleguen los datos queda pendiente; al llegar, se abre.
+        vista._datos = None
+        driver_id = datos[-1]["pilotos"][0]["driver_id"]
+        vista.abrir_ficha_externa("piloto", driver_id)
+        assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+        vista._mostrar(datos[-1])
+        assert vista.stack_interno.currentIndex() == FICHA_PILOTO
 
-    assert vista.volver_a_grilla() and volvio == [True]
-    assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+        assert vista.volver_a_grilla() and volvio == [True]
+        assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+
+        # Cambiar de año olvida la ficha pendiente: no se abre sola después.
+        vista._datos = None
+        vista.abrir_ficha_externa("piloto", driver_id)
+        vista.pedir_anio(2024)
+        vista._mostrar(datos[-1])
+        assert vista.stack_interno.currentIndex() == GRILLA_PILOTOS
+    finally:
+        _restaurar_pilotos()
 
 
 if __name__ == "__main__":

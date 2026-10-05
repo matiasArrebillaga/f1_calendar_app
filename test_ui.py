@@ -23,6 +23,9 @@ from ui.event_detail_view import EventDetailView
 from ui.icons import PODIO
 from PySide6.QtGui import QPixmap
 
+import workers.pilotos_worker as pilotos_worker
+from test_historial import base_de_prueba
+
 
 def test_ir_a_anio_clampea_los_dos_extremos():
     barra = SelectorTemporada()
@@ -417,19 +420,63 @@ def test_las_tarjetas_nunca_se_muestran_como_ventana():
         _WorkerFalso.vista = None
 
 
+def _correr_pilotos_worker(year, descargar, anio_actual, limpiar=True):
+    """Corre PilotosWorker.run() en el hilo del test, con la base falsa y la
+    descarga reemplazada. Devuelve (emitidos por terminado, emitidos por error)."""
+    base = base_de_prueba()   # antes de reemplazar descargar_temporada: la usa
+    h = pilotos_worker.historial
+    originales = (h.abrir_base, h.descargar_temporada, h.completar_headshots,
+                  pilotos_worker.anio_actual)
+    h.abrir_base = lambda: base
+    h.descargar_temporada = descargar
+    h.completar_headshots = lambda con, anio: None
+    pilotos_worker.anio_actual = lambda: anio_actual
+    if limpiar:
+        pilotos_worker._ACTUALIZADAS.clear()
+    try:
+        worker = pilotos_worker.PilotosWorker(year)
+        datos, errores = [], []
+        worker.terminado.connect(datos.append)
+        worker.error.connect(errores.append)
+        worker.run()
+        return datos, errores
+    finally:
+        (h.abrir_base, h.descargar_temporada, h.completar_headshots,
+         pilotos_worker.anio_actual) = originales
+
+
+def _sin_red(con, anio):
+    raise OSError("sin red")
+
+
+def test_temporada_terminada_y_guardada_no_toca_la_red():
+    datos, errores = _correr_pilotos_worker(2025, _sin_red, anio_actual=2026)
+    assert not errores, errores
+    assert [p["driver_id"] for p in datos[0]["pilotos"]] == ["norris", "piastri", "leclerc", "lawson"]
+    assert [e["constructor_id"] for e in datos[0]["equipos"]] == ["mclaren", "ferrari"]
+
+
+def test_temporada_en_curso_sin_red_muestra_lo_guardado():
+    datos, errores = _correr_pilotos_worker(2025, _sin_red, anio_actual=2025)
+    assert not errores, errores
+    assert len(datos[0]["pilotos"]) == 4
+
+
+def test_temporada_que_falta_y_sin_red_da_error():
+    datos, errores = _correr_pilotos_worker(2026, _sin_red, anio_actual=2026)
+    assert datos == [] and errores == ["sin red"], (datos, errores)
+
+
+def test_la_temporada_en_curso_se_baja_una_sola_vez_por_sesion():
+    llamadas = []
+    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025)
+    _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025,
+                           limpiar=False)
+    assert llamadas == [2025], llamadas
+
+
 if __name__ == "__main__":
-    test_ir_a_anio_clampea_los_dos_extremos()
-    test_el_debounce_colapsa_una_rafaga_en_una_sola_carga()
-    test_el_calendario_no_trae_los_tests_de_pretemporada()
-    test_mapa_tardio_de_otro_circuito_se_descarta()
-    test_el_mapa_no_se_re_escala_si_el_tamano_no_cambio()
-    test_calcular_columnas_nunca_devuelve_cero()
-    test_todos_los_alias_apuntan_a_un_circuito_real()
-    test_contraste_de_la_paleta()
-    test_qss_no_tiene_reglas_muertas()
-    test_distancia_coherente_con_longitud_por_vueltas()
-    test_cambiar_de_anio_no_deja_tarjetas_del_anio_anterior()
-    test_el_cache_de_anios_tiene_tope()
-    test_el_calendario_abre_en_el_mes_actual()
-    test_las_tarjetas_nunca_se_muestran_como_ventana()
+    for nombre, prueba in list(globals().items()):
+        if nombre.startswith("test_"):
+            prueba()
     print("ok")

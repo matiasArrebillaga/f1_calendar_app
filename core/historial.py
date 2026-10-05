@@ -355,3 +355,23 @@ def cara_a_cara(con, anio, constructor_id):
         "victorias": (contar(a, 1), contar(b, 1)),
         "podios": (contar(a, 3), contar(b, 3)),
     }
+
+
+def completar_headshots(con, anio):
+    """Foto oficial de F1 de los pilotos del año, sacada de la última carrera.
+    FastF1 la trae vacía en temporadas viejas (en 2018 ya no viene)."""
+    import fastf1   # pesado: sólo se importa cuando hace falta
+
+    ultima = con.execute("SELECT MAX(ronda) FROM resultados WHERE temporada = ?",
+                         (anio,)).fetchone()[0]
+    if ultima is None:
+        return
+    sesion = fastf1.get_session(anio, ultima, "R")
+    sesion.load(laps=False, telemetry=False, weather=False, messages=False)
+    with con:
+        for _, fila in sesion.results.iterrows():
+            url = fila.get("HeadshotUrl")
+            if isinstance(url, str) and url:
+                # /1col/ son 93 px; /2col/ son 206, que alcanzan para la ficha.
+                con.execute("UPDATE pilotos SET headshot_url = ? WHERE driver_id = ?",
+                            (url.replace("/1col/", "/2col/"), fila["DriverId"]))

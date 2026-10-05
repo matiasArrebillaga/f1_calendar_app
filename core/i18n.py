@@ -107,3 +107,30 @@ def traducir_evento(texto):
         return ""
     texto_str = str(texto)
     return EVENTOS_ES.get(texto_str, texto_str)
+
+
+# Ergast da la nacionalidad como gentilicio en inglés ("British"); la ficha
+# muestra el país.
+NACIONALIDADES_ES = {
+    "American": "Estados Unidos", "American-Italian": "Estados Unidos",
+    "Argentine": "Argentina", "Argentine-Italian": "Argentina",
+    "Australian": "Australia", "Austrian": "Austria", "Belgian": "Bélgica",
+    "Brazilian": "Brasil", "British": "Reino Unido", "Canadian": "Canadá",
+    "Chilean": "Chile", "Chinese": "China", "Colombian": "Colombia",
+    "Czech": "República Checa", "Danish": "Dinamarca", "Dutch": "Países Bajos",
+    "East German": "Alemania Oriental", "Finnish": "Finlandia", "French": "Francia",
+    "German": "Alemania", "Hungarian": "Hungría", "Indian": "India",
+    "Indonesian": "Indonesia", "Irish": "Irlanda", "Italian": "Italia",
+    "Japanese": "Japón", "Liechtensteiner": "Liechtenstein", "Malaysian": "Malasia",
+    "Mexican": "México", "Monegasque": "Mónaco", "New Zealander": "Nueva Zelanda",
+    "Polish": "Polonia", "Portuguese": "Portugal", "Rhodesian": "Rodesia",
+    "Russian": "Rusia", "South African": "Sudáfrica", "Spanish": "España",
+    "Swedish": "Suecia", "Swiss": "Suiza", "Thai": "Tailandia",
+    "Uruguayan": "Uruguay", "Venezuelan": "Venezuela",
+}
+
+
+def traducir_nacionalidad(texto):
+    if texto is None:
+        return ""
+    return NACIONALIDADES_ES.get(str(texto), str(texto))

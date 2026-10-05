@@ -642,6 +642,15 @@ def test_un_error_de_red_se_reintenta_al_volver_a_la_pestania():
         _restaurar_pilotos()
 
 
+def test_la_sidebar_lleva_a_pilotos():
+    from ui.sidebar import Sidebar
+    sidebar = Sidebar()
+    destinos = []
+    sidebar.navegar.connect(destinos.append)
+    sidebar.boton_pilotos.click()
+    assert destinos == ["pilotos"]
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

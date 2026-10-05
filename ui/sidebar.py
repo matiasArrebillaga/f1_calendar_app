@@ -66,6 +66,8 @@ class Sidebar(QWidget):
             layout, "Calendario", "calendar-days", "Calendario de la temporada (Esc)")
         self.boton_standings = self._agregar_nav(
             layout, "Clasificación", "trophy", "Clasificación de pilotos y equipos")
+        self.boton_pilotos = self._agregar_nav(
+            layout, "Pilotos", "users", "Pilotos y equipos de la temporada")
         self.boton_calendario.setChecked(True)
 
         layout.addStretch()
@@ -83,6 +85,7 @@ class Sidebar(QWidget):
 
         self.boton_calendario.clicked.connect(lambda: self.navegar.emit("calendario"))
         self.boton_standings.clicked.connect(lambda: self.navegar.emit("standings"))
+        self.boton_pilotos.clicked.connect(lambda: self.navegar.emit("pilotos"))
 
         self._animacion = QVariantAnimation(self)
         self._animacion.setDuration(self.DURACION_COLAPSO)

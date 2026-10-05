@@ -278,7 +278,7 @@ def stats_temporada(con, anio, driver_id):
 
 def tira_resultados(con, anio, driver_id):
     return _dicts(con.execute("""
-        SELECT r.ronda, c.nombre AS gp, r.largada, r.posicion, r.posicion_texto
+        SELECT r.ronda, c.nombre AS gp, c.pais, r.largada, r.posicion, r.posicion_texto
           FROM resultados r
           JOIN carreras c ON c.temporada = r.temporada AND c.ronda = r.ronda
          WHERE r.temporada = ? AND r.driver_id = ?
@@ -299,11 +299,23 @@ def carrera_completa(con, driver_id):
     return carrera
 
 
+def stats_equipo(con, anio, constructor_id):
+    victorias = con.execute("""SELECT COUNT(*) FROM resultados
+                                WHERE temporada = ? AND constructor_id = ? AND posicion = 1""",
+                            (anio, constructor_id)).fetchone()[0]
+    dobletes = con.execute("""SELECT COUNT(*) FROM (
+                                SELECT ronda FROM resultados
+                                 WHERE temporada = ? AND constructor_id = ? AND posicion IN (1, 2)
+                                 GROUP BY ronda HAVING COUNT(*) = 2)""",
+                           (anio, constructor_id)).fetchone()[0]
+    return {"victorias": victorias, "dobletes": dobletes}
+
+
 def cara_a_cara(con, anio, constructor_id):
     """Duelo entre los dos pilotos del equipo que más carreras largaron juntos.
     None si el equipo nunca tuvo dos pilotos en una misma carrera."""
     filas = _dicts(con.execute(f"""
-        SELECT ronda, driver_id, largada, posicion FROM resultados
+        SELECT ronda, driver_id, largada, posicion, posicion_texto FROM resultados
          WHERE temporada = ? AND constructor_id = ? AND {LARGO_SQL}""",
         (anio, constructor_id)))
     por_ronda = defaultdict(dict)
@@ -337,7 +349,7 @@ def cara_a_cara(con, anio, constructor_id):
     if puntos[b] > puntos[a]:
         a, b = b, a
 
-    rondas = [r for r, pilotos in por_ronda.items() if a in pilotos and b in pilotos]
+    rondas = sorted(r for r, pilotos in por_ronda.items() if a in pilotos and b in pilotos)
     if anio >= ANIO_CLASIFICACION:
         grilla = defaultdict(dict)
         for ronda, piloto, posicion in con.execute(
@@ -348,18 +360,27 @@ def cara_a_cara(con, anio, constructor_id):
         grilla = {r: {p: f["largada"] or None for p, f in pilotos.items()}
                   for r, pilotos in por_ronda.items()}
 
-    clasificacion, carrera = [0, 0], [0, 0]
+    carreras = {ronda: (nombre, pais) for ronda, nombre, pais in con.execute(
+        "SELECT ronda, nombre, pais FROM carreras WHERE temporada = ?", (anio,))}
+    clasificacion, carrera, por_carrera = [0, 0], [0, 0], []
     for ronda in rondas:
         qa, qb = grilla.get(ronda, {}).get(a), grilla.get(ronda, {}).get(b)
         if qa and qb:
             clasificacion[0 if qa < qb else 1] += 1
-        pa, pb = por_ronda[ronda][a]["posicion"], por_ronda[ronda][b]["posicion"]
+        fila_a, fila_b = por_ronda[ronda][a], por_ronda[ronda][b]
+        pa, pb = fila_a["posicion"], fila_b["posicion"]
         if pa is None and pb is None:
-            continue   # abandonaron los dos: la carrera no cuenta
-        if pb is None or (pa is not None and pa < pb):
-            carrera[0] += 1
+            adelante = None   # abandonaron los dos: la carrera no cuenta
         else:
-            carrera[1] += 1
+            adelante = 0 if pb is None or (pa is not None and pa < pb) else 1
+            carrera[adelante] += 1
+        gp, pais = carreras.get(ronda, ("", ""))
+        por_carrera.append({"ronda": ronda, "gp": gp, "pais": pais,
+                            "a": fila_a, "b": fila_b, "adelante": adelante})
+
+    def poles(piloto):
+        return sum(1 for ronda, pilotos in por_ronda.items()
+                   if piloto in pilotos and grilla.get(ronda, {}).get(piloto) == 1)
 
     def contar(piloto, maximo):
         return sum(1 for f in filas
@@ -376,6 +397,8 @@ def cara_a_cara(con, anio, constructor_id):
         "puntos": (puntos[a], puntos[b]),
         "victorias": (contar(a, 1), contar(b, 1)),
         "podios": (contar(a, 3), contar(b, 3)),
+        "poles": (poles(a), poles(b)),
+        "por_carrera": por_carrera,
     }
 
 

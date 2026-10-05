@@ -543,11 +543,15 @@ class _PilotosWorkerFalso(_WorkerFalso):
 
 
 class _FotosWorkerFalso:
-    def __init__(self, pilotos):
+    def __init__(self, pilotos, equipos=()):
         self.pilotos = pilotos
 
     @property
     def foto_lista(self):
+        return _WorkerFalso._Senal([])
+
+    @property
+    def logo_listo(self):
         return _WorkerFalso._Senal([])
 
     @property
@@ -599,7 +603,7 @@ def test_fichas_de_piloto_y_de_equipo():
         vista.cargar_datos(2025)
         vista.abrir_piloto("norris")
         assert vista.stack_interno.currentIndex() == pilotos_view.FICHA_PILOTO
-        assert len(vista.ficha_piloto.tira.celdas()) == 4
+        assert len(vista.ficha_piloto.grafico.carreras()) == 4
         assert vista.volver_a_grilla()
         assert vista.stack_interno.currentIndex() == pilotos_view.GRILLA_PILOTOS
         assert not vista.volver_a_grilla(), "desde la grilla, Esc le toca a MainWindow"
@@ -608,6 +612,8 @@ def test_fichas_de_piloto_y_de_equipo():
         assert vista.stack_interno.currentIndex() == pilotos_view.FICHA_EQUIPO
         assert vista.ficha_equipo.filas["carrera"].valor_a.text() == "2"
         assert vista.ficha_equipo.sin_duelo.isHidden()
+        assert vista.ficha_equipo.grandes._valores[2].text() == "2"   # victorias
+        assert len(vista.ficha_equipo.tira.celdas()) == 8               # 4 carreras x 2
 
         vista.abrir_equipo("ferrari")   # un solo piloto: sin cara a cara
         assert not vista.ficha_equipo.sin_duelo.isHidden()
@@ -630,6 +636,23 @@ def test_pilotos_de_otro_anio_que_llegan_tarde_se_descartan():
         vista.cargar_datos(1990)        # llega enseguida
         pendientes[0].emitir()          # y recién ahora llega 2025
         assert [t.clave for t in vista.grilla_pilotos.tarjetas()] == ["senna", "prost", "nadie"]
+    finally:
+        _restaurar_pilotos()
+
+
+def test_las_tarjetas_de_equipo_llenan_el_ancho_y_muestran_sus_pilotos():
+    vista = _vista_pilotos()
+    try:
+        vista.show()
+        vista.cargar_datos(2025)
+        vista._cambiar_tab(pilotos_view.GRILLA_EQUIPOS)
+        QApplication.processEvents()
+        mclaren, ferrari = vista.grilla_equipos.tarjetas()
+        disponible = vista.grilla_equipos.viewport().width()
+        # Dos tarjetas en una fila que ocupa todo el ancho (no 320 px cada una).
+        assert mclaren.width() + ferrari.width() > disponible * 0.9,             (mclaren.width(), ferrari.width(), disponible)
+        assert [f.driver_id for f in mclaren.fotos] == ["norris", "piastri"]
+        assert ferrari.logo.iniciales == "FER"   # sin logo bajado: iniciales
     finally:
         _restaurar_pilotos()
 
@@ -671,26 +694,26 @@ def test_la_sidebar_lleva_a_pilotos():
     assert destinos == ["pilotos"]
 
 
-def test_cambiar_de_piloto_no_deja_celdas_ni_tarjetas_del_anterior():
+def test_cambiar_de_equipo_no_deja_celdas_ni_tarjetas_del_anterior():
     """Lo que sale del layout queda pintado hasta que deleteLater lo borra de
-    verdad: sin ocultarlo, la tira de Senna 1988 mostraba al final celdas de
-    Norris 2025 (el mismo bug que tuvo el calendario con las tarjetas)."""
-    from PySide6.QtWidgets import QFrame
+    verdad: sin ocultarlo, la tira de McLaren 1988 mostraba al final celdas de
+    McLaren 2025 (el mismo bug que tuvo el calendario con las tarjetas)."""
+    from PySide6.QtWidgets import QLabel
     vista = _vista_pilotos()
     try:
         vista.show()
         vista.cargar_datos(2025)
-        vista.abrir_piloto("norris")            # 4 celdas
-        vista.cargar_datos(1990)
-        vista.abrir_piloto("senna")             # 1 celda
-        celdas = [c for c in vista.ficha_piloto.tira.findChildren(QFrame, "celdaResultado")
+        vista.abrir_equipo("mclaren")           # 4 carreras
+        vista.cargar_datos(1988)
+        vista.abrir_equipo("mclaren")           # 1 carrera
+        celdas = [c for c in vista.ficha_equipo.tira.findChildren(QLabel, "celdaDuelo")
                   if c.isVisible()]
-        assert len(celdas) == 1, f"{len(celdas)} celdas visibles"
+        assert len(celdas) == 2, f"{len(celdas)} celdas visibles"
         # La grilla está tapada por la ficha: lo que cuenta es si cada tarjeta
         # quedó oculta a propósito, no si se ve en este momento.
         tarjetas = [t for t in vista.grilla_pilotos.widget().children()
                     if getattr(t, "clave", None) and not t.isHidden()]
-        assert sorted(t.clave for t in tarjetas) == ["nadie", "prost", "senna"],             sorted(t.clave for t in tarjetas)
+        assert sorted(t.clave for t in tarjetas) == ["prost", "senna"],             sorted(t.clave for t in tarjetas)
     finally:
         _restaurar_pilotos()
 

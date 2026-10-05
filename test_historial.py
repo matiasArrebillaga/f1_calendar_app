@@ -302,6 +302,18 @@ def test_cara_a_cara_entre_companeros():
     assert duelo["puntos"] == (50, 43)
     assert duelo["victorias"] == (1, 1)
     assert duelo["podios"] == (2, 2)
+    assert duelo["poles"] == (1, 1)
+    assert [(c["ronda"], c["gp"], c["pais"], c["adelante"]) for c in duelo["por_carrera"]] == [
+        (1, "Australian Grand Prix", "Australia", 0), (2, "Chinese Grand Prix", "China", 1),
+        (3, "Japanese Grand Prix", "Japan", None), (4, "Bahrain Grand Prix", "Bahrain", 0)]
+    assert duelo["por_carrera"][2]["a"]["posicion_texto"] == "R"
+
+
+def test_stats_equipo():
+    con = base_de_prueba()
+    # R1 Norris-Piastri 1-2; R2 ganó Piastri con Norris tercero.
+    assert historial.stats_equipo(con, 2025, "mclaren") == {"victorias": 2, "dobletes": 1}
+    assert historial.stats_equipo(con, 2025, "no_existe") == {"victorias": 0, "dobletes": 0}
 
 
 def test_cara_a_cara_sin_companero_es_none():
@@ -409,6 +421,25 @@ def test_jpg_de_wikipedia_viejo_no_tapa_la_oficial():
     try:
         assert fotos.obtener_ruta_foto("norris", "https://f1/norris.png", "http://w/N") ==             os.path.join(carpeta, "norris.png")
         assert fotos.obtener_ruta_foto("piastri", "https://f1/piastri.png", "http://w/P") ==             os.path.join(carpeta, "piastri.jpg")
+    finally:
+        _restaurar_fotos(originales)
+
+
+def test_logo_oficial_se_baja_una_vez_y_sin_logo_es_none():
+    carpeta, originales = _fotos_en_carpeta_temporal()
+    bajadas = []
+
+    def bajar(url, destino):
+        bajadas.append(url)
+        _archivo_vacio(destino)
+
+    fotos._bajar = bajar
+    try:
+        ruta = fotos.obtener_ruta_logo("red_bull")
+        assert ruta == os.path.join(carpeta, "red_bull.png")
+        assert fotos.obtener_ruta_logo("red_bull") == ruta
+        assert len(bajadas) == 1 and "red-bull-racing-logo" in bajadas[0]
+        assert fotos.obtener_ruta_logo("coloni") is None   # equipo sin logo oficial
     finally:
         _restaurar_fotos(originales)
 

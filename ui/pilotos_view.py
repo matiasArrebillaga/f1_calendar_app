@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget,
     QVBoxLayout, QWidget
@@ -8,9 +8,10 @@ from core import historial
 from core.equipos import color_equipo
 from ui.estado import aplicar_estado
 from ui.fichas_pilotos import (
-    FichaEquipo, FichaPiloto, FotoPiloto, GrillaTarjetas, ScrollSinFlechas, TarjetaEquipo,
-    TarjetaPiloto
+    FichaEquipo, FichaPiloto, FotoPiloto, GrillaTarjetas, LogoEquipo, ScrollSinFlechas,
+    TarjetaEquipo, TarjetaPiloto
 )
+from ui.icons import PRIMARIO, icono
 from ui.spinner_widget import SpinnerWidget
 from workers.pilotos_worker import FotosWorker, PilotosWorker
 
@@ -34,6 +35,7 @@ class PilotosView(QWidget):
         self._cache_por_anio = {}   # {year: datos}; los errores no: la red puede volver
         self._datos = None
         self._fotos = {}            # {driver_id: ruta}; la foto no depende del año
+        self._logos = {}            # {constructor_id: ruta}
         self._con = None            # conexión de la UI, se abre con la primera ficha
         self._workers_activos = []  # referencias vivas mientras corren
         self._worker_fotos = None
@@ -81,6 +83,7 @@ class PilotosView(QWidget):
         self.ficha_piloto = FichaPiloto()
         self.ficha_equipo = FichaEquipo()
         self.stack_interno = QStackedWidget()
+        self.stack_interno.setObjectName("transparente")
         self.stack_interno.addWidget(self.grilla_pilotos)
         self.stack_interno.addWidget(self._pagina_ficha(self.ficha_piloto, "Pilotos", GRILLA_PILOTOS))
         self.stack_interno.addWidget(self.grilla_equipos)
@@ -97,15 +100,24 @@ class PilotosView(QWidget):
         self.boton_equipos.clicked.connect(lambda: self._cambiar_tab(GRILLA_EQUIPOS))
 
     def _pagina_ficha(self, ficha, volver_a, indice_grilla):
-        miga = QPushButton(f"← {volver_a}")
-        miga.setObjectName("migaVolver")
-        miga.setCursor(Qt.PointingHandCursor)
-        miga.clicked.connect(lambda: self.stack_interno.setCurrentIndex(indice_grilla))
+        volver = QPushButton(f"Volver a {volver_a}")
+        volver.setObjectName("botonVolver")
+        volver.setIcon(icono("arrow-left", PRIMARIO, 18))
+        volver.setIconSize(QSize(18, 18))
+        volver.setCursor(Qt.PointingHandCursor)
+        volver.clicked.connect(lambda: self.stack_interno.setCurrentIndex(indice_grilla))
+        atajo = QLabel("Esc")
+        atajo.setObjectName("atajoVolver")
+        fila_volver = QHBoxLayout()
+        fila_volver.setSpacing(10)
+        fila_volver.addWidget(volver)
+        fila_volver.addWidget(atajo)
+        fila_volver.addStretch()
         contenido = QWidget()
         columna = QVBoxLayout(contenido)
         columna.setContentsMargins(0, 0, 8, 16)
-        columna.setSpacing(12)
-        columna.addWidget(miga, alignment=Qt.AlignLeft)
+        columna.setSpacing(14)
+        columna.addLayout(fila_volver)
         columna.addWidget(ficha)
         columna.addStretch()
         scroll = ScrollSinFlechas()
@@ -205,13 +217,23 @@ class PilotosView(QWidget):
         self.grilla_pilotos.set_tarjetas(tarjetas)
 
         tarjetas = []
+        con = self._conexion()
+        lider = max((e["puntos"] or 0 for e in datos["equipos"]), default=0)
         for equipo in datos["equipos"]:
-            tarjeta = TarjetaEquipo(equipo, color_equipo(equipo["constructor_id"]))
+            cid = equipo["constructor_id"]
+            tarjeta = TarjetaEquipo(
+                equipo, color_equipo(cid),
+                [p for p in datos["pilotos"] if p["constructor_id"] == cid],
+                historial.stats_equipo(con, self.year, cid)["victorias"], lider)
             tarjeta.clicked.connect(self.abrir_equipo)
+            for foto in tarjeta.fotos:
+                self._poner_foto(foto)
+            if cid in self._logos:
+                tarjeta.logo.set_logo(self._logos[cid])
             tarjetas.append(tarjeta)
         self.grilla_equipos.set_tarjetas(tarjetas)
 
-        self._pedir_fotos(datos["pilotos"])
+        self._pedir_fotos(datos["pilotos"], datos["equipos"])
 
     # --- Fotos ---
 
@@ -220,15 +242,17 @@ class PilotosView(QWidget):
         if ruta:
             foto.set_foto(ruta)
 
-    def _pedir_fotos(self, pilotos):
+    def _pedir_fotos(self, pilotos, equipos):
         if self._worker_fotos is not None:
             self._worker_fotos.requestInterruption()   # las del año anterior ya no hacen falta
             self._worker_fotos = None
         faltan = [p for p in pilotos if p["driver_id"] not in self._fotos]
-        if not faltan:
+        faltan_logos = [e for e in equipos if e["constructor_id"] not in self._logos]
+        if not faltan and not faltan_logos:
             return
-        worker = FotosWorker(faltan)
+        worker = FotosWorker(faltan, faltan_logos)
         worker.foto_lista.connect(self._on_foto_lista)
+        worker.logo_listo.connect(self._on_logo_listo)
         worker.finished.connect(lambda: self._limpiar_worker(worker))
         self._workers_activos.append(worker)
         self._worker_fotos = worker
@@ -239,6 +263,12 @@ class PilotosView(QWidget):
         for foto in self.findChildren(FotoPiloto):
             if foto.driver_id == driver_id:
                 foto.set_foto(ruta)
+
+    def _on_logo_listo(self, constructor_id, ruta):
+        self._logos[constructor_id] = ruta
+        for logo in self.findChildren(LogoEquipo):
+            if logo.constructor_id == constructor_id:
+                logo.set_logo(ruta)
 
     # --- Fichas ---
 
@@ -260,8 +290,10 @@ class PilotosView(QWidget):
 
     def abrir_equipo(self, constructor_id):
         equipo = next(e for e in self._datos["equipos"] if e["constructor_id"] == constructor_id)
-        duelo = historial.cara_a_cara(self._conexion(), self.year, constructor_id)
-        self.ficha_equipo.mostrar(equipo, color_equipo(constructor_id), self.year, duelo)
+        con = self._conexion()
+        self.ficha_equipo.mostrar(equipo, color_equipo(constructor_id), self.year,
+                                  historial.cara_a_cara(con, self.year, constructor_id),
+                                  historial.stats_equipo(con, self.year, constructor_id))
         self._poner_foto(self.ficha_equipo.foto_a)
         self._poner_foto(self.ficha_equipo.foto_b)
         self.stack_interno.setCurrentIndex(FICHA_EQUIPO)

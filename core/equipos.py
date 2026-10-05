@@ -22,5 +22,23 @@ COLORES_EQUIPO = {   # los de fastf1 (session.results.TeamColor) para 2026
 }
 
 
+# ponytail: tabla fija como la de colores. F1 sólo publica en esta ruta los
+# logos de los 10 equipos de 2025; los demás (Audi, Cadillac, equipos viejos)
+# quedan con las iniciales. Si F1 publica los de 2026, sumar el año a la ruta.
+SLUG_LOGO = {
+    "mclaren": "mclaren", "mercedes": "mercedes", "red_bull": "red-bull-racing",
+    "ferrari": "ferrari", "williams": "williams", "rb": "racing-bulls",
+    "aston_martin": "aston-martin", "haas": "haas", "sauber": "kick-sauber",
+    "alpine": "alpine",
+}
+URL_LOGO = ("https://media.formula1.com/content/dam/fom-website/teams/2025/"
+            "{}-logo.png.transform/2col/image.png")
+
+
 def color_equipo(constructor_id):
     return COLORES_EQUIPO.get(constructor_id)
+
+
+def url_logo(constructor_id):
+    slug = SLUG_LOGO.get(constructor_id)
+    return URL_LOGO.format(slug) if slug else None

@@ -3,7 +3,7 @@ from datetime import date
 from PySide6.QtCore import QThread, Signal
 
 from core import historial
-from core.fotos import obtener_ruta_foto
+from core.fotos import obtener_ruta_foto, obtener_ruta_logo
 
 # Temporadas incompletas ya refrescadas en esta sesión de la app: la API se
 # consulta una vez por arranque, no cada vez que se vuelve a la pestaña.
@@ -59,12 +59,21 @@ class PilotosWorker(QThread):
 
 class FotosWorker(QThread):
     foto_lista = Signal(str, str)   # driver_id, ruta local
+    logo_listo = Signal(str, str)   # constructor_id, ruta local
 
-    def __init__(self, pilotos):
+    def __init__(self, pilotos, equipos=()):
         super().__init__()
         self.pilotos = pilotos
+        self.equipos = equipos
 
     def run(self):
+        # Primero los logos: son pocos y chicos.
+        for equipo in self.equipos:
+            if self.isInterruptionRequested():
+                return
+            ruta = obtener_ruta_logo(equipo["constructor_id"])
+            if ruta:
+                self.logo_listo.emit(equipo["constructor_id"], ruta)
         for piloto in self.pilotos:
             if self.isInterruptionRequested():
                 return    # cambiaron de año: estas fotos ya no hacen falta

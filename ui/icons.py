@@ -25,6 +25,8 @@ PRIMARIO = "#F3F6F9"
 DATO = "#52DEEC"       # tiempos, diferencias, cuenta regresiva, barras
 BORDE = "#2D3541"
 SUPERFICIE = "#1B2029"  # fondo de las fotos de piloto, bajo el degradé del equipo
+PANEL = "#12161C"
+ABANDONO = "#FF6B57"    # DNF/DSQ en las fichas de pilotos
 # Medallas del 1º, 2º y 3º: (degradé arriba, degradé abajo, número). El número
 # oscuro tiene que pasar AA contra el tono de abajo, que es el más oscuro.
 PODIO = (

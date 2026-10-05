@@ -707,61 +707,154 @@ QLabel#puntosTarjeta {
     font-weight: 600;
 }
 
-QLabel#nombreTarjeta {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-QLabel#nombreFicha {
+QLabel#nombreTarjetaEquipo {
     font-family: "Titillium Web";
-    font-size: 26px;
+    font-size: 19px;
     font-weight: 700;
 }
 
-QLabel#metaFicha {
-    color: #A4AEBC;
-    font-size: 13px;
+QLabel#posTarjeta {
+    font-family: "Titillium Web";
+    font-size: 34px;
+    font-weight: 900;
+    color: #3A4350;
 }
 
-QFrame#celdaResultado {
+QFrame#pilotosTarjeta {
+    background: transparent;
+    border: none;
+    border-top: 1px solid #2D3541;
+}
+
+QFrame#pilotoTarjeta {
+    background: transparent;
+    border: none;
+    border-left: 1px solid #2D3541;
+}
+
+QFrame#pilotoTarjeta[primera="true"] {
+    border-left: none;
+}
+
+QLabel#siglaMini {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Volver de una ficha a la lista: botón de verdad, no una miga. */
+QPushButton#botonVolver {
     background-color: #12161C;
+    color: #F3F6F9;
     border: 1px solid #2D3541;
-    border-radius: 3px;
-}
-
-QFrame#celdaResultado[estado="podio"] {
-    border-top: 2px solid #F3D27A;
-}
-
-QLabel#textoCelda {
-    font-size: 13px;
-    font-weight: 600;
-}
-
-QFrame#celdaResultado[estado="podio"] QLabel#textoCelda {
-    color: #F3D27A;
-}
-
-QFrame#celdaResultado[estado="abandono"] QLabel#textoCelda {
-    color: #FF6B57;
-}
-
-QFrame#celdaResultado[estado="ausente"] QLabel#textoCelda {
-    color: #A4AEBC;
-}
-
-QLabel#deltaCelda {
-    color: #A4AEBC;
-    font-size: 11px;
-}
-
-QLabel#deltaCelda[sentido="sube"] {
-    color: #52DEEC;
-}
-
-QLabel#nombreDuelo {
+    border-radius: 4px;
+    min-height: 36px;
+    padding: 0 16px 0 12px;
     font-size: 14px;
     font-weight: 600;
+}
+
+QPushButton#botonVolver:hover {
+    background-color: #1B2029;
+    border-color: #52DEEC;
+}
+
+QPushButton#botonVolver:focus {
+    border-color: #E10600;
+}
+
+QLabel#atajoVolver {
+    color: #A4AEBC;
+    font-size: 12px;
+}
+
+QWidget#transparente {
+    background: transparent;
+}
+
+/* Cabecera de las fichas: el degradé del equipo lo pinta CabeceraColor. */
+QLabel#nombrePila {
+    font-family: "Titillium Web";
+    font-size: 22px;
+    font-weight: 300;
+    color: #CAD2DC;
+}
+
+QLabel#apellidoFicha {
+    font-family: "Titillium Web";
+    font-size: 50px;
+    font-weight: 900;
+}
+
+QLabel#metaFicha {
+    color: #CAD2DC;
+    font-size: 13px;
+}
+
+QFrame#grande {
+    background: transparent;
+    border: none;
+    border-left: 1px solid #2D3541;
+}
+
+QLabel#valorGrande {
+    font-family: "Titillium Web";
+    font-size: 38px;
+    font-weight: 700;
+}
+
+QWidget#tiraStats {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 4px;
+}
+
+QFrame#celdaTira {
+    background: transparent;
+    border: none;
+    border-left: 1px solid #2D3541;
+}
+
+QFrame#celdaTira[primera="true"] {
+    border-left: none;
+}
+
+QLabel#nombrePilaDuelo {
+    font-family: "Titillium Web";
+    font-size: 17px;
+    font-weight: 300;
+    color: #CAD2DC;
+}
+
+QLabel#apellidoDuelo {
+    font-family: "Titillium Web";
+    font-size: 24px;
+    font-weight: 800;
+}
+
+QLabel#siglaDuelo {
+    color: #CAD2DC;
+    font-size: 11px;
+    font-weight: 700;
+    padding-right: 6px;
+}
+
+QLabel#gpDuelo {
+    color: #A4AEBC;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QLabel#celdaDuelo {
+    background-color: #12161C;
+    border-radius: 3px;
+    color: #A4AEBC;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 0;
+}
+
+QLabel#celdaDuelo[estado="abandono"] {
+    color: #FF6B57;
 }
 
 QLabel#valorDuelo {

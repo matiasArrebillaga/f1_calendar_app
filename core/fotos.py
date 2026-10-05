@@ -6,9 +6,11 @@ import json
 import os
 import urllib.request
 
+from core.equipos import url_logo
 from core.paths import data_path, ruta_cache
 
 CARPETA = "cache_fotos"
+CARPETA_LOGOS = "cache_logos"
 USER_AGENT = "F1CalendarApp/1.0"   # Wikimedia rechaza pedidos sin User-Agent
 
 # Pilotos sin foto en ninguna fuente: no se reintenta en esta sesión.
@@ -66,3 +68,23 @@ def obtener_ruta_foto(driver_id, headshot_url=None, url_wiki=None):
             continue
     _fallidas.add(driver_id)
     return respaldo
+
+
+def obtener_ruta_logo(constructor_id):
+    """Logo oficial del equipo, o None (la UI muestra las iniciales)."""
+    url = url_logo(constructor_id)
+    if url is None:
+        return None
+    ruta, _ = ruta_cache(CARPETA_LOGOS, f"{constructor_id}.png")
+    if os.path.exists(ruta):
+        return ruta
+    if ("logo", constructor_id) in _fallidas:
+        return None
+    os.makedirs(data_path(CARPETA_LOGOS), exist_ok=True)
+    destino = os.path.join(data_path(CARPETA_LOGOS), f"{constructor_id}.png")
+    try:
+        _bajar(url, destino)
+        return destino
+    except Exception:
+        _fallidas.add(("logo", constructor_id))
+        return None

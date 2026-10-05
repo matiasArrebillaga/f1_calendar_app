@@ -22,6 +22,7 @@ from ui.calendar_event_card import CalendarEventCard
 from ui.event_detail_view import EventDetailView
 from ui.icons import PODIO
 from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt
 
 import workers.pilotos_worker as pilotos_worker
 from test_historial import base_de_prueba
@@ -690,6 +691,25 @@ def test_cambiar_de_piloto_no_deja_celdas_ni_tarjetas_del_anterior():
         tarjetas = [t for t in vista.grilla_pilotos.widget().children()
                     if getattr(t, "clave", None) and not t.isHidden()]
         assert sorted(t.clave for t in tarjetas) == ["nadie", "prost", "senna"],             sorted(t.clave for t in tarjetas)
+    finally:
+        _restaurar_pilotos()
+
+
+def test_las_flechas_siguen_cambiando_de_anio_desde_la_pestania_pilotos():
+    """QAbstractScrollArea se queda con ←/→ aunque no tenga scroll horizontal:
+    después de tocar una tarjeta, las flechas dejaban de cambiar de año."""
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QKeyEvent
+    vista = _vista_pilotos()
+    try:
+        scrolls = [vista.grilla_pilotos, vista.grilla_equipos,
+                   vista.stack_interno.widget(pilotos_view.FICHA_PILOTO),
+                   vista.stack_interno.widget(pilotos_view.FICHA_EQUIPO)]
+        for scroll in scrolls:
+            for tecla in (Qt.Key_Left, Qt.Key_Right):
+                evento = QKeyEvent(QEvent.KeyPress, tecla, Qt.NoModifier)
+                scroll.keyPressEvent(evento)
+                assert not evento.isAccepted(), f"{type(scroll).__name__} se comió {tecla}"
     finally:
         _restaurar_pilotos()
 

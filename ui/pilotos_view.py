@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy, QStackedWidget,
+    QHBoxLayout, QLabel, QPushButton, QSizePolicy, QStackedWidget,
     QVBoxLayout, QWidget
 )
 
@@ -8,7 +8,8 @@ from core import historial
 from core.equipos import color_equipo
 from ui.estado import aplicar_estado
 from ui.fichas_pilotos import (
-    FichaEquipo, FichaPiloto, FotoPiloto, GrillaTarjetas, TarjetaEquipo, TarjetaPiloto
+    FichaEquipo, FichaPiloto, FotoPiloto, GrillaTarjetas, ScrollSinFlechas, TarjetaEquipo,
+    TarjetaPiloto
 )
 from ui.spinner_widget import SpinnerWidget
 from workers.pilotos_worker import FotosWorker, PilotosWorker
@@ -107,10 +108,8 @@ class PilotosView(QWidget):
         columna.addWidget(miga, alignment=Qt.AlignLeft)
         columna.addWidget(ficha)
         columna.addStretch()
-        scroll = QScrollArea()
+        scroll = ScrollSinFlechas()
         scroll.setWidget(contenido)
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         return scroll
 
     def _cambiar_tab(self, indice):

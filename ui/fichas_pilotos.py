@@ -209,15 +209,29 @@ class TarjetaEquipo(_TarjetaClickeable):
         layout.addLayout(columna, 1)
 
 
-class GrillaTarjetas(QScrollArea):
+class ScrollSinFlechas(QScrollArea):
+    """QScrollArea que deja pasar ←/→ hasta MainWindow, que cambia de año con
+    ellas. Apagar el scroll horizontal no alcanza: QAbstractScrollArea se queda
+    con esas teclas igual."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def keyPressEvent(self, evento):
+        if evento.key() in (Qt.Key_Left, Qt.Key_Right):
+            evento.ignore()
+            return
+        super().keyPressEvent(evento)
+
+
+class GrillaTarjetas(ScrollSinFlechas):
     """Tarjetas de ancho fijo en tantas columnas como entren a lo ancho."""
     ESPACIO = 10
 
     def __init__(self):
         super().__init__()
-        self.setWidgetResizable(True)
-        # Sin scroll horizontal: se comería las flechas que cambian de año.
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         contenedor = QWidget()
         self._grilla = QGridLayout(contenedor)
         self._grilla.setContentsMargins(0, 0, 0, 16)

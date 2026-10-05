@@ -669,6 +669,112 @@ QLabel#detalleKpi {
     font-size: 12px;
 }
 
+/* ---------- Pilotos y equipos ----------
+   Tarjetas y fichas de la pestaña Pilotos. Las cajas de stats reusan
+   QFrame#kpi / QLabel#valorKpi de Clasificación. */
+QFrame#tarjetaPiloto,
+QFrame#tarjetaEquipo {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 4px;
+}
+
+QFrame#tarjetaPiloto:hover,
+QFrame#tarjetaEquipo:hover {
+    background-color: #1B2029;
+    border-color: #52DEEC;
+}
+
+QFrame#tarjetaPiloto:focus,
+QFrame#tarjetaEquipo:focus {
+    border: 1px solid #E10600;
+}
+
+QLabel#siglaTarjeta {
+    font-family: "Titillium Web";
+    font-size: 17px;
+    font-weight: 700;
+}
+
+QLabel#detalleTarjeta {
+    color: #A4AEBC;
+    font-size: 12px;
+}
+
+QLabel#puntosTarjeta {
+    color: #52DEEC;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#nombreTarjeta {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#nombreFicha {
+    font-family: "Titillium Web";
+    font-size: 26px;
+    font-weight: 700;
+}
+
+QLabel#metaFicha {
+    color: #A4AEBC;
+    font-size: 13px;
+}
+
+QFrame#celdaResultado {
+    background-color: #12161C;
+    border: 1px solid #2D3541;
+    border-radius: 3px;
+}
+
+QFrame#celdaResultado[estado="podio"] {
+    border-top: 2px solid #F3D27A;
+}
+
+QLabel#textoCelda {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QFrame#celdaResultado[estado="podio"] QLabel#textoCelda {
+    color: #F3D27A;
+}
+
+QFrame#celdaResultado[estado="abandono"] QLabel#textoCelda {
+    color: #FF6B57;
+}
+
+QFrame#celdaResultado[estado="ausente"] QLabel#textoCelda {
+    color: #A4AEBC;
+}
+
+QLabel#deltaCelda {
+    color: #A4AEBC;
+    font-size: 11px;
+}
+
+QLabel#deltaCelda[sentido="sube"] {
+    color: #52DEEC;
+}
+
+QLabel#nombreDuelo {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#valorDuelo {
+    font-family: "Titillium Web";
+    font-size: 19px;
+    font-weight: 700;
+    color: #A4AEBC;
+}
+
+QLabel#valorDuelo[gana="true"] {
+    color: #F3F6F9;
+}
+
 /* ---------- Estado (cargando / error) ---------- */
 
 QLabel#estadoCargando {

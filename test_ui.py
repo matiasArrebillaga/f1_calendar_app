@@ -25,6 +25,7 @@ from PySide6.QtGui import QPixmap
 
 import workers.pilotos_worker as pilotos_worker
 from test_historial import base_de_prueba
+from ui.fichas_pilotos import formato_celda, sigla
 
 
 def test_ir_a_anio_clampea_los_dos_extremos():
@@ -215,6 +216,9 @@ def test_contraste_de_la_paleta():
         ("blanco / chip accent",        "#FFFFFF", "#E10600", AA_TEXTO),
         ("dato / bg-panel",             "#52DEEC", "#12161C", AA_TEXTO),
         ("dato / bg-sunken",            "#52DEEC", "#0C0E12", AA_TEXTO),
+        # Tira de resultados: podio y abandono sobre el panel de la celda.
+        ("oro / bg-panel",              "#F3D27A", "#12161C", AA_TEXTO),
+        ("error / bg-panel",            "#FF6B57", "#12161C", AA_TEXTO),
         # Bloque de próxima carrera: horarios y lugar sobre accent-wash.
         ("text-muted / accent-wash",    "#A4AEBC", "#261519", AA_TEXTO),
         ("text-secondary / accent-wash", "#CAD2DC", "#261519", AA_TEXTO),
@@ -473,6 +477,25 @@ def test_la_temporada_en_curso_se_baja_una_sola_vez_por_sesion():
     _correr_pilotos_worker(2025, lambda con, anio: llamadas.append(anio), anio_actual=2025,
                            limpiar=False)
     assert llamadas == [2025], llamadas
+
+
+def test_formato_de_las_celdas_de_la_tira():
+    def celda(largada, posicion, texto):
+        return formato_celda({"largada": largada, "posicion": posicion, "posicion_texto": texto})
+
+    assert celda(1, 1, "1") == ("P1", "=", "podio")
+    assert celda(4, 3, "3") == ("P3", "▲1", "podio")
+    assert celda(2, 7, "7") == ("P7", "▼5", "normal")
+    assert celda(0, 1, "1") == ("P1", "boxes", "podio")
+    assert celda(2, None, "R") == ("DNF", "", "abandono")
+    assert celda(1, None, "D") == ("DSQ", "", "abandono")
+    assert celda(0, None, "F") == ("DNQ", "", "ausente")
+    assert celda(0, None, "W") == ("DNS", "", "ausente")
+
+
+def test_sigla_de_pilotos_sin_codigo():
+    assert sigla({"codigo": "NOR", "apellido": "Norris"}) == "NOR"
+    assert sigla({"codigo": None, "apellido": "Senna"}) == "SEN"
 
 
 if __name__ == "__main__":

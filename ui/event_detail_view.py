@@ -196,6 +196,8 @@ class EventDetailView(QWidget):
 
         self._workers_activos = []  # referencias vivas mientras corren, evita el crash
         self.codigo_sesion = None
+        self._sesion_pedida = None   # (year, gp, codigo) de la última sesión pedida
+        self._con_historial = None   # se abre con la primera tabla de resultados
         self.evento_actual = None
         self.sesiones_info = {}  # {codigo: {'nombre': str, 'fecha': Timestamp, 'pasada': bool}}
 
@@ -326,6 +328,7 @@ class EventDetailView(QWidget):
         self.tabla_resultados.setRowCount(0)
         self.stack_contenido.setCurrentIndex(0)
         self.codigo_sesion = codigo_sesion
+        self._sesion_pedida = (year, gp, codigo_sesion)
 
         worker = SessionWorker(year, gp, codigo_sesion)
         worker.terminado.connect(self.on_sesion_cargada)
@@ -334,14 +337,18 @@ class EventDetailView(QWidget):
         self._workers_activos.append(worker)
         worker.start()
 
+    def _es_vieja(self, worker):
+        """El código solo no alcanza: la carrera del GP anterior también es 'R'."""
+        return (worker.year, worker.gp, worker.codigo_sesion) != self._sesion_pedida
+
     def _limpiar_worker(self, worker):
         if worker in self._workers_activos:
             self._workers_activos.remove(worker)
 
     def on_sesion_cargada(self, sesion):
         worker = self.sender()
-        if worker.codigo_sesion != self.codigo_sesion:
-            return  # llegó tarde: el usuario ya clickeó otra sesión
+        if self._es_vieja(worker):
+            return  # llegó tarde: el usuario ya clickeó otra sesión u otro GP
 
         self.spinner.detener()
         self._set_estado("")
@@ -398,7 +405,7 @@ class EventDetailView(QWidget):
                         if 'BestLapTime' in resultados.columns and not es_clasificacion
                         else None)
         color_dato, color_primario = QColor(DATO), QColor(PRIMARIO)
-        con_ficha = self._ids_con_ficha(int(self.evento_actual['EventDate'].year))
+        con_ficha = self._ids_con_ficha(worker.year)
 
         for fila, (_, row) in enumerate(resultados.iterrows()):
             posicion = row.get('Position')
@@ -453,7 +460,7 @@ class EventDetailView(QWidget):
     def _ids_con_ficha(self, anio):
         """Pilotos y equipos del campeonato de ese año: los únicos que tienen
         ficha. Un reserva que sólo corrió una FP1 no está."""
-        if getattr(self, "_con_historial", None) is None:
+        if self._con_historial is None:
             self._con_historial = historial.abrir_base()
         return {"piloto": {p['driver_id'] for p in historial.pilotos_temporada(self._con_historial, anio)},
                 "equipo": {e['constructor_id'] for e in historial.equipos_temporada(self._con_historial, anio)}}
@@ -653,7 +660,7 @@ class EventDetailView(QWidget):
 
     def on_error(self, mensaje):
         worker = self.sender()
-        if worker is not None and worker.codigo_sesion != self.codigo_sesion:
+        if worker is not None and self._es_vieja(worker):
             return
 
         self.spinner.detener()

@@ -19,7 +19,7 @@ from core.paths import data_path, resource_path
 API = "https://api.jolpi.ca/ergast/f1"
 CARPETA = "cache_historial"
 ARCHIVO = "historial_f1.db"
-USER_AGENT = "F1CalendarApp/1.0"
+USER_AGENT = "F1CalendarApp/2.0"
 PAUSA_S = 0.3              # entre páginas: Jolpica admite 4 consultas por segundo
 ESPERA_429_S = 60
 ANIO_CLASIFICACION = 1994  # Ergast no tiene clasificaciones antes de esto

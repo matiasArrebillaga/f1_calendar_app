@@ -258,7 +258,8 @@ class StandingsView(QWidget):
         fuente_datos.setStyleHint(QFont.Monospace)
         puntos_lider = max(filas[0][3], 1) if filas else 1
 
-        for fila, ((nombre, equipo, color, puntos, victorias), (driver_id, constructor_id))                 in enumerate(zip(filas, ids)):
+        for fila, ((nombre, equipo, color, puntos, victorias), (driver_id, constructor_id)) \
+                in enumerate(zip(filas, ids)):
             celdas = [str(fila + 1), nombre]
             if con_equipo:
                 celdas.append(equipo)

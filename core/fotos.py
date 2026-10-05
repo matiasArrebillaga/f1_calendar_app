@@ -11,7 +11,7 @@ from core.paths import data_path, ruta_cache
 
 CARPETA = "cache_fotos"
 CARPETA_LOGOS = "cache_logos"
-USER_AGENT = "F1CalendarApp/1.0"   # Wikimedia rechaza pedidos sin User-Agent
+USER_AGENT = "F1CalendarApp/2.0"   # Wikimedia rechaza pedidos sin User-Agent
 
 # Pilotos sin foto en ninguna fuente: no se reintenta en esta sesión.
 _fallidas = set()

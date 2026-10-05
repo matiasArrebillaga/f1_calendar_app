@@ -1,8 +1,8 @@
 import os
 import math
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+# Figure y no pyplot: pyplot es estado global y los mapas se generan en
+# QThreads, a veces dos a la vez (un worker por circuito).
+from matplotlib.figure import Figure
 
 from core.paths import ruta_cache, data_path
 # Una sola tabla de alias para toda la app: la de core.circuits. Antes este
@@ -31,7 +31,8 @@ def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
     x, y = telemetria['X'].to_numpy(), telemetria['Y'].to_numpy()
     x_rot, y_rot = _rotar(x, y, rotacion)
 
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig = Figure(figsize=(10, 10))
+    ax = fig.subplots()
     fig.patch.set_alpha(0)
     ax.set_facecolor('none')
 
@@ -49,7 +50,6 @@ def generar_mapa_circuito(location, telemetria, circuito_info, ruta_salida):
     ax.axis('off')
 
     fig.savefig(ruta_salida, transparent=True, bbox_inches='tight', dpi=150)
-    plt.close(fig)
 
     return ruta_salida
 

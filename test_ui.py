@@ -120,6 +120,25 @@ def test_mapa_tardio_de_otro_circuito_se_descarta():
     assert pintados == ["monza.png"]
 
 
+def test_la_sesion_tardia_de_otro_gp_se_descarta():
+    """Abrir un GP arranca en la carrera, y la del GP anterior también es 'R':
+    comparar sólo el código mostraba sus resultados (o su error) en el nuevo."""
+    vista = EventDetailView()
+    vista._sesion_pedida = (2025, 5, "R")
+
+    class _WorkerSesionFalso:
+        year, gp, codigo_sesion = 2025, 4, "R"
+
+    vista.sender = lambda: _WorkerSesionFalso()
+    vista.on_sesion_cargada(None)   # descartada antes de tocar la sesión
+    vista.on_error("del GP anterior")
+    assert vista.estado.objectName() != "estadoError"
+
+    _WorkerSesionFalso.gp = 5
+    vista.on_error("sin red")
+    assert vista.estado.objectName() == "estadoError"
+
+
 def test_el_mapa_no_se_re_escala_si_el_tamano_no_cambio():
     """resizeEvent entra acá por cada píxel que se arrastra el borde, y los PNG
     de cache_tracks llegan a 2275x2400: re-escalar con SmoothTransformation cada

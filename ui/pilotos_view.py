@@ -179,6 +179,7 @@ class PilotosView(QWidget):
         """Anota el año sin pedir nada a la red. La carga real ocurre en
         showEvent, cuando esta vista es la que se está mirando."""
         self._year_pedido = year
+        self._ficha_pendiente = None   # era de otro año
         if self.isVisible():
             self.cargar_datos(year)
 
@@ -223,6 +224,7 @@ class PilotosView(QWidget):
         worker = self.sender()
         if worker.year != self.year:
             return
+        self._ficha_pendiente = None   # si no, se abriría sola al reintentar
         self._set_estado(f"No se pudieron cargar los pilotos de {self.year}. "
                          "Revisá la conexión y volvé a abrir la pestaña.", "error")
         self.year = None   # así showEvent lo vuelve a pedir

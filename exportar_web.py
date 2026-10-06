@@ -14,6 +14,7 @@ import os
 import shutil
 import sqlite3
 import sys
+import time
 from datetime import date
 
 from core import historial
@@ -24,6 +25,15 @@ from core.i18n import EVENTOS_ES, NACIONALIDADES_ES, PAISES_ES
 
 DATOS = os.path.join("web", "datos")
 MAPAS = os.path.join("web", "mapas")
+# El deploy arranca sin caché y hace ~50 pedidos seguidos; Jolpica admite 4
+# por segundo y contesta 429 al pasarse. Como precache_historial.py.
+REINTENTOS = 5
+
+
+def pedir(ruta, offset=0):
+    # historial.pedir_json se busca al llamar (no como valor por defecto):
+    # así los tests lo pueden reemplazar.
+    return historial.pedir_json(ruta, offset, reintentos=REINTENTOS)
 
 
 def escribir_json(ruta, datos):
@@ -84,14 +94,16 @@ def carreras_previas(con):
     return {driver_id: historial.carrera_completa(copia, driver_id) for driver_id in ids}
 
 
-def ganadores(pedir=historial.pedir_json):
+def ganadores(pedir_pagina=None):
     """Ganadores de cada circuito con ficha. Un circuito que falla queda
     afuera en vez de tirar abajo todo el deploy: la web muestra "sin
     ganadores" para ese."""
+    pedir_pagina = pedir_pagina or pedir
     resultado = {}
     for d in DATOS_CIRCUITOS.values():
+        time.sleep(historial.PAUSA_S)
         try:
-            lista = historial.ganadores_circuito(d["circuit_id"], pedir)
+            lista = historial.ganadores_circuito(d["circuit_id"], pedir_pagina)
         except Exception as error:
             print(f"ganadores de {d['circuit_id']}: {error}", file=sys.stderr)
             continue
@@ -127,7 +139,7 @@ def exportar_actual(anio):
     # el deploy no tiene la base completa, y para las fichas del año no hace falta.
     con = sqlite3.connect(":memory:")
     con.executescript(historial.ESQUEMA)
-    historial.descargar_temporada(con, anio)
+    historial.descargar_temporada(con, anio, pedir=pedir)
     datos = temporada(con, anio)
     for p in datos["pilotos"]:
         p["carrera"] = historial.carrera_completa(con, p["driver_id"])

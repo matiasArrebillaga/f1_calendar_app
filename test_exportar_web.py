@@ -97,6 +97,31 @@ def test_copiar_mapas_los_renombra_por_circuit_id():
     assert sorted(os.listdir(destino)) == ["marina_bay.png", "monza.png"]
 
 
+def test_el_deploy_reintenta_los_429_de_jolpica():
+    """El deploy arranca sin caché y hace ~50 pedidos seguidos: sin reintentos,
+    un 429 tiraba abajo el deploy o dejaba un circuito sin ganadores."""
+    llamadas = []
+
+    def pedir_falso(ruta, offset=0, reintentos=1):
+        llamadas.append((ruta, reintentos))
+        return {"limit": "100", "offset": str(offset), "total": "0",
+                "RaceTable": {"Races": []}, "StandingsTable": {"StandingsLists": []}}
+
+    carpeta = tempfile.mkdtemp()
+    originales = historial.pedir_json, historial.data_path, exportar_web.DATOS
+    historial.pedir_json = pedir_falso
+    historial.data_path = lambda nombre: os.path.join(carpeta, nombre)
+    exportar_web.DATOS = carpeta
+    try:
+        exportar_web.exportar_actual(2026)
+    finally:
+        historial.pedir_json, historial.data_path, exportar_web.DATOS = originales
+    assert any(ruta == "2026/results" for ruta, _ in llamadas)
+    assert any(ruta.startswith("circuits/") for ruta, _ in llamadas)
+    assert {reintentos for _, reintentos in llamadas} == {exportar_web.REINTENTOS}
+    assert exportar_web.REINTENTOS > 1
+
+
 if __name__ == "__main__":
     for nombre, prueba in list(globals().items()):
         if nombre.startswith("test_"):

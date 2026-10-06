@@ -158,7 +158,7 @@ web/
 ```
 
 - **Rutas** (hash, así "atrás" funciona solo): `#/calendario/2026`, `#/gp/2026/15`,
-  `#/gp/2026/15/circuito` (hoja abierta), `#/clasificacion/2026/pilotos|equipos`,
+  `#/gp/2026/15/circuito` (hoja abierta), `#/gp/2026/15/mapa` (mapa grande), `#/clasificacion/2026/pilotos|equipos`,
   `#/pilotos/2026/pilotos|equipos`, `#/piloto/2026/antonelli`, `#/equipo/2026/mercedes`.
   Sin hash: calendario del año actual.
 - Cada vista exporta `render(params)` y devuelve su HTML; `app.js` la monta en `<main>`, marca la

@@ -2,7 +2,11 @@ name: Publicar web
 on:
   push:
     branches: [ "master" ]
-    paths: [ "web/**", ".github/workflows/pages.yaml" ]
+    paths: [ "web/**", "exportar_web.py", "core/**", ".github/workflows/pages.yaml" ]
+  schedule:
+    # Lunes temprano, después de las carreras del fin de semana: refresca las
+    # fichas de la temporada en curso sin que haya que pushear nada.
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -22,6 +26,20 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+    - name: Datos de la temporada en curso
+      # Sólo stdlib: no hace falta requirements.txt. Si falla, no se publica
+      # y queda en línea la versión anterior.
+      run: python exportar_web.py
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Tests de la web
+      env:
+        TZ: America/Argentina/Buenos_Aires
+      run: node --test "web/test/*.test.js"
     - uses: actions/configure-pages@v5
     - uses: actions/upload-pages-artifact@v3
       with:

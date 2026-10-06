@@ -9,8 +9,9 @@ import * as detalle from "./vistas/detalle.js";
 import * as clasificacion from "./vistas/clasificacion.js";
 import * as pilotos from "./vistas/pilotos.js";
 import * as fichaPiloto from "./vistas/ficha_piloto.js";
+import * as fichaEquipo from "./vistas/ficha_equipo.js";
 
-const VISTAS = { calendario, gp: detalle, clasificacion, pilotos, piloto: fichaPiloto };
+const VISTAS = { calendario, gp: detalle, clasificacion, pilotos, piloto: fichaPiloto, equipo: fichaEquipo };
 
 const ICONO_ATRAS = html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
 const ICONO_ANTERIOR = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
@@ -62,8 +63,7 @@ async function mostrar() {
   }
   if (mio !== turno) return;
   const ruta = parsearRuta(location.hash, datosComunes.anio_actual);
-  // Mientras no estén todas las vistas, las que faltan caen en el calendario.
-  const vista = VISTAS[ruta.vista] ?? VISTAS.calendario;
+  const vista = VISTAS[ruta.vista];
 
   // Sólo se abrió o se cerró una capa (hoja del circuito, mapa): no se vuelve
   // a renderizar, así no se pierde el scroll.

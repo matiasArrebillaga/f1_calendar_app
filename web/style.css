@@ -1,0 +1,136 @@
+/* Paleta "telemetría": la misma tabla que style.qss. El rojo marca estado,
+   el cian marca datos. */
+:root {
+  --app: #090A0D;
+  --panel: #12161C;
+  --surface: #1B2029;
+  --sunken: #0C0E12;
+  --borde: #2D3541;
+  --borde-fuerte: #3F4957;
+  --texto: #F3F6F9;
+  --texto2: #CAD2DC;
+  --muted: #A4AEBC;
+  --rojo: #E10600;
+  --rojo-wash: #261519;
+  --dato: #52DEEC;
+  --error: #FF6B57;
+  --titulo: "Titillium Web", system-ui, sans-serif;
+  --mono: ui-monospace, "Roboto Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--app);
+  color: var(--texto);
+  font: 15px/1.4 system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: var(--panel);
+  border-bottom: 1px solid var(--borde);
+}
+.barra h1 { margin: 0; font: 700 20px var(--titulo); }
+.barra span { color: var(--muted); font-weight: 600; }
+
+main { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+.estado { color: var(--muted); }
+.estado.error { color: var(--error); }
+
+.etiqueta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+}
+
+.chip {
+  background: var(--rojo);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  border-radius: 2px;
+  padding: 3px 6px;
+}
+
+.bandera { width: 24px; height: auto; margin-left: auto; border-radius: 2px; }
+
+/* ---------- Próxima carrera ---------- */
+#proxima {
+  background: var(--rojo-wash);
+  border: 1px solid var(--borde);
+  border-left: 2px solid var(--rojo);
+  border-radius: 4px;
+  padding: 16px;
+}
+.proxima-arriba { display: flex; align-items: center; }
+#proxima h2 { margin: 10px 0 2px; font: 600 24px/1.15 var(--titulo); }
+.lugar { margin: 0; color: var(--texto2); font-size: 13px; }
+
+.cuenta { display: flex; gap: 8px; margin: 14px 0 18px; }
+.cuenta div {
+  min-width: 64px;
+  padding: 6px 10px;
+  background: var(--sunken);
+  border: 1px solid var(--borde);
+  border-radius: 3px;
+}
+.cuenta b { display: block; color: var(--dato); font: 24px var(--mono); }
+.cuenta small { color: var(--muted); font-size: 10px; letter-spacing: 1.2px; }
+
+.horarios {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  margin: 8px 0 0;
+}
+.horarios dt { color: var(--texto2); }
+.horarios dt.carrera { color: var(--texto); font-weight: 600; }
+.horarios dd { margin: 0; color: var(--muted); font: 13px var(--mono); align-self: center; }
+
+/* ---------- Calendario ---------- */
+.mes {
+  margin: 24px 0 8px;
+  padding: 0 4px 6px;
+  color: var(--texto2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 96px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--borde);
+  border-left: 2px solid #6E7D8F;
+  border-radius: 4px;
+}
+.tarjeta.proxima { background: var(--rojo-wash); border-left-color: var(--rojo); }
+.tarjeta.pasado { border-left-color: var(--borde); }
+.tarjeta.pasado h4 { color: var(--texto2); }
+.tarjeta-arriba { display: flex; align-items: center; gap: 6px; }
+.tarjeta h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.fecha { margin: auto 0 0; color: var(--muted); font: 12px var(--mono); }

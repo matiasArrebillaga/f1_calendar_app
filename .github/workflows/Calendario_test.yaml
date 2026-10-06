@@ -2,8 +2,10 @@ name: Calendario_test
 on:
   push:
     branches: [ "master" ]
+    paths-ignore: [ "web/**", ".github/workflows/pages.yaml" ]
   pull_request:
     branches: [ "master" ]
+    paths-ignore: [ "web/**", ".github/workflows/pages.yaml" ]
 
 permissions:
   contents: read

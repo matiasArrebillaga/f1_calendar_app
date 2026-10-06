@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090A0D">
+  <title>Calendario F1</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="barra">
+    <img src="icon-192.png" alt="" width="28" height="28">
+    <h1>Calendario F1 <span id="temporada"></span></h1>
+  </header>
+
+  <main>
+    <p id="estado" class="estado">Cargando calendario…</p>
+
+    <section id="proxima" hidden>
+      <div class="proxima-arriba">
+        <span id="chip" class="chip">PRÓXIMA</span>
+        <img id="proxima-bandera" class="bandera" alt="">
+      </div>
+      <h2 id="proxima-nombre"></h2>
+      <p id="proxima-lugar" class="lugar"></p>
+      <div class="cuenta">
+        <div><b id="dias">–</b><small>DÍAS</small></div>
+        <div><b id="horas">–</b><small>HORAS</small></div>
+        <div><b id="minutos">–</b><small>MIN</small></div>
+      </div>
+      <h3 class="etiqueta">HORARIOS · HORA LOCAL</h3>
+      <dl id="horarios" class="horarios"></dl>
+    </section>
+
+    <div id="calendario"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

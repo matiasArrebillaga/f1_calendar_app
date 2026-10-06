@@ -1,25 +1,28 @@
 // Pedidos a las APIs y a los JSON de datos/. Un caché en memoria por URL
-// evita repetir pedidos dentro de la misma visita; entre visitas y sin
-// conexión responde el service worker (sw.js).
+// evita repetir pedidos mientras se navega; entre visitas y sin conexión
+// responde el service worker (sw.js).
 const JOLPICA = "https://api.jolpi.ca/ergast/f1";
 const OPENF1 = "https://api.openf1.org/v1";
-const memoria = new Map();
+// La PWA queda abierta días en segundo plano: sin vencimiento, una
+// clasificación vista mientras se corría quedaría vacía hasta cerrar la app.
+const VIGENCIA_MS = 60_000;
+const memoria = new Map();   // url → { promesa, hasta }
 
 function pedir(url) {
-  if (!memoria.has(url)) {
-    const promesa = fetch(url).then((respuesta) => {
-      if (!respuesta.ok) {
-        const error = new Error(`${respuesta.status} ${url}`);
-        error.status = respuesta.status;
-        throw error;
-      }
-      return respuesta.json();
-    });
-    // Un error no se guarda: "Reintentar" tiene que volver a pedir.
-    promesa.catch(() => memoria.delete(url));
-    memoria.set(url, promesa);
-  }
-  return memoria.get(url);
+  const guardado = memoria.get(url);
+  if (guardado && guardado.hasta > Date.now()) return guardado.promesa;
+  const promesa = fetch(url).then((respuesta) => {
+    if (!respuesta.ok) {
+      const error = new Error(`${respuesta.status} ${url}`);
+      error.status = respuesta.status;
+      throw error;
+    }
+    return respuesta.json();
+  });
+  // Un error no se guarda: "Reintentar" tiene que volver a pedir.
+  promesa.catch(() => memoria.delete(url));
+  memoria.set(url, { promesa, hasta: Date.now() + VIGENCIA_MS });
+  return promesa;
 }
 
 export const comun = () => pedir("datos/comun.json");
@@ -45,7 +48,12 @@ export async function sesionOpenF1(anio, nombre, dia) {
   const sesion = sesiones.find((s) => s.session_name === nombre && s.date_start.slice(0, 10) === dia);
   if (!sesion) return null;
   const [res, pilotos] = await Promise.all([
-    pedir(`${OPENF1}/session_result?session_key=${sesion.session_key}`),
+    // Mientras la sesión se corre (o hasta que OpenF1 la procesa) responde
+    // 404 "No results found": es una lista vacía, no un error.
+    pedir(`${OPENF1}/session_result?session_key=${sesion.session_key}`).catch((error) => {
+      if (error.status === 404) return [];
+      throw error;
+    }),
     pedir(`${OPENF1}/drivers?session_key=${sesion.session_key}`),
   ]);
   return { resultados: res, pilotos };

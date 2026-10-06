@@ -70,6 +70,8 @@ export function armarPendiente(sesion, ahora) {
     : "Todavía no hay resultados publicados para esta sesión."}</p></div>`;
 }
 
+const errorSesion = () => html`<div class="estado error"><p>No se pudo cargar. Revisá la conexión.</p></div>`;
+
 export const sesionInicial = (ev, ahora) => ev.sesiones.filter((s) => s.fecha <= ahora).at(-1) ?? ev.sesiones[0];
 
 async function armarSesion(ev, sesion, comun) {
@@ -122,7 +124,9 @@ async function evento(ruta, comun) {
 export async function render(ruta, comun) {
   const ev = await evento(ruta, comun);
   const activa = sesionInicial(ev, Date.now());
-  return armarDetalle(ev, activa, await armarSesion(ev, activa, comun), comun);
+  // Si falla la sesión (OpenF1 caído o limitando pedidos), el resto del
+  // detalle se ve igual y los otros chips siguen andando.
+  return armarDetalle(ev, activa, await armarSesion(ev, activa, comun).catch(errorSesion), comun);
 }
 
 export function montar(main, ruta, comun) {
@@ -140,8 +144,7 @@ export function montar(main, ruta, comun) {
     caja.innerHTML = html`<p class="estado">Cargando…</p>`;
     const ev = await evento(ruta, comun);
     const sesion = ev.sesiones.find((s) => s.clave === boton.dataset.sesion);
-    const contenido = await armarSesion(ev, sesion, comun)
-      .catch(() => html`<div class="estado error"><p>No se pudo cargar. Revisá la conexión.</p></div>`);
+    const contenido = await armarSesion(ev, sesion, comun).catch(errorSesion);
     if (mio === pedido) caja.innerHTML = contenido;
   });
   capa(main, ruta, comun);

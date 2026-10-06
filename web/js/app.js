@@ -48,6 +48,9 @@ const mismaPagina = (a, b) => a && a.vista === b.vista && a.anio === b.anio
 
 function mostrarError(mio) {
   if (mio !== turno) return;
+  // Sin esto, "Reintentar" en un GP se tomaba como un cambio de capa y no
+  // volvía a renderizar nada.
+  actual = null;
   main.innerHTML = html`<div class="estado error"><p>No se pudo cargar. Revisá la conexión.</p>
     <button class="boton" data-reintentar>Reintentar</button></div>`;
 }

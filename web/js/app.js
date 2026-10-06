@@ -5,8 +5,9 @@ import { html } from "./html.js";
 import { ANIO_MIN, parsearRuta, pestanaDe, rutaConAnio } from "./formato.js";
 import { comun as pedirComun } from "./api.js";
 import * as calendario from "./vistas/calendario.js";
+import * as detalle from "./vistas/detalle.js";
 
-const VISTAS = { calendario };
+const VISTAS = { calendario, gp: detalle };
 
 const ICONO_ATRAS = html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
 const ICONO_ANTERIOR = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;

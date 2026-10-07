@@ -1,26 +1,35 @@
 import { html } from "../html.js";
-import { MESES, aEvento, cuentaRegresiva, diaHora, gpCorto, indiceProxima, sigla } from "../formato.js";
+import { MESES, aEvento, cuentaRegresiva, diaHora, estadoSesiones, gpCorto, indiceProxima, sigla } from "../formato.js";
 import { calendario, temporada } from "../api.js";
 import { bandera } from "./filas.js";
 
 export const encabezado = () => ({ titulo: "Calendario" });
 
 const DIA_MS = 86_400_000;
+let proximaEnPantalla = null;   // la que dibujó el último render, para refrescarla
 
 function armarProxima(ev, ahora) {
+  const sesiones = estadoSesiones(ev.sesiones, ahora);
+  const vivo = sesiones.find((s) => s.estado === "vivo");
   const c = cuentaRegresiva(ev.largada, ahora);
-  return html`<a class="hero" href="#/gp/${ev.anio}/${ev.ronda}" data-largada="${ev.largada.getTime()}" data-ronda="${ev.ronda}">
-    <div class="fila"><span class="chip" data-chip>${c.enCurso ? "EN CURSO" : "PRÓXIMA"} · R${ev.ronda}</span>${bandera(ev.bandera)}</div>
+  const dato = (s) => (s.estado === "hecha" ? "✓ Resultados" : s.estado === "vivo" ? "EN VIVO" : diaHora(s.fecha));
+  return html`<a class="hero ${vivo ? "en-vivo" : ""}" href="#/gp/${ev.anio}/${ev.ronda}" data-largada="${ev.largada.getTime()}">
+    <div class="fila">${vivo
+      ? html`<span class="chip vivo"><i class="punto"></i>EN VIVO · ${vivo.nombre.toUpperCase()}</span>`
+      : html`<span class="chip">PRÓXIMA · R${ev.ronda}${ev.conSprint ? " · SPRINT" : ""}</span>`}${bandera(ev.bandera)}</div>
     <h2>${ev.nombre}</h2>
     <p class="lugar">${ev.circuito} · ${ev.pais} · ${ev.rango}</p>
-    <div class="cuenta">
-      <div><b data-dias>${c.dias}</b><small>DÍAS</small></div>
-      <div><b data-horas>${c.horas}</b><small>HORAS</small></div>
-      <div><b data-minutos>${c.minutos}</b><small>MIN</small></div>
-    </div>
+    ${vivo
+      ? html`<div class="avance"><i style="width:${Math.min(100, Math.round(vivo.avance * 100))}%"></i></div>
+        <p class="muted nota">Empezó hace ${vivo.minutos} min</p>`
+      : html`<div class="cuenta">
+        <div><b>${c.dias}</b><small>DÍAS</small></div>
+        <div><b>${c.horas}</b><small>HORAS</small></div>
+        <div><b>${c.minutos}</b><small>MIN</small></div>
+      </div>`}
     <h3 class="eti">HORARIOS · HORA LOCAL</h3>
-    <dl class="horarios">${ev.sesiones.map((s) =>
-      html`<dt class="${s.clave === "Race" ? "carrera" : ""}">${s.nombre}</dt><dd>${diaHora(s.fecha)}</dd>`)}</dl>
+    <dl class="horarios">${sesiones.map((s) =>
+      html`<dt class="${s.clave === "Race" ? "carrera" : ""}">${s.nombre}</dt><dd class="${s.estado}">${dato(s)}</dd>`)}</dl>
   </a>`;
 }
 
@@ -75,6 +84,7 @@ export async function render(ruta, comun) {
     temporada(ruta.anio, comun).catch(() => null),   // sin ganadores, el calendario igual se ve
   ]);
   const eventos = races.map((race) => aEvento(race, comun));
+  proximaEnPantalla = eventos[indiceProxima(eventos, Date.now())] ?? null;
   return armarCalendario(eventos, Date.now(), ganadoresPorRonda(datos, comun.colores));
 }
 
@@ -86,7 +96,9 @@ export function montar(main) {
   const alto = document.getElementById("encabezado").offsetHeight;
   if (hero && ultimaCorrida) {
     // Como escritorio: abre parado en la próxima; lo corrido queda arriba.
-    window.scrollTo(0, hero.getBoundingClientRect().top + window.scrollY - alto - 12);
+    // Asoma una franja de la última corrida, que es donde flota la píldora,
+    // así no tapa la tarjeta.
+    window.scrollTo(0, hero.getBoundingClientRect().top + window.scrollY - alto - 52);
   }
   if (pildora && ultimaCorrida) {
     // La píldora se ve mientras lo corrido quedó arriba, fuera de pantalla
@@ -98,17 +110,13 @@ export function montar(main) {
     pildora.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
     limpiezas.push(() => observador.disconnect());
   }
-  if (hero) {
-    // La cuenta regresiva se refresca cada 30 s, como el QTimer de escritorio.
-    const largada = Number(hero.dataset.largada);
-    const actualizar = () => {
-      const c = cuentaRegresiva(largada, Date.now());
-      hero.querySelector("[data-dias]").textContent = c.dias;
-      hero.querySelector("[data-horas]").textContent = c.horas;
-      hero.querySelector("[data-minutos]").textContent = c.minutos;
-      hero.querySelector("[data-chip]").textContent = `${c.enCurso ? "EN CURSO" : "PRÓXIMA"} · R${hero.dataset.ronda}`;
-    };
-    const id = setInterval(actualizar, 30_000);
+  if (hero && proximaEnPantalla) {
+    // Cada 30 s se redibuja la tarjeta: cuenta regresiva y estado en vivo.
+    const ev = proximaEnPantalla;
+    const id = setInterval(() => {
+      main.querySelector("[data-largada]")?.replaceWith(
+        document.createRange().createContextualFragment(String(armarProxima(ev, Date.now()))));
+    }, 30_000);
     limpiezas.push(() => clearInterval(id));
   }
   return () => limpiezas.forEach((f) => f());

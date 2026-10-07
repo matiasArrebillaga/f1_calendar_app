@@ -125,6 +125,19 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .45); transition: opacity .2s, transform .2s;
 }
 .pildora.oculta { opacity: 0; pointer-events: none; transform: translate(-50%, -8px); }
+@keyframes latido { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .7); } 70%, 100% { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); } }
+.chip.vivo { display: inline-flex; align-items: center; gap: 6px; }
+.punto { display: block; width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: latido 1.6s infinite; }
+.hero.en-vivo { border-color: var(--rojo); }
+.avance { height: 4px; margin: 12px 0 4px; overflow: hidden; border-radius: 2px; background: var(--sunken); }
+.avance i { display: block; height: 100%; background: var(--rojo); }
+.horarios dd.hecha { color: var(--dato); }
+.horarios dd.vivo { color: var(--rojo); font-weight: 700; }
+.tabbar a { position: relative; }
+.tabbar a.vivo::after {
+  content: ""; position: absolute; top: 9px; left: calc(50% + 6px); width: 8px; height: 8px;
+  border-radius: 50%; background: var(--rojo); border: 2px solid var(--panel);
+}
 
 /* ---------- Detalle del GP ---------- */
 .cab { max-width: 720px; margin: 0 auto; padding: 16px 16px 4px; display: flex; flex-direction: column; gap: 2px; }

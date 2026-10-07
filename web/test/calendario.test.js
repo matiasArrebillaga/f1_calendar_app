@@ -52,3 +52,22 @@ test("ganadores por ronda, desde la tira de cada piloto", () => {
 test("sin carreras publicadas", () => {
   assert.match(String(armarCalendario([], Date.now())), /Sin calendario/);
 });
+
+test("fin de semana en vivo: chip, avance y estado de cada sesión", () => {
+  const salida = String(armarCalendario(eventos, Date.parse("2026-10-10T13:38:00Z")));
+  assert.match(salida, /class="hero en-vivo"/);
+  assert.match(salida, /EN VIVO · CLASIFICACIÓN/);
+  assert.match(salida, /width:63%/);                  // 38 de 60 min
+  assert.match(salida, /Empezó hace 38 min/);
+  assert.equal(salida.match(/✓ Resultados/g).length, 3);   // libres, clasif. sprint y sprint
+  assert.match(salida, /<dd class="vivo">EN VIVO<\/dd>/);
+  assert.match(salida, /dom 09:00/);                  // la carrera, todavía próxima
+  assert.doesNotMatch(salida, /DÍAS/);
+});
+
+test("fuera de sesión: cuenta regresiva y sprint marcado", () => {
+  const salida = String(armarCalendario(eventos, AHORA));
+  assert.match(salida, /PRÓXIMA · R17 · SPRINT/);
+  assert.match(salida, /DÍAS/);
+  assert.doesNotMatch(salida, /en-vivo|✓ Resultados/);
+});

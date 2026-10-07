@@ -2,8 +2,8 @@
 // de vistas/ exporta encabezado(ruta), render(ruta, comun) y, si hace falta,
 // montar(main, ruta, comun) y capa(main, ruta, comun).
 import { html } from "./html.js";
-import { ANIO_MIN, parsearRuta, pestanaDe, rutaConAnio } from "./formato.js";
-import { comun as pedirComun } from "./api.js";
+import { ANIO_MIN, aEvento, hayEnVivo, parsearRuta, pestanaDe, rutaConAnio } from "./formato.js";
+import { calendario as pedirCalendario, comun as pedirComun } from "./api.js";
 import * as calendario from "./vistas/calendario.js";
 import * as detalle from "./vistas/detalle.js";
 import * as clasificacion from "./vistas/clasificacion.js";
@@ -107,4 +107,20 @@ document.addEventListener("click", (evento) => {
 
 window.addEventListener("hashchange", mostrar);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+
+// Punto rojo en Calendario mientras se corre una sesión, mire la pestaña que
+// mire. Si falla la red, simplemente no hay punto.
+async function vigilarEnVivo() {
+  try {
+    const datosComunes = await pedirComun();
+    const eventos = (await pedirCalendario(datosComunes.anio_actual)).map((r) => aEvento(r, datosComunes));
+    const pestana = document.querySelector('.tabbar [data-pestana="calendario"]');
+    const marcar = () => pestana.classList.toggle("vivo", hayEnVivo(eventos, Date.now()));
+    marcar();
+    setInterval(marcar, 30_000);
+  } catch {
+    // sin conexión: sin punto
+  }
+}
+vigilarEnVivo();
 mostrar();

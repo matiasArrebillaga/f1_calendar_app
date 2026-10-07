@@ -38,7 +38,8 @@ Criterios de éxito:
 | Un aviso por sesión | La última sesión avisada se recuerda en el caché de Actions. |
 | Al tocar el aviso | Abre `#/gp/<año>/<ronda>` en la app. Sin F1 TV. |
 | En vivo | Sólo con los horarios y duraciones fijas: no hay datos en vivo gratis dentro de la sesión. |
-| Descartado | Volver deslizando desde el borde (Android ya lo hace) y título que se achica al scrollear. |
+| Fichas al scrollear | La cabecera grande se comprime a una banda con foto/logo y nombre; "carrera completa" queda fija abajo. |
+| Descartado | Volver deslizando desde el borde (Android ya lo hace) y título de pestaña que se achica al scrollear. |
 
 ## Fotos y logos oficiales
 
@@ -104,6 +105,12 @@ borde). Áreas táctiles de 44 px.
   una fila por ronda, de la más reciente a la más vieja: ronda, bandera, GP, "Largó Nº", caja con
   la llegada (llena si ganó, gris si podio, con borde si sumó puntos, sin caja fuera de los
   puntos, texto DNF/DSQ/DNQ/NC como hoy) y ▲/▼ puestos ganados o perdidos. Toca → GP.
+- Cabecera que se comprime: al bajar, la cabecera grande se reemplaza por una banda fija de 56 px
+  pegada debajo del encabezado, con la foto de busto en círculo (`headshot_url`, o la sigla) y el
+  nombre, sobre el color del equipo. Un IntersectionObserver sobre la cabecera grande pone la clase
+  `comprimida` cuando sale de pantalla; la banda entra con una transición corta (fade + desliz) y se
+  va al volver arriba. Con `prefers-reduced-motion`, aparece sin animación. Igual en la ficha del
+  equipo, con el logo en lugar de la foto.
 - "Carrera completa" (títulos, victorias, podios, GPs, debut) va en una barra fija abajo, pegada
   arriba de la barra de pestañas (`position: sticky; bottom: var(--alto-tabbar)` + safe area): se
   ve siempre mientras se scrollea la lista. El contenido lleva un margen inferior del alto de la

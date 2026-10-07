@@ -170,3 +170,10 @@ def test_completar_fotos_sin_openf1_no_rompe_el_deploy():
     datos = _datos_fotos()
     exportar_web.completar_fotos(datos, 2026, caido)
     assert datos["pilotos"][0]["headshot_url"] is None
+
+
+def test_completar_fotos_con_respuesta_rara_de_openf1_no_rompe_el_deploy():
+    for respuesta in ({"detail": "No results found."}, [{"headshot_url": URL_ANT}]):
+        datos = _datos_fotos()
+        exportar_web.completar_fotos(datos, 2026, lambda ruta, r=respuesta: r)
+        assert datos["pilotos"][0]["headshot_url"] is None

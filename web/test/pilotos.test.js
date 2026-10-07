@@ -113,3 +113,19 @@ test("grilla de equipos de otra temporada: sin el auto de este año", () => {
   const salida = String(armarPilotos({ ...DATOS, equipos: [EQUIPO_MER] }, "equipos", 2010, COMUN));
   assert.doesNotMatch(salida, /class="auto"/);
 });
+
+test("logo que no carga (CDN sin publicar el año): quedan las iniciales", () => {
+  const salida = String(armarPilotos({ ...DATOS, equipos: [EQUIPO_MER] }, "equipos", 2026, COMUN));
+  assert.match(salida, /<img src="https:\/\/media\.formula1\.com\/mercedes\.png" alt="" loading="lazy" data-ini="M" onerror="this\.replaceWith\(this\.dataset\.ini\)">/);
+});
+
+test("filas: sin texto de largada si no largó (W/F), aunque la grilla diga 0", () => {
+  const tira = [
+    { ronda: 1, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: null, posicion_texto: "W" },
+    { ronda: 2, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: null, posicion_texto: "F" },
+  ];
+  const salida = String(armarFichaPiloto({ ...PILOTO_ANT, tira }, null, COMUN, 2026));
+  assert.doesNotMatch(salida, /Largó desde boxes/);
+  assert.match(salida, />NC</);
+  assert.match(salida, />DNQ</);
+});

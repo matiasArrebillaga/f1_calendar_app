@@ -31,7 +31,9 @@ const iniciales = (nombre) => nombre.split(/[\s-]+/)
 export function armarLogo(e, comun, clase = "logo-eq") {
   const logo = comun.logos[e.constructor_id];
   return html`<span class="${clase}" style="--eq:${comun.colores[e.constructor_id] ?? GRIS}">${logo
-    ? html`<img src="${logo}" alt="" loading="lazy">` : iniciales(e.nombre)}</span>`;
+    // Si el logo no carga (enero, antes de que F1 publique el año), las iniciales.
+    ? html`<img src="${logo}" alt="" loading="lazy" data-ini="${iniciales(e.nombre)}" onerror="this.replaceWith(this.dataset.ini)">`
+    : iniciales(e.nombre)}</span>`;
 }
 
 export function armarPilotos(datos, solapa, anio, comun) {

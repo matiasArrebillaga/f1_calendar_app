@@ -69,8 +69,8 @@ def completar_fotos(datos, anio, pedir=pedir_openf1):
     la web cae en Wikipedia o la sigla, como antes."""
     try:
         de_openf1 = {d["name_acronym"]: d.get("headshot_url") for d in pedir("drivers?session_key=latest")}
-    except (OSError, ValueError) as error:
-        print(f"OpenF1 sin fotos: {error}")
+    except Exception as error:   # red, JSON roto o una respuesta con otra forma
+        print(f"OpenF1 sin fotos: {error!r}")
         return
     for p in datos["pilotos"]:
         url = de_openf1.get(p.get("codigo"))

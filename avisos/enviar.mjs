@@ -21,7 +21,14 @@ async function pedir(url) {
 }
 
 const anio = new Date(ahora).getUTCFullYear();
-const races = (await pedir(`https://api.jolpi.ca/ergast/f1/${anio}.json?limit=100`)).MRData.RaceTable.Races;
+// Jolpica caído: se reintenta en 10 min. Sin exit 1, así un corte no manda un
+// mail de falla por cada corrida; el único error que avisa es el del push.
+const races = await pedir(`https://api.jolpi.ca/ergast/f1/${anio}.json?limit=100`)
+  .then((datos) => datos.MRData.RaceTable.Races)
+  .catch((error) => {
+    console.log(`Sin calendario de Jolpica (${error.message}): se reintenta en la próxima corrida`);
+    process.exit(0);
+  });
 // Los nombres en castellano salen del comun.json publicado; si no está, en inglés.
 const comun = await pedir(`${PAGINA}datos/comun.json`).catch(() => ({ eventos: {}, paises: {}, banderas: {} }));
 const ultima = existsSync(ULTIMA) ? readFileSync(ULTIMA, "utf8").trim() : null;

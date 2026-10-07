@@ -215,8 +215,13 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .kpi small { font-size: 11px; color: var(--muted); }
 
 /* ---------- Pilotos y equipos ---------- */
-.grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
-.tpil { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border: 1px solid var(--borde); border-radius: 4px; }
+.grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.tpil {
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--borde); border-radius: 14px;
+  transition: transform .12s;
+}
+.tpil:active { transform: scale(.97); }
 .foto {
   height: 104px; display: grid; place-items: center; overflow: hidden;
   font: 700 34px var(--titulo); color: rgba(255, 255, 255, .9);
@@ -228,6 +233,18 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tpil .info { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px 10px; }
 .tpil b { font-size: 14px; font-weight: 600; }
 .tpil small { font-size: 12px; color: var(--muted); }
+.tpil.piloto { height: 236px; background: color-mix(in srgb, var(--eq) 34%, var(--panel)); box-shadow: inset 0 -3px var(--eq); }
+.tpil.piloto .num { position: absolute; left: 10px; top: 4px; font: 700 64px/1 var(--titulo); color: rgba(255, 255, 255, .14); }
+.tpil.piloto .pos-chip { position: absolute; z-index: 1; right: 8px; top: 8px; padding: 3px 6px; font-size: 11px; font-weight: 600; background: rgba(9, 10, 13, .7); border-radius: 6px; }
+.tpil.piloto .cuerpo-foto { position: absolute; right: -6px; top: 14px; width: 78%; }
+.tpil.piloto .foto { position: absolute; inset: 0 0 auto; height: 170px; background: none; }
+.tpil.piloto .info {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 12px 12px;
+  background: linear-gradient(transparent, rgba(9, 10, 13, .92) 40%);
+}
+.tpil.piloto .info b { font: 700 18px/1.1 var(--titulo); text-transform: uppercase; }
+.tpil.piloto .info small { display: flex; justify-content: space-between; color: var(--texto2); }
+.tpil.equipo .auto { display: block; width: 100%; padding: 0 8px; margin-top: -12px; }
 
 .cabcolor {
   display: flex; align-items: center; gap: 14px; padding: 16px;

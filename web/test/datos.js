@@ -8,6 +8,7 @@ export const COMUN = {
   banderas: { Singapore: "sg", Azerbaijan: "az" },
   colores: { mercedes: "#00D7B6", red_bull: "#4781D7" },
   logos: { mercedes: "https://media.formula1.com/mercedes.png" },
+  autos: { mercedes: "https://cdn/mercedes-auto.webp" },
   circuitos: {
     baku: {
       nombre_completo: "Baku City Circuit", circuit_id: "baku", tipo: "Callejero", sentido: "Antihorario",

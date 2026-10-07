@@ -15,6 +15,16 @@ export function armarFoto(p, color, clase = "foto") {
   return html`<span class="${clase}" style="--eq:${color ?? GRIS}" data-wiki="${p.url_wiki ?? ""}">${sigla(p)}</span>`;
 }
 
+// Foto de cuerpo entero (temporada en curso) para la grilla y la portada de
+// la ficha; comparten view-transition-name, así la foto "viaja" de una a otra.
+// Si la imagen no carga (404 del CDN), se saca y queda el fondo de color.
+export function armarRetrato(p, color) {
+  if (p.foto_cuerpo) {
+    return html`<img class="cuerpo-foto" src="${p.foto_cuerpo}" alt="" loading="lazy" onerror="this.remove()" style="view-transition-name:foto-${p.driver_id}">`;
+  }
+  return armarFoto(p, color, "foto");
+}
+
 // Iniciales como ui/fichas_pilotos.LogoEquipo: sin "F1" ni "Team".
 const iniciales = (nombre) => nombre.split(/[\s-]+/)
   .filter((w) => w && !["F1", "F", "Team"].includes(w)).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
@@ -36,14 +46,23 @@ export function armarPilotos(datos, solapa, anio, comun) {
     return html`${segmento}<div class="estado"><h3>Sin datos</h3><p>No hay datos de pilotos para ${anio}.</p></div>`;
   }
   const tarjetas = solapa === "equipos"
-    ? lista.map((e) => html`<a class="tpil" href="#/equipo/${anio}/${e.constructor_id}">
+    ? lista.map((e) => {
+      const auto = comun.autos?.[e.constructor_id];
+      return html`<a class="tpil equipo" href="#/equipo/${anio}/${e.constructor_id}" style="--eq:${comun.colores[e.constructor_id] ?? GRIS}">
         ${armarLogo(e, comun)}
+        ${auto ? html`<img class="auto" src="${auto}" alt="" loading="lazy" onerror="this.remove()">` : ""}
         <span class="info"><b>${e.nombre}</b><small>${e.posicion ? `${e.posicion}º · ` : ""}${numero(e.puntos)} pts</small></span>
-      </a>`)
-    : lista.map((p) => html`<a class="tpil" href="#/piloto/${anio}/${p.driver_id}">
-        ${armarFoto(p, comun.colores[p.constructor_id])}
-        <span class="info"><b>${p.nombre} ${p.apellido}</b><small>${p.equipo} · ${numero(p.puntos)} pts</small></span>
-      </a>`);
+      </a>`;
+    })
+    : lista.map((p) => {
+      const color = comun.colores[p.constructor_id];
+      return html`<a class="tpil piloto" href="#/piloto/${anio}/${p.driver_id}" style="--eq:${color ?? GRIS}">
+        <span class="num">${p.numero ?? ""}</span>
+        ${p.posicion ? html`<span class="pos-chip mono">${p.posicion}º</span>` : ""}
+        ${armarRetrato(p, color)}
+        <span class="info"><b>${p.apellido}</b><small><span>${p.equipo}</span><span class="mono">${numero(p.puntos)} pts</span></small></span>
+      </a>`;
+    });
   return html`${segmento}<div class="cuerpo"><div class="grilla">${tarjetas}</div></div>`;
 }
 

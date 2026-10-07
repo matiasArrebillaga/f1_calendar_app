@@ -6,30 +6,42 @@ import { COMUN, EQUIPO_MER, PILOTO_ANT } from "./datos.js";
 
 const DATOS = { anio: 2026, ronda: 16, pilotos: [PILOTO_ANT], equipos: [EQUIPO_MER] };
 
-test("grilla de pilotos: sigla mientras no hay foto, y la de Wikipedia pendiente", () => {
+test("grilla de pilotos: tarjeta con número, posición y sigla mientras no hay foto", () => {
   const salida = String(armarPilotos(DATOS, "pilotos", 2026, COMUN));
   assert.match(salida, /href="#\/piloto\/2026\/antonelli"/);
-  assert.match(salida, /Andrea Kimi Antonelli/);
-  assert.match(salida, /Mercedes · 320 pts/);
+  assert.match(salida, /<span class="num">12<\/span>/);
+  assert.match(salida, /<span class="pos-chip mono">1º<\/span>/);
+  assert.match(salida, /<b>Antonelli<\/b><small><span>Mercedes<\/span><span class="mono">320 pts<\/span>/);
   assert.match(salida, />\s*ANT\s*</);
   assert.match(salida, /data-wiki="https:\/\/en\.wikipedia\.org\/wiki\/Andrea_Kimi_Antonelli"/);
   assert.match(salida, /--eq:#00D7B6/);
 });
 
-test("con foto oficial no se pide la de Wikipedia", () => {
-  const conFoto = { ...DATOS, pilotos: [{ ...PILOTO_ANT, headshot_url: "https://media.formula1.com/ant.png" }] };
+test("con foto de cuerpo entero: va esa, comparte nombre de transición y se saca si no carga", () => {
+  const conFoto = { ...DATOS, pilotos: [{ ...PILOTO_ANT, foto_cuerpo: "https://cdn/ant.webp" }] };
   const salida = String(armarPilotos(conFoto, "pilotos", 2026, COMUN));
-  assert.match(salida, /<img src="https:\/\/media\.formula1\.com\/ant\.png"/);
+  assert.match(salida, /<img class="cuerpo-foto" src="https:\/\/cdn\/ant\.webp"/);
+  assert.match(salida, /view-transition-name:foto-antonelli/);
+  assert.match(salida, /onerror="this\.remove\(\)"/);
   assert.doesNotMatch(salida, /data-wiki/);
 });
 
-test("grilla de equipos: logo oficial o iniciales", () => {
+test("con sólo la foto de busto (2018-2025) se usa esa", () => {
+  const conFoto = { ...DATOS, pilotos: [{ ...PILOTO_ANT, headshot_url: "https://media.formula1.com/ant.png" }] };
+  const salida = String(armarPilotos(conFoto, "pilotos", 2026, COMUN));
+  assert.match(salida, /<img src="https:\/\/media\.formula1\.com\/ant\.png"/);
+  assert.doesNotMatch(salida, /data-wiki|cuerpo-foto/);
+});
+
+test("grilla de equipos: logo, auto si hay, e iniciales si no hay logo", () => {
   const sinLogo = { ...EQUIPO_MER, constructor_id: "brabham", nombre: "Brabham-Alfa Romeo" };
   const salida = String(armarPilotos({ ...DATOS, equipos: [EQUIPO_MER, sinLogo] }, "equipos", 2026, COMUN));
   assert.match(salida, /<img src="https:\/\/media\.formula1\.com\/mercedes\.png"/);
+  assert.match(salida, /<img class="auto" src="https:\/\/cdn\/mercedes-auto\.webp"/);
   assert.match(salida, /href="#\/equipo\/2026\/mercedes"/);
   assert.match(salida, /1º · 556 pts/);
   assert.match(salida, />BAR</);
+  assert.equal(salida.match(/class="auto"/g).length, 1);
 });
 
 test("temporada sin datos exportados", () => {

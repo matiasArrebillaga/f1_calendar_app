@@ -102,6 +102,25 @@ export function estadoSesiones(sesiones, ahora) {
 export const hayEnVivo = (eventos, ahora) =>
   eventos.some((ev) => estadoSesiones(ev.sesiones, ahora).some((s) => s.estado === "vivo"));
 
+// Avisos (avisos/enviar.mjs): la primera sesión que arranca en los próximos
+// 35 min y no es la última avisada. Con el workflow cada 10 min (que GitHub
+// atrasa a veces), llega entre ~15 y 35 min antes, una sola vez.
+const VENTANA_AVISO_MS = 35 * 60_000;
+export const idSesion = (ev, s) => `${ev.anio}-${ev.ronda}-${s.clave}`;
+
+export function sesionAAvisar(eventos, ahora, ultimaAvisada) {
+  for (const ev of eventos) {
+    for (const s of ev.sesiones) {
+      const falta = s.fecha.getTime() - ahora;
+      const id = idSesion(ev, s);
+      if (falta > 0 && falta <= VENTANA_AVISO_MS && id !== ultimaAvisada) {
+        return { ev, sesion: s, minutos: Math.round(falta / 60_000), id };
+      }
+    }
+  }
+  return null;
+}
+
 // "Gran Premio de Azerbaiyán" → "Azerbaiyán"; los que no tienen traducción
 // vienen en inglés ("United States Grand Prix" → "United States").
 export const gpCorto = (nombre) => nombre.replace(/^Gran Premio de (la |los )?/, "").replace(/ Grand Prix$/, "");

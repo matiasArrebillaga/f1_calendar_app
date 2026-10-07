@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Manda el push antes de cada sesión (lo corre .github/workflows/avisos.yaml).",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

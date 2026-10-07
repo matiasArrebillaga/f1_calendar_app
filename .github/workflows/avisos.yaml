@@ -1,0 +1,45 @@
+name: Avisos de sesiones
+on:
+  schedule:
+    # Cada 10 min. GitHub a veces lo atrasa: por eso la ventana es de 35 min.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      ahora:
+        description: "Simular este momento (ISO, p. ej. 2026-10-10T12:33:00Z). Vacío = ahora."
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: avisos
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Última sesión avisada
+      uses: actions/cache/restore@v4
+      with:
+        path: avisos/ultima.txt
+        key: aviso-${{ github.run_id }}
+        restore-keys: aviso-
+    - run: npm ci --omit=dev
+      working-directory: avisos
+    - id: enviar
+      run: node avisos/enviar.mjs
+      env:
+        AHORA: ${{ inputs.ahora }}
+        VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+        PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
+    - name: Recordar la sesión avisada
+      if: steps.enviar.outputs.id != ''
+      uses: actions/cache/save@v4
+      with:
+        path: avisos/ultima.txt
+        key: aviso-${{ steps.enviar.outputs.id }}

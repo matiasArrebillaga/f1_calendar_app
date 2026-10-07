@@ -22,3 +22,5 @@ dist_nuevo/
 web/datos/actual.json
 web/datos/comun.json
 web/datos/ganadores.json
+avisos/node_modules/
+avisos/ultima.txt

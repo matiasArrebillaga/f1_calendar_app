@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {
   aEvento, cuentaRegresiva, diaHora, edadEn, enJuego, fechaSesion, formatoDiferencia,
   formatoVuelta, indiceProxima, numero, parsearRuta, pestanaDe, rangoFechas, rutaConAnio,
-  sigla, sumarCarrera, estadoSesiones, gpCorto, hayEnVivo,
+  sigla, sumarCarrera, estadoSesiones, gpCorto, hayEnVivo, sesionAAvisar,
 } from "../js/formato.js";
 import { COMUN, SINGAPUR, carrera } from "./datos.js";
 
@@ -150,4 +150,18 @@ test("hay sesión en vivo en algún evento", () => {
   assert.equal(hayEnVivo(evs, Date.parse("2026-10-10T13:10:00Z")), true);
   assert.equal(hayEnVivo(evs, Date.parse("2026-10-10T11:00:00Z")), false);
   assert.equal(hayEnVivo([], Date.now()), false);
+});
+
+test("aviso: la sesión que empieza en los próximos 35 min, una sola vez", () => {
+  const evs = [aEvento(SINGAPUR, COMUN)];
+  const antesQualy = Date.parse("2026-10-10T12:33:00Z");          // 27 min antes de las 13:00Z
+  const aviso = sesionAAvisar(evs, antesQualy, null);
+  assert.equal(aviso.id, "2026-17-Qualifying");
+  assert.equal(aviso.minutos, 27);
+  assert.equal(aviso.sesion.nombre, "Clasificación");
+  assert.equal(aviso.ev.ronda, 17);
+  assert.equal(sesionAAvisar(evs, antesQualy, "2026-17-Qualifying"), null);       // ya avisada
+  assert.equal(sesionAAvisar(evs, Date.parse("2026-10-10T12:20:00Z"), null), null); // falta 40 min
+  assert.equal(sesionAAvisar(evs, Date.parse("2026-10-10T13:05:00Z"), null), null); // ya empezó
+  assert.equal(sesionAAvisar([], antesQualy, null), null);
 });

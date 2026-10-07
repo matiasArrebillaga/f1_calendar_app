@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {
   aEvento, cuentaRegresiva, diaHora, edadEn, enJuego, fechaSesion, formatoDiferencia,
   formatoVuelta, indiceProxima, numero, parsearRuta, pestanaDe, rangoFechas, rutaConAnio,
-  sigla, sumarCarrera,
+  sigla, sumarCarrera, estadoSesiones, gpCorto, hayEnVivo,
 } from "../js/formato.js";
 import { COMUN, SINGAPUR, carrera } from "./datos.js";
 
@@ -119,4 +119,35 @@ test("edad y sigla", () => {
   assert.equal(edadEn("2006-08-25", 2026), 20);
   assert.equal(sigla({ codigo: "ANT", apellido: "Antonelli" }), "ANT");
   assert.equal(sigla({ codigo: null, apellido: "Fangio" }), "FAN");
+});
+
+test("nombre corto del GP: sin 'Gran Premio de' ni 'Grand Prix'", () => {
+  assert.equal(gpCorto("Gran Premio de Azerbaiyán"), "Azerbaiyán");
+  assert.equal(gpCorto("Gran Premio de los Países Bajos"), "Países Bajos");
+  assert.equal(gpCorto("United States Grand Prix"), "United States");
+  assert.equal(gpCorto("Bahrain Grand Prix in Malaysia"), "Bahrain Grand Prix in Malaysia");
+});
+
+test("estado de las sesiones: próxima, en vivo con avance y hecha", () => {
+  const ev = aEvento(SINGAPUR, COMUN);
+  const libres = estadoSesiones(ev.sesiones, Date.parse("2026-10-09T08:50:00Z"));
+  assert.equal(libres[0].estado, "vivo");
+  assert.equal(libres[0].minutos, 20);
+  assert.ok(Math.abs(libres[0].avance - 20 / 60) < 1e-9);
+  assert.ok(libres.slice(1).every((s) => s.estado === "proxima" && s.avance === null));
+
+  const qualy = estadoSesiones(ev.sesiones, Date.parse("2026-10-10T13:38:00Z"));
+  assert.deepEqual(qualy.map((s) => s.estado), ["hecha", "hecha", "hecha", "vivo", "proxima"]);
+  assert.equal(qualy[3].nombre, "Clasificación");
+
+  // La carrera se da por terminada a las 2 h, igual que indiceProxima.
+  const fin = estadoSesiones(ev.sesiones, Date.parse("2026-10-11T14:01:00Z"));
+  assert.ok(fin.every((s) => s.estado === "hecha"));
+});
+
+test("hay sesión en vivo en algún evento", () => {
+  const evs = [aEvento(SINGAPUR, COMUN)];
+  assert.equal(hayEnVivo(evs, Date.parse("2026-10-10T13:10:00Z")), true);
+  assert.equal(hayEnVivo(evs, Date.parse("2026-10-10T11:00:00Z")), false);
+  assert.equal(hayEnVivo([], Date.now()), false);
 });

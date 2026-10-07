@@ -78,6 +78,34 @@ export function cuentaRegresiva(largada, ahora) {
   };
 }
 
+// Duración típica de cada sesión, para el estado "en vivo": no hay datos en
+// vivo gratis dentro de la sesión, así que se calcula con el horario.
+const DURACION_MIN = {
+  FirstPractice: 60, SecondPractice: 60, ThirdPractice: 60,
+  SprintShootout: 45, SprintQualifying: 45, Sprint: 45, Qualifying: 60, Race: 120,
+};
+
+export function estadoSesiones(sesiones, ahora) {
+  return sesiones.map((s) => {
+    const inicio = s.fecha.getTime();
+    const duracion = DURACION_MIN[s.clave] * 60_000;
+    const estado = ahora >= inicio + duracion ? "hecha" : ahora >= inicio ? "vivo" : "proxima";
+    const vivo = estado === "vivo";
+    return {
+      ...s, estado,
+      avance: vivo ? (ahora - inicio) / duracion : null,
+      minutos: vivo ? Math.floor((ahora - inicio) / 60_000) : null,
+    };
+  });
+}
+
+export const hayEnVivo = (eventos, ahora) =>
+  eventos.some((ev) => estadoSesiones(ev.sesiones, ahora).some((s) => s.estado === "vivo"));
+
+// "Gran Premio de Azerbaiyán" → "Azerbaiyán"; los que no tienen traducción
+// vienen en inglés ("United States Grand Prix" → "United States").
+export const gpCorto = (nombre) => nombre.replace(/^Gran Premio de (la |los )?/, "").replace(/ Grand Prix$/, "");
+
 export function formatoVuelta(seg) {
   const minutos = Math.floor(seg / 60);
   return minutos ? `${minutos}:${(seg - minutos * 60).toFixed(3).padStart(6, "0")}` : seg.toFixed(3);

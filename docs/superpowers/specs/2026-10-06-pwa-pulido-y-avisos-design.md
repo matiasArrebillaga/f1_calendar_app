@@ -104,7 +104,11 @@ borde). Áreas táctiles de 44 px.
   una fila por ronda, de la más reciente a la más vieja: ronda, bandera, GP, "Largó Nº", caja con
   la llegada (llena si ganó, gris si podio, con borde si sumó puntos, sin caja fuera de los
   puntos, texto DNF/DSQ/DNQ/NC como hoy) y ▲/▼ puestos ganados o perdidos. Toca → GP.
-- "Carrera completa" como hoy.
+- "Carrera completa" (títulos, victorias, podios, GPs, debut) va en una barra fija abajo, pegada
+  arriba de la barra de pestañas (`position: sticky; bottom: var(--alto-tabbar)` + safe area): se
+  ve siempre mientras se scrollea la lista. El contenido lleva un margen inferior del alto de la
+  barra para que la última fila no quede tapada. Sin datos de carrera, la barra dice "Sin datos de
+  carrera".
 
 ### 5. Ficha del equipo (`vistas/ficha_equipo.js`)
 - Cabecera con logo, nombre, pilotos y el auto; KPIs como hoy.

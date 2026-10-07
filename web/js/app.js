@@ -139,6 +139,7 @@ async function abrirAvisos() {
     <span class="asa"></span>
     <h3 class="titulo-circuito">Avisos antes de cada sesión</h3>
     ${r.error ? html`<p class="muted">${r.error}</p>` : html`<p class="muted">Copiá este texto y pegalo en GitHub › Settings › Secrets and variables › Actions, como el secreto <b>PUSH_SUBSCRIPTION</b>. Se hace una sola vez.</p>
+      <p class="muted nota">¿Otro celular? En el secreto van todos juntos, entre corchetes y separados por coma: <span class="mono">[texto1, texto2]</span>.</p>
       <textarea class="suscripcion mono" readonly rows="6">${r.texto}</textarea>
       <button class="boton" data-copiar>Copiar</button>`}
     <button class="boton" data-cerrar-avisos>Cerrar</button>

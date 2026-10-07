@@ -51,23 +51,39 @@ if (!process.env.VAPID_PRIVATE || !process.env.PUSH_SUBSCRIPTION) {
 }
 
 const { ev, sesion, minutos, id } = aviso;
-webpush.setVapidDetails("https://github.com/matiasArrebillaga/f1_calendar_app", VAPID_PUBLICA, process.env.VAPID_PRIVATE);
+// Uno o varios celulares: el secreto es una suscripción o una lista de ellas.
+let suscripciones;
 try {
-  await webpush.sendNotification(JSON.parse(process.env.PUSH_SUBSCRIPTION), JSON.stringify({
-    titulo: `${sesion.nombre} · ${ev.nombre}`,
-    cuerpo: `Empieza en ${minutos} min`,
-    tag: id,
-    url: `#/gp/${ev.anio}/${ev.ronda}`,
-  }), { TTL: 1800, urgency: "high" });
+  const leido = JSON.parse(process.env.PUSH_SUBSCRIPTION);
+  suscripciones = Array.isArray(leido) ? leido : [leido];
 } catch (error) {
-  // Nunca imprimir el error entero: trae el endpoint de la suscripción y los
-  // logs de un repo público son públicos. 404/410 = suscripción vencida:
-  // volver a tocar la campana y copiar el texto nuevo.
-  console.error(`Falló el envío de ${id}: ${error.statusCode ?? error.name}`);
+  console.error(`PUSH_SUBSCRIPTION no es JSON válido (${error.name})`);
   process.exit(1);
 }
-console.log(`Avisado: ${id}`);
-if (!prueba) {
+webpush.setVapidDetails("https://github.com/matiasArrebillaga/f1_calendar_app", VAPID_PUBLICA, process.env.VAPID_PRIVATE);
+const mensaje = JSON.stringify({
+  titulo: `${sesion.nombre} · ${ev.nombre}`,
+  cuerpo: `Empieza en ${minutos} min`,
+  tag: id,
+  url: `#/gp/${ev.anio}/${ev.ronda}`,
+});
+const resultados = await Promise.allSettled(suscripciones.map((suscripcion) =>
+  webpush.sendNotification(suscripcion, mensaje, { TTL: 1800, urgency: "high" })));
+// Nunca imprimir el error entero: trae el endpoint de la suscripción y los
+// logs de un repo público son públicos. 404/410 = suscripción vencida: en ese
+// celular, volver a tocar la campana y reemplazar su texto en la lista.
+const fallas = resultados.flatMap((r, i) =>
+  (r.status === "rejected" ? [`celular ${i + 1}: ${r.reason.statusCode ?? r.reason.name}`] : []));
+const enviados = resultados.length - fallas.length;
+if (enviados) console.log(`Avisado: ${id} (${enviados} de ${resultados.length})`);
+// Si a alguno le llegó, la sesión cuenta como avisada: si no, el próximo
+// intento se lo repetiría a los que ya lo recibieron.
+if (enviados && !prueba) {
   writeFileSync(ULTIMA, id);
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `id=${id}\n`);
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `id=${id}
+`);
+}
+if (fallas.length) {
+  console.error(`Falló el envío de ${id}: ${fallas.join(", ")}`);
+  process.exit(1);
 }

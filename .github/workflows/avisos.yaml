@@ -38,7 +38,8 @@ jobs:
         VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
         PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
     - name: Recordar la sesión avisada
-      if: steps.enviar.outputs.id != ''
+      # always(): si a un celular le falló pero a otro le llegó, igual se recuerda.
+      if: always() && steps.enviar.outputs.id != ''
       uses: actions/cache/save@v4
       with:
         path: avisos/ultima.txt

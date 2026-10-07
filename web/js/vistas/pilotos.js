@@ -84,3 +84,18 @@ export async function render(ruta, comun) {
 }
 
 export const montar = (main) => cargarFotos(main);
+
+// Fichas: cuando el nombre grande de la portada sale de pantalla, entra la
+// banda chica (foto/logo + nombre) pegada debajo del encabezado.
+export function comprimirAlBajar(main) {
+  const banda = main.querySelector(".banda");
+  const nombre = main.querySelector(".portada h2");
+  if (!banda || !nombre) return undefined;
+  const alto = document.getElementById("encabezado").offsetHeight;
+  banda.style.top = `${alto}px`;
+  const observador = new IntersectionObserver(([e]) =>
+    banda.classList.toggle("visible", !e.isIntersecting && e.boundingClientRect.top < alto),
+  { rootMargin: `-${alto}px 0px 0px 0px` });
+  observador.observe(nombre);
+  return () => observador.disconnect();
+}

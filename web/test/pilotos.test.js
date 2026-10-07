@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { armarFichaPiloto, armarGrafico } from "../js/vistas/ficha_piloto.js";
+import { armarFichaPiloto, filasCarrera } from "../js/vistas/ficha_piloto.js";
 import { armarPilotos } from "../js/vistas/pilotos.js";
 import { COMUN, EQUIPO_MER, PILOTO_ANT } from "./datos.js";
 
@@ -48,13 +48,15 @@ test("temporada sin datos exportados", () => {
   assert.match(String(armarPilotos(null, "pilotos", 2027, COMUN)), /No hay datos de pilotos para 2027/);
 });
 
-test("ficha del piloto: cabecera, temporada y carrera completa", () => {
+test("ficha del piloto: portada, temporada y carrera completa fija abajo", () => {
   const salida = String(armarFichaPiloto(PILOTO_ANT, PILOTO_ANT.carrera, COMUN, 2026));
-  assert.match(salida, /Mercedes · #12 · Italia · 20 años en 2026/);
+  assert.match(salida, /Mercedes · #12/);
+  assert.match(salida, /Italia · 20 años en 2026/);
+  assert.match(salida, /<h2>Antonelli<\/h2>/);
   assert.match(salida, /<small>CAMPEONATO<\/small><b>1º<\/b>/);
   assert.match(salida, /<b>4\.3<\/b><small>Prom\. largada/);   // 4.25 redondeado a un decimal
-  assert.match(salida, /<b>16<\/b><small>GPs/);
-  assert.match(salida, /<b>2026<\/b><small>Debut/);
+  assert.match(salida, /class="carrera-fija"[\s\S]*<b>16<\/b><small>GPs[\s\S]*<b>2026<\/b><small>Debut/);
+  assert.match(salida, /class="banda"[\s\S]*?ANT[\s\S]*?<b>Antonelli<\/b>/);   // sigla mientras no hay foto
 });
 
 test("ficha sin carrera previa ni promedios", () => {
@@ -62,14 +64,44 @@ test("ficha sin carrera previa ni promedios", () => {
   const salida = String(armarFichaPiloto(sinStats, null, COMUN, 2026));
   assert.match(salida, /<small>CAMPEONATO<\/small><b>—<\/b>/);
   assert.match(salida, /<b>—<\/b><small>Prom\. llegada/);
-  assert.match(salida, /Sin datos de carrera/);
+  assert.match(salida, /class="carrera-fija"[\s\S]*Sin datos de carrera/);
 });
 
-test("gráfico carrera por carrera: alto por posición, abandonos en rojo y link al GP", () => {
-  const salida = String(armarGrafico(PILOTO_ANT.tira, 2026));
-  assert.match(salida, /href="#\/gp\/2026\/1"/);
-  assert.match(salida, /height:95%/);
-  assert.match(salida, /class="barra dnf"/);
-  assert.match(salida, />DNF</);
-  assert.match(String(armarGrafico([], 2026)), /Todavía no corrió/);
+test("ficha con foto de cuerpo entero: misma transición que la grilla", () => {
+  const salida = String(armarFichaPiloto({ ...PILOTO_ANT, foto_cuerpo: "https://cdn/ant.webp" }, null, COMUN, 2026));
+  assert.match(salida, /<img class="cuerpo-foto" src="https:\/\/cdn\/ant\.webp"[^>]*view-transition-name:foto-antonelli/);
+});
+
+test("carrera por carrera: la más reciente primero, con últimas 5 y links", () => {
+  const salida = String(armarFichaPiloto(PILOTO_ANT, null, COMUN, 2026));
+  assert.match(salida, /Últimas 5/);
+  assert.ok(salida.indexOf('href="#/gp/2026/2"') < salida.indexOf('href="#/gp/2026/1"'));
+  assert.match(salida, /href="#\/gp\/2026\/2"[\s\S]*?<span class="caja mono fuera">DNF<\/span>/);
+  const vacia = String(armarFichaPiloto({ ...PILOTO_ANT, tira: [] }, null, COMUN, 2026));
+  assert.match(vacia, /Todavía no corrió en esta temporada/);
+  assert.doesNotMatch(vacia, /Últimas 5/);
+});
+
+test("filas de carrera por carrera: caja según el puesto y puestos ganados", () => {
+  const tira = [
+    { ronda: 1, gp: "Azerbaijan Grand Prix", pais: "Azerbaijan", largada: 2, posicion: 2, posicion_texto: "2" },
+    { ronda: 2, gp: "X Grand Prix", pais: "Nowhere", largada: 19, posicion: 1, posicion_texto: "1" },
+    { ronda: 3, gp: "X Grand Prix", pais: "Nowhere", largada: 1, posicion: 15, posicion_texto: "15" },
+    { ronda: 4, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: 7, posicion_texto: "7" },
+    { ronda: 5, gp: "X Grand Prix", pais: "Nowhere", largada: 3, posicion: null, posicion_texto: "D" },
+  ];
+  const [r5, r4, r3, r2, r1] = filasCarrera(tira, COMUN);
+  assert.deepEqual(r1, { ronda: 1, bandera: "az", gp: "Azerbaiyán", largada: 2, texto: 2, clase: "podio", delta: "=", claseDelta: "" });
+  assert.equal(r2.clase, "gano");
+  assert.equal(r2.delta, "▲18");
+  assert.equal(r2.claseDelta, "sube");
+  assert.equal(r3.clase, "");
+  assert.equal(r3.delta, "▼14");
+  assert.equal(r4.clase, "puntos");
+  assert.equal(r4.delta, "");                        // largó desde boxes: sin ▲/▼
+  assert.equal(r4.largada, 0);
+  assert.equal(r5.texto, "DSQ");
+  assert.equal(r5.clase, "fuera");
+  assert.equal(r5.delta, "");
+  assert.equal(r2.bandera, null);
 });

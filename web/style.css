@@ -269,12 +269,60 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .stats div { display: flex; flex-direction: column; }
 .stats b { font: 400 18px var(--mono); }
 .stats small { font-size: 11px; color: var(--muted); }
-.grafico { display: flex; gap: 3px; }
-.grafico .barra { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-.grafico .col { height: 110px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--borde); }
-.grafico i { display: block; width: 100%; border-radius: 2px 2px 0 0; background: var(--dato); }
-.grafico .barra.dnf i { background: var(--error); }
-.grafico .num { font: 10px var(--mono); color: var(--muted); text-align: center; overflow: hidden; }
+/* Fichas: portada grande, banda que la reemplaza al bajar y filas. */
+.portada {
+  position: relative; height: 340px; overflow: hidden;
+  background: color-mix(in srgb, var(--eq) 30%, var(--sunken)); box-shadow: inset 0 -3px var(--eq);
+}
+.portada .dorsal { position: absolute; left: -6px; top: -36px; font: 700 260px/1 var(--titulo); color: rgba(255, 255, 255, .08); }
+.portada .cuerpo-foto { position: absolute; right: -8px; top: 18px; width: 210px; }
+.portada .avatar.grande { position: absolute; right: 24px; top: 40px; width: 120px; height: 120px; font-size: 40px; }
+.portada::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 170px; background: linear-gradient(transparent, rgba(9, 10, 13, .95)); }
+.portada-texto { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 18px; display: flex; flex-direction: column; gap: 2px; }
+.portada-texto .meta { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.logo-chico { height: 18px; }
+.nombre-chico { font-size: 18px; color: var(--texto2); }
+.portada h2 { font: 700 44px/.95 var(--titulo); text-transform: uppercase; }
+.banda {
+  position: fixed; z-index: 1; left: 0; right: 0; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  background: color-mix(in srgb, var(--eq) 30%, var(--sunken)); border-bottom: 2px solid var(--eq);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .4);
+  opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .2s, transform .2s;
+}
+.banda.visible { opacity: 1; transform: none; }
+.banda-texto { display: flex; flex-direction: column; line-height: 1.1; }
+.banda-texto small { font-size: 12px; color: var(--texto2); }
+.banda-texto b { font: 700 20px var(--titulo); text-transform: uppercase; }
+.avatar.chico { width: 38px; height: 38px; font-size: 14px; border: 2px solid var(--eq); }
+.ultimas { display: flex; align-items: center; gap: 6px; }
+.ultimas .nota { margin-right: 4px; }
+.carrera-fila {
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 4px;
+  border-bottom: 1px solid var(--borde-suave); transition: background .12s;
+}
+.carrera-fila:active { background: var(--hover); }
+.carrera-fila .ronda { width: 28px; flex: none; font-size: 12px; color: var(--muted); }
+.caja {
+  width: 38px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px;
+  font-size: 15px; font-weight: 700; border: 1px solid transparent; color: var(--muted);
+}
+.ultimas .caja { width: 30px; height: 26px; font-size: 13px; }
+.caja.gano { background: var(--texto); color: var(--app); }
+.caja.podio { background: var(--borde-fuerte); color: var(--texto); }
+.caja.puntos { border-color: var(--borde-fuerte); color: var(--texto); }
+.caja.fuera { color: var(--error); }
+.delta { width: 40px; flex: none; text-align: right; font-size: 12px; font-weight: 600; color: var(--futuro); }
+.delta.sube { color: var(--dato); }
+.delta.baja { color: var(--error); }
+.carrera-fija {
+  position: sticky; z-index: 1; bottom: calc(var(--alto-tabbar) + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 6px; padding: 8px 16px 10px;
+  background: var(--panel); border-top: 1px solid var(--borde);
+}
+.carrera-fija .eti { font-size: 10px; }
+.cinco { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.cinco b { display: block; font: 600 16px var(--mono); }
+.cinco small { font-size: 10px; color: var(--muted); }
 .duelo-cab { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 1.5px; }
 .duelos { display: flex; flex-direction: column; gap: 12px; }
 .duelo { display: grid; grid-template-columns: 40px 1fr 92px 1fr 40px; align-items: center; gap: 6px; font-size: 13px; }

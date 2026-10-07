@@ -11,8 +11,15 @@ import { VAPID_PUBLICA } from "../web/js/avisos.js";
 
 const PAGINA = "https://matiasarrebillaga.github.io/f1_calendar_app/";
 const ULTIMA = new URL("ultima.txt", import.meta.url);
-const prueba = Boolean(process.env.AHORA);
-const ahora = prueba ? Date.parse(process.env.AHORA) : Date.now();
+// trim: al pegar la fecha en el formulario de GitHub suele venir con espacios,
+// y Date.parse da NaN con cualquier espacio alrededor.
+const textoAhora = process.env.AHORA?.trim();
+const prueba = Boolean(textoAhora);
+const ahora = prueba ? Date.parse(textoAhora) : Date.now();
+if (Number.isNaN(ahora)) {
+  console.error(`"ahora" no es una fecha: ${JSON.stringify(textoAhora)}. Usá el formato 2026-10-09T08:05:00Z (UTC).`);
+  process.exit(1);
+}
 
 async function pedir(url) {
   const respuesta = await fetch(url);

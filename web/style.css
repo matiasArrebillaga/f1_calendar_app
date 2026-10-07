@@ -379,3 +379,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tabbar { view-transition-name: tabbar; }
 .segmento a.activa { view-transition-name: segmento; }
 .portada { view-transition-name: portada; }
+.icono-btn.campana { margin-left: 0; }
+.icono-btn.campana.activa { color: var(--dato); }
+.suscripcion {
+  width: 100%; padding: 10px; resize: none; font-size: 11px; color: var(--texto2);
+  background: var(--sunken); border: 1px solid var(--borde); border-radius: 8px;
+}

@@ -19,3 +19,23 @@ self.addEventListener("fetch", (e) => {
       .catch(() => caches.match(e.request))
   );
 });
+
+// Avisos antes de cada sesión (avisos/enviar.mjs). El tag es el id de la
+// sesión: si llegara un duplicado, reemplaza al anterior en vez de sumar otro.
+self.addEventListener("push", (e) => {
+  const aviso = e.data?.json() ?? {};
+  e.waitUntil(self.registration.showNotification(aviso.titulo ?? "Calendario F1", {
+    body: aviso.cuerpo, tag: aviso.tag, icon: "icon-192.png", data: { url: aviso.url ?? "" },
+  }));
+});
+
+// Tocar el aviso abre el GP: en la ventana de la app si ya estaba abierta.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url ?? "", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
+    const ventana = ventanas[0];
+    if (!ventana) return self.clients.openWindow(url);
+    return ventana.focus().then((v) => v.navigate(url));
+  }));
+});

@@ -4,6 +4,7 @@
 import { html } from "./html.js";
 import { ANIO_MIN, aEvento, hayEnVivo, parsearRuta, pestanaDe, rutaConAnio } from "./formato.js";
 import { calendario as pedirCalendario, comun as pedirComun } from "./api.js";
+import { suscribir } from "./avisos.js";
 import * as calendario from "./vistas/calendario.js";
 import * as detalle from "./vistas/detalle.js";
 import * as clasificacion from "./vistas/clasificacion.js";
@@ -16,6 +17,8 @@ const VISTAS = { calendario, gp: detalle, clasificacion, pilotos, piloto: fichaP
 const ICONO_ATRAS = html`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
 const ICONO_ANTERIOR = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
 const ICONO_SIGUIENTE = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
+
+const ICONO_CAMPANA = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
 
 // Si los datos tardan más de 150 ms, un esqueleto; si ya estaban en caché, se
 // pasa directo y no parpadea.
@@ -41,6 +44,7 @@ function armarEncabezado(ruta, info, anioActual) {
       <h1 class="chico">${info.titulo}</h1><span class="muted anio">${ruta.anio}</span>`;
   }
   return html`<h1>${info.titulo}</h1>
+    ${info.campana ? html`<button class="icono-btn campana" data-campana aria-label="Avisos antes de cada sesión">${ICONO_CAMPANA}</button>` : ""}
     <div class="temporada">
       <a href="${rutaConAnio(ruta, ruta.anio - 1)}" class="${ruta.anio <= ANIO_MIN ? "oculto" : ""}" aria-label="Temporada anterior">${ICONO_ANTERIOR}</a>
       <span>${ruta.anio}</span>
@@ -96,6 +100,10 @@ async function mostrar() {
   marcarPestana(ruta);
   const pintarEncabezado = () => {
     encabezado.innerHTML = armarEncabezado(ruta, vista.encabezado(ruta), datosComunes.anio_actual);
+    // Campana en cian si este celular ya está suscripto.
+    const campana = encabezado.querySelector("[data-campana]");
+    navigator.serviceWorker?.ready.then((r) => r.pushManager?.getSubscription())
+      .then((s) => campana?.classList.toggle("activa", Boolean(s))).catch(() => {});
   };
   const espera = setTimeout(() => {
     if (mio !== turno) return;
@@ -122,6 +130,24 @@ async function mostrar() {
   }
 }
 
+// Hoja con la suscripción para copiar como secreto del repo.
+async function abrirAvisos() {
+  const r = await suscribir().catch((error) => ({ error: `No se pudo activar: ${error.message}` }));
+  const capa = document.createElement("div");
+  capa.className = "capa";
+  capa.innerHTML = html`<div class="velo" data-cerrar-avisos></div><div class="hoja">
+    <span class="asa"></span>
+    <h3 class="titulo-circuito">Avisos antes de cada sesión</h3>
+    ${r.error ? html`<p class="muted">${r.error}</p>` : html`<p class="muted">Copiá este texto y pegalo en GitHub › Settings › Secrets and variables › Actions, como el secreto <b>PUSH_SUBSCRIPTION</b>. Se hace una sola vez.</p>
+      <textarea class="suscripcion mono" readonly rows="6">${r.texto}</textarea>
+      <button class="boton" data-copiar>Copiar</button>`}
+    <button class="boton" data-cerrar-avisos>Cerrar</button>
+  </div>`;
+  document.body.append(capa);
+  document.body.classList.add("con-capa");
+  encabezado.querySelector("[data-campana]")?.classList.toggle("activa", !r.error);
+}
+
 document.addEventListener("click", (evento) => {
   if (evento.target.closest(".tabbar a, .segmento a")) navigator.vibrate?.(8);
   // Sólo la tarjeta tocada lleva el nombre: con uno por tarjeta, la
@@ -134,6 +160,18 @@ document.addEventListener("click", (evento) => {
     // si la app se abrió directo en esta pantalla, va a la de arriba.
     if (history.length > 1) history.back();
     else location.hash = atras.dataset.atras;
+    return;
+  }
+  if (evento.target.closest("[data-campana]")) { abrirAvisos(); return; }
+  if (evento.target.closest("[data-cerrar-avisos]")) {
+    evento.target.closest(".capa").remove();
+    document.body.classList.remove("con-capa");
+    return;
+  }
+  const copiar = evento.target.closest("[data-copiar]");
+  if (copiar) {
+    navigator.clipboard.writeText(copiar.parentElement.querySelector("textarea").value)
+      .then(() => { copiar.textContent = "Copiado ✓"; });
     return;
   }
   if (evento.target.closest("[data-reintentar]")) mostrar();

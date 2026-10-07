@@ -3,7 +3,7 @@ import { MESES, aEvento, cuentaRegresiva, diaHora, estadoSesiones, gpCorto, indi
 import { calendario, temporada } from "../api.js";
 import { bandera } from "./filas.js";
 
-export const encabezado = () => ({ titulo: "Calendario" });
+export const encabezado = () => ({ titulo: "Calendario", campana: true });
 
 const DIA_MS = 86_400_000;
 let proximaEnPantalla = null;   // la que dibujó el último render, para refrescarla

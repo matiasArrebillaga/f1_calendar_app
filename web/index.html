@@ -17,6 +17,7 @@
   <header id="encabezado" class="top"></header>
   <main id="contenido"><p class="estado">Cargando…</p></main>
   <nav class="tabbar" aria-label="Secciones">
+    <span class="indicador" aria-hidden="true"></span>
     <a data-pestana="calendario" href="#/calendario">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       Calendario
@@ -30,5 +31,9 @@
       Pilotos
     </a>
   </nav>
+  <div id="sin-red" class="sin-red" role="status" hidden>
+    <span>Sin conexión · mostrando lo último guardado</span>
+    <button data-reintentar>Reintentar</button>
+  </div>
 </body>
 </html>

@@ -17,6 +17,12 @@ const ICONO_ATRAS = html`<svg width="22" height="22" viewBox="0 0 24 24" fill="n
 const ICONO_ANTERIOR = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
 const ICONO_SIGUIENTE = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
 
+// Si los datos tardan más de 150 ms, un esqueleto; si ya estaban en caché, se
+// pasa directo y no parpadea.
+const ESPERA_ESQUELETO_MS = 150;
+const ESQUELETO = html`<div class="cuerpo esqueleto" aria-busy="true" aria-label="Cargando">
+  <span class="sk bloque"></span>${Array.from({ length: 6 }, () => html`<span class="sk renglon"></span>`)}</div>`;
+
 const encabezado = document.getElementById("encabezado");
 const main = document.getElementById("contenido");
 let actual = null;   // { ruta, limpiar }
@@ -41,6 +47,8 @@ function marcarPestana(ruta) {
     a.classList.toggle("activa", a.dataset.pestana === pestana);
     a.href = `#/${a.dataset.pestana}/${ruta.anio}`;
   }
+  const pestanas = [...document.querySelectorAll(".tabbar a")];
+  document.querySelector(".tabbar").style.setProperty("--i", pestanas.findIndex((a) => a.dataset.pestana === pestana));
 }
 
 const mismaPagina = (a, b) => a && a.vista === b.vista && a.anio === b.anio
@@ -78,22 +86,34 @@ async function mostrar() {
 
   actual?.limpiar?.();
   actual = { ruta };
-  encabezado.innerHTML = armarEncabezado(ruta, vista.encabezado(ruta), datosComunes.anio_actual);
   marcarPestana(ruta);
-  main.innerHTML = html`<p class="estado">Cargando…</p>`;
-  window.scrollTo(0, 0);
+  const pintarEncabezado = () => {
+    encabezado.innerHTML = armarEncabezado(ruta, vista.encabezado(ruta), datosComunes.anio_actual);
+  };
+  const espera = setTimeout(() => {
+    if (mio !== turno) return;
+    pintarEncabezado();
+    main.innerHTML = ESQUELETO;
+    window.scrollTo(0, 0);
+  }, ESPERA_ESQUELETO_MS);
   try {
     const contenido = await vista.render(ruta, datosComunes);
+    clearTimeout(espera);
     if (mio !== turno) return;
+    pintarEncabezado();
     main.innerHTML = contenido;
+    window.scrollTo(0, 0);
     actual.limpiar = vista.montar?.(main, ruta, datosComunes);
   } catch (error) {
+    clearTimeout(espera);
     console.error(error);
+    if (mio === turno) pintarEncabezado();
     mostrarError(mio);
   }
 }
 
 document.addEventListener("click", (evento) => {
+  if (evento.target.closest(".tabbar a, .segmento a")) navigator.vibrate?.(8);
   const atras = evento.target.closest("[data-atras]");
   if (atras) {
     // Dentro de la app, atrás vuelve a donde estaba (Clasificación, un GP…);
@@ -123,4 +143,10 @@ async function vigilarEnVivo() {
   }
 }
 vigilarEnVivo();
+
+const sinRed = document.getElementById("sin-red");
+const marcarRed = () => { sinRed.hidden = navigator.onLine; };
+window.addEventListener("online", marcarRed);
+window.addEventListener("offline", marcarRed);
+marcarRed();
 mostrar();

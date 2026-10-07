@@ -78,9 +78,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tabbar a {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   font-size: 11px; font-weight: 600; color: var(--muted);
-  border-top: 2px solid transparent; margin-top: -1px;
 }
-.tabbar a.activa { color: var(--texto); border-top-color: var(--rojo); }
+.tabbar a.activa { color: var(--texto); }
 
 /* ---------- Calendario ---------- */
 .hero {
@@ -350,3 +349,29 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .filas-cab span:first-child { flex: 1; }
 .filas-cab span:not(:first-child) { width: 38px; text-align: center; }
 .caja.gana { background: var(--eq); color: var(--app); }
+
+/* ---------- Pulido: indicador, esqueleto, sin red, movimiento ---------- */
+.tabbar .indicador {
+  position: absolute; top: -1px; height: 2px; width: calc(100% / 3 * .36);
+  left: calc((var(--i, 0) + .32) * 100% / 3); background: var(--rojo); border-radius: 0 0 2px 2px;
+  transition: left .3s cubic-bezier(.3, .7, .2, 1);
+}
+@keyframes brillo { from { background-position: -400px 0; } to { background-position: 400px 0; } }
+.sk {
+  display: block; border-radius: 6px; background: var(--surface) linear-gradient(90deg, var(--surface) 0, var(--hover) 120px, var(--surface) 240px) no-repeat;
+  background-size: 400px 100%; animation: brillo 1.3s linear infinite;
+}
+.sk.bloque { height: 220px; border-radius: 12px; }
+.sk.renglon { height: 48px; }
+.sin-red {
+  position: fixed; z-index: 3; left: 12px; right: 12px; bottom: calc(var(--alto-tabbar) + env(safe-area-inset-bottom) + 12px);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 6px 0 14px; min-height: 48px;
+  font-size: 13px; background: var(--surface); border: 1px solid var(--borde-fuerte); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+.sin-red[hidden] { display: none; }
+.sin-red button { min-height: 44px; padding: 0 10px; font-weight: 600; color: var(--dato); }
+.res > a { transition: background .12s; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

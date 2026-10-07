@@ -12,3 +12,9 @@ export function filaResultado({ pos, color, nombre, sub, dato, extra, href }) {
     <span class="der"><b>${dato}</b>${extra ? html`<small>${extra}</small>` : ""}</span>`;
   return href ? html`<a href="${href}">${contenido}</a>` : html`<div>${contenido}</div>`;
 }
+
+// La bandera chica de un país (flagcdn). Sin código, un hueco del mismo tamaño
+// para que las filas no se corran.
+export const bandera = (codigo) => (codigo
+  ? html`<img class="bandera" src="https://flagcdn.com/w40/${codigo}.png" alt="" loading="lazy" width="22" height="15">`
+  : html`<span class="bandera"></span>`);

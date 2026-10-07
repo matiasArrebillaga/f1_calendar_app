@@ -101,24 +101,30 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   margin-top: 12px; padding: 0 4px 6px; color: var(--texto2);
   font-size: 12px; font-weight: 600; letter-spacing: 2px; border-bottom: 1px solid var(--borde);
 }
-.plegado summary {
-  display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 14px;
-  list-style: none; cursor: pointer; color: var(--texto2); font-size: 14px;
-  background: var(--panel); border: 1px solid var(--borde); border-radius: 4px;
+.calendario .filas { display: flex; flex-direction: column; }
+.calendario .hero { margin: 8px 0; }
+.gp-fila {
+  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 4px;
+  border-bottom: 1px solid var(--borde-suave); transition: background .12s;
 }
-.plegado summary::-webkit-details-marker { display: none; }
-.plegado summary::after { content: "▾"; color: var(--muted); }
-.plegado[open] summary::after { content: "▴"; }
-.lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 8px; }
-.tarjeta {
-  display: flex; flex-direction: column; gap: 3px; min-height: 92px; padding: 12px;
-  background: var(--surface); border: 1px solid var(--borde); border-left: 2px solid var(--futuro); border-radius: 4px;
+.gp-fila:active { background: var(--hover); }
+.gp-fila .ronda { width: 30px; flex: none; font-size: 12px; color: var(--muted); }
+.gp-fila .bandera, .carrera-fila .bandera { width: 22px; height: 15px; flex: none; margin: 0; object-fit: cover; }
+.gp-fila.pasado .nombre b { color: var(--texto2); font-weight: 400; }
+.gp-fila.pasado .bandera { opacity: .75; }
+.ganador {
+  display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 6px; font-size: 12px; font-weight: 600;
+  color: var(--texto2); background: var(--panel); border: 1px solid var(--borde); border-radius: 6px;
 }
-.tarjeta.proxima { background: var(--rojo-wash); border-left-color: var(--rojo); }
-.tarjeta.pasado { border-left-color: var(--borde); }
-.tarjeta.pasado h4 { color: var(--texto2); }
-.tarjeta h4 { font-size: 15px; font-weight: 600; }
-.fecha { margin-top: auto; color: var(--muted); font: 12px var(--mono); }
+.ganador i { display: block; width: 3px; height: 14px; border-radius: 2px; }
+.falta { font-size: 12px; color: var(--dato); }
+.pildora {
+  position: fixed; z-index: 2; left: 50%; top: calc(66px + env(safe-area-inset-top));
+  transform: translateX(-50%); height: 36px; padding: 0 16px; border-radius: 18px;
+  font-size: 13px; font-weight: 600; background: rgba(27, 32, 41, .94); border: 1px solid var(--borde-fuerte);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45); transition: opacity .2s, transform .2s;
+}
+.pildora.oculta { opacity: 0; pointer-events: none; transform: translate(-50%, -8px); }
 
 /* ---------- Detalle del GP ---------- */
 .cab { max-width: 720px; margin: 0 auto; padding: 16px 16px 4px; display: flex; flex-direction: column; gap: 2px; }

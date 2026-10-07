@@ -11,10 +11,12 @@ en enero) y lo que genera sí se versiona.
 """
 import json
 import os
+import re
 import shutil
 import sqlite3
 import sys
 import time
+import urllib.request
 from datetime import date
 
 from core import historial
@@ -28,12 +30,66 @@ MAPAS = os.path.join("web", "mapas")
 # El deploy arranca sin caché y hace ~50 pedidos seguidos; Jolpica admite 4
 # por segundo y contesta 429 al pasarse. Como precache_historial.py.
 REINTENTOS = 5
+OPENF1 = "https://api.openf1.org/v1"
+# Slug de cada equipo en el CDN nuevo de F1 (verificados contra el CDN el
+# 2026-10-06). ponytail: tabla fija como las de core/equipos.py; cada año el
+# CDN usa la carpeta del año, y si F1 todavía no la publicó (enero) las
+# imágenes dan 404 y la web las saca (onerror).
+SLUG_CDN = {
+    "mercedes": "mercedes", "ferrari": "ferrari", "mclaren": "mclaren",
+    "red_bull": "redbullracing", "rb": "racingbulls", "aston_martin": "astonmartin",
+    "alpine": "alpine", "williams": "williams", "haas": "haasf1team",
+    "audi": "audi", "cadillac": "cadillac",
+}
+CDN = "https://media.formula1.com/image/upload/c_lfill,w_{ancho}/q_auto/v1740000000/common/f1/{anio}/{ruta}.webp"
+# El código de la foto en la URL de OpenF1: .../ANDANT01_Kimi_Antonelli/andant01.png...
+CODIGO_FOTO = re.compile(r"/([a-z]{6}\d{2})\.png")
 
 
 def pedir(ruta, offset=0):
     # historial.pedir_json se busca al llamar (no como valor por defecto):
     # así los tests lo pueden reemplazar.
     return historial.pedir_json(ruta, offset, reintentos=REINTENTOS)
+
+
+def url_cdn(anio, ruta, ancho):
+    return CDN.format(anio=anio, ruta=ruta, ancho=ancho)
+
+
+def pedir_openf1(ruta):
+    pedido = urllib.request.Request(f"{OPENF1}/{ruta}", headers={"User-Agent": historial.USER_AGENT})
+    with urllib.request.urlopen(pedido, timeout=30) as respuesta:
+        return json.load(respuesta)
+
+
+def completar_fotos(datos, anio, pedir=pedir_openf1):
+    """Foto oficial de los pilotos de la temporada en curso, desde los pilotos
+    de la última sesión de OpenF1 cruzados por sigla. En escritorio la pone
+    FastF1, que no corre en el deploy. Si OpenF1 falla, se exporta sin fotos:
+    la web cae en Wikipedia o la sigla, como antes."""
+    try:
+        de_openf1 = {d["name_acronym"]: d.get("headshot_url") for d in pedir("drivers?session_key=latest")}
+    except (OSError, ValueError) as error:
+        print(f"OpenF1 sin fotos: {error}")
+        return
+    for p in datos["pilotos"]:
+        url = de_openf1.get(p.get("codigo"))
+        if not url:
+            continue
+        # /1col/ son 93 px; /2col/ son 206, que alcanzan para los avatares.
+        p["headshot_url"] = url.replace("/1col/", "/2col/")
+        codigo = CODIGO_FOTO.search(url)
+        slug = SLUG_CDN.get(p.get("constructor_id"))
+        if codigo and slug:
+            c = codigo[1]
+            p["foto_cuerpo"] = url_cdn(anio, f"{slug}/{c}/{anio}{slug}{c}right", 440)
+    por_id = {p["driver_id"]: p for p in datos["pilotos"]}
+    for e in datos["equipos"]:
+        cara = e.get("cara_a_cara")
+        for lado in ("a", "b") if cara else ():
+            piloto = por_id.get(cara[lado]["driver_id"])
+            if piloto:
+                cara[lado]["headshot_url"] = piloto.get("headshot_url")
 
 
 def escribir_json(ruta, datos):
@@ -52,7 +108,12 @@ def datos_comunes(anio_actual):
         "nacionalidades": NACIONALIDADES_ES,
         "banderas": CODIGOS_PAIS,
         "colores": COLORES_EQUIPO,
-        "logos": {constructor_id: url_logo(constructor_id) for constructor_id in SLUG_LOGO},
+        # Los 11 equipos actuales del CDN nuevo; los viejos, con la ruta de 2025 de core.
+        "logos": {**{constructor_id: url_logo(constructor_id) for constructor_id in SLUG_LOGO},
+                  **{cid: url_cdn(anio_actual, f"{slug}/{anio_actual}{slug}logowhite", 200)
+                     for cid, slug in SLUG_CDN.items()}},
+        "autos": {cid: url_cdn(anio_actual, f"{slug}/{anio_actual}{slug}carright", 640)
+                  for cid, slug in SLUG_CDN.items()},
         "circuitos": {
             d["circuit_id"]: {**d, "mapa": os.path.exists(os.path.join(MAPAS, f"{d['circuit_id']}.png"))}
             for d in DATOS_CIRCUITOS.values()
@@ -143,6 +204,7 @@ def exportar_actual(anio):
     datos = temporada(con, anio)
     for p in datos["pilotos"]:
         p["carrera"] = historial.carrera_completa(con, p["driver_id"])
+    completar_fotos(datos, anio)
     escribir_json(os.path.join(DATOS, "actual.json"), datos)
     escribir_json(os.path.join(DATOS, "ganadores.json"), ganadores())
     escribir_json(os.path.join(DATOS, "comun.json"), datos_comunes(anio))

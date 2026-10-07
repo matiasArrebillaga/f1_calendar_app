@@ -55,6 +55,8 @@ def test_datos_comunes_salen_de_core_y_marcan_los_mapas():
     assert comun["banderas"]["UK"] == "gb"
     assert comun["eventos"]["Monaco Grand Prix"] == "Gran Premio de Mónaco"
     assert comun["logos"]["mclaren"].startswith("https://")
+    assert comun["logos"]["audi"].endswith("/2026/audi/2026audilogowhite.webp")
+    assert comun["autos"]["cadillac"].endswith("/2026/cadillac/2026cadillaccarright.webp")
     assert comun["circuitos"]["monza"]["mapa"] is True
     assert comun["circuitos"]["baku"]["mapa"] is False
     assert comun["circuitos"]["baku"]["vueltas"] == 51
@@ -127,3 +129,44 @@ if __name__ == "__main__":
         if nombre.startswith("test_"):
             prueba()
     print("ok")
+
+
+URL_ANT = ("https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/"
+           "drivers/K/ANDANT01_Kimi_Antonelli/andant01.png.transform/1col/image.png")
+
+
+def _datos_fotos():
+    return {
+        "pilotos": [
+            {"driver_id": "antonelli", "codigo": "ANT", "constructor_id": "mercedes", "headshot_url": None},
+            {"driver_id": "tsunoda", "codigo": "TSU", "constructor_id": "red_bull", "headshot_url": None},
+        ],
+        "equipos": [{"constructor_id": "mercedes", "cara_a_cara": {
+            "a": {"driver_id": "antonelli", "headshot_url": None},
+            "b": {"driver_id": "russell", "headshot_url": None}}}],
+    }
+
+
+def test_completar_fotos_cruza_openf1_por_sigla():
+    datos = _datos_fotos()
+    exportar_web.completar_fotos(datos, 2026, lambda ruta: [
+        {"name_acronym": "ANT", "headshot_url": URL_ANT},
+        {"name_acronym": "RUS", "headshot_url": None},
+    ])
+    ant, tsu = datos["pilotos"]
+    assert ant["headshot_url"] == URL_ANT.replace("/1col/", "/2col/")
+    assert ant["foto_cuerpo"] == ("https://media.formula1.com/image/upload/c_lfill,w_440/q_auto/v1740000000/"
+                                  "common/f1/2026/mercedes/andant01/2026mercedesandant01right.webp")
+    # Sin coincidencia en OpenF1: queda como antes (Wikipedia o sigla).
+    assert tsu["headshot_url"] is None and "foto_cuerpo" not in tsu
+    cara = datos["equipos"][0]["cara_a_cara"]
+    assert cara["a"]["headshot_url"] == ant["headshot_url"]
+    assert cara["b"]["headshot_url"] is None
+
+
+def test_completar_fotos_sin_openf1_no_rompe_el_deploy():
+    def caido(ruta):
+        raise OSError("sin red")
+    datos = _datos_fotos()
+    exportar_web.completar_fotos(datos, 2026, caido)
+    assert datos["pilotos"][0]["headshot_url"] is None

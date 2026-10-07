@@ -17,11 +17,13 @@ test("grilla de pilotos: tarjeta con número, posición y sigla mientras no hay 
   assert.match(salida, /--eq:#00D7B6/);
 });
 
-test("con foto de cuerpo entero: va esa, comparte nombre de transición y se saca si no carga", () => {
+test("con foto de cuerpo entero: va esa, sin nombre de transición propio, y se saca si no carga", () => {
   const conFoto = { ...DATOS, pilotos: [{ ...PILOTO_ANT, foto_cuerpo: "https://cdn/ant.webp" }] };
   const salida = String(armarPilotos(conFoto, "pilotos", 2026, COMUN));
   assert.match(salida, /<img class="cuerpo-foto" src="https:\/\/cdn\/ant\.webp"/);
-  assert.match(salida, /view-transition-name:foto-antonelli/);
+  // El nombre de transición lo pone app.js sólo en la tarjeta tocada: con uno
+  // por foto, la transición las dibuja a todas sin recortar.
+  assert.doesNotMatch(salida, /view-transition-name/);
   assert.match(salida, /onerror="this\.remove\(\)"/);
   assert.doesNotMatch(salida, /data-wiki/);
 });
@@ -67,9 +69,10 @@ test("ficha sin carrera previa ni promedios", () => {
   assert.match(salida, /class="carrera-fija"[\s\S]*Sin datos de carrera/);
 });
 
-test("ficha con foto de cuerpo entero: misma transición que la grilla", () => {
+test("ficha con foto de cuerpo entero en la portada", () => {
   const salida = String(armarFichaPiloto({ ...PILOTO_ANT, foto_cuerpo: "https://cdn/ant.webp" }, null, COMUN, 2026));
-  assert.match(salida, /<img class="cuerpo-foto" src="https:\/\/cdn\/ant\.webp"[^>]*view-transition-name:foto-antonelli/);
+  assert.match(salida, /<section class="portada"[\s\S]*?<img class="cuerpo-foto" src="https:\/\/cdn\/ant\.webp"/);
+  assert.doesNotMatch(salida, /view-transition-name/);
 });
 
 test("carrera por carrera: la más reciente primero, con últimas 5 y links", () => {

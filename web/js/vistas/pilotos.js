@@ -16,11 +16,10 @@ export function armarFoto(p, color, clase = "foto") {
 }
 
 // Foto de cuerpo entero (temporada en curso) para la grilla y la portada de
-// la ficha; comparten view-transition-name, así la foto "viaja" de una a otra.
-// Si la imagen no carga (404 del CDN), se saca y queda el fondo de color.
+// la ficha. Si la imagen no carga (404 del CDN), se saca y queda el fondo de color.
 export function armarRetrato(p, color) {
   if (p.foto_cuerpo) {
-    return html`<img class="cuerpo-foto" src="${p.foto_cuerpo}" alt="" loading="lazy" onerror="this.remove()" style="view-transition-name:foto-${p.driver_id}">`;
+    return html`<img class="cuerpo-foto" src="${p.foto_cuerpo}" alt="" loading="lazy" onerror="this.remove()">`;
   }
   return armarFoto(p, color, "foto");
 }

@@ -23,6 +23,13 @@ const ESPERA_ESQUELETO_MS = 150;
 const ESQUELETO = html`<div class="cuerpo esqueleto" aria-busy="true" aria-label="Cargando">
   <span class="sk bloque"></span>${Array.from({ length: 6 }, () => html`<span class="sk renglon"></span>`)}</div>`;
 
+// Transición nativa de Chrome: la tarjeta tocada de la grilla se expande hasta
+// la portada de la ficha (comparten view-transition-name). Sin soporte,
+// cambio directo.
+const transicion = (cambio) => (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches
+  ? document.startViewTransition(cambio)
+  : cambio());
+
 const encabezado = document.getElementById("encabezado");
 const main = document.getElementById("contenido");
 let actual = null;   // { ruta, limpiar }
@@ -100,10 +107,13 @@ async function mostrar() {
     const contenido = await vista.render(ruta, datosComunes);
     clearTimeout(espera);
     if (mio !== turno) return;
-    pintarEncabezado();
-    main.innerHTML = contenido;
-    window.scrollTo(0, 0);
-    actual.limpiar = vista.montar?.(main, ruta, datosComunes);
+    transicion(() => {
+      if (mio !== turno) return;
+      pintarEncabezado();
+      main.innerHTML = contenido;
+      window.scrollTo(0, 0);
+      actual.limpiar = vista.montar?.(main, ruta, datosComunes);
+    });
   } catch (error) {
     clearTimeout(espera);
     console.error(error);
@@ -114,6 +124,10 @@ async function mostrar() {
 
 document.addEventListener("click", (evento) => {
   if (evento.target.closest(".tabbar a, .segmento a")) navigator.vibrate?.(8);
+  // Sólo la tarjeta tocada lleva el nombre: con uno por tarjeta, la
+  // transición dibujaría todas las fotos sin recortar.
+  const tarjeta = evento.target.closest(".tpil");
+  if (tarjeta) tarjeta.style.viewTransitionName = "portada";
   const atras = evento.target.closest("[data-atras]");
   if (atras) {
     // Dentro de la app, atrás vuelve a donde estaba (Clasificación, un GP…);

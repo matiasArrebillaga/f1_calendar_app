@@ -105,3 +105,8 @@ test("filas de carrera por carrera: caja según el puesto y puestos ganados", ()
   assert.equal(r5.delta, "");
   assert.equal(r2.bandera, null);
 });
+
+test("grilla de equipos de otra temporada: sin el auto de este año", () => {
+  const salida = String(armarPilotos({ ...DATOS, equipos: [EQUIPO_MER] }, "equipos", 2010, COMUN));
+  assert.doesNotMatch(salida, /class="auto"/);
+});

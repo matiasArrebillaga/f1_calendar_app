@@ -47,7 +47,8 @@ export function armarPilotos(datos, solapa, anio, comun) {
   }
   const tarjetas = solapa === "equipos"
     ? lista.map((e) => {
-      const auto = comun.autos?.[e.constructor_id];
+      // El auto es el de este año: en otras temporadas no va.
+      const auto = anio === comun.anio_actual ? comun.autos?.[e.constructor_id] : null;
       return html`<a class="tpil equipo" href="#/equipo/${anio}/${e.constructor_id}" style="--eq:${comun.colores[e.constructor_id] ?? GRIS}">
         ${armarLogo(e, comun)}
         ${auto ? html`<img class="auto" src="${auto}" alt="" loading="lazy" onerror="this.remove()">` : ""}

@@ -246,19 +246,12 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tpil.piloto .info small { display: flex; justify-content: space-between; color: var(--texto2); }
 .tpil.equipo .auto { display: block; width: 100%; padding: 0 8px; margin-top: -12px; }
 
-.cabcolor {
-  display: flex; align-items: center; gap: 14px; padding: 16px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--eq) 16%, transparent), transparent);
-  border-bottom: 1px solid var(--borde);
-}
 .avatar {
   width: 72px; height: 72px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%;
   font: 700 24px var(--titulo); color: var(--app); background: var(--eq);
 }
 .avatar.cuadrado { border-radius: 12px; }
 .avatar.cuadrado img { object-fit: contain; padding: 10px; }   /* un logo no se recorta como una foto */
-.cabcolor-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.cabcolor-texto h2 { font: 600 24px/1.1 var(--titulo); }
 .meta { font-size: 13px; }
 .grandes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .grandes.cuatro { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -323,7 +316,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .cinco { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; text-align: center; }
 .cinco b { display: block; font: 600 16px var(--mono); }
 .cinco small { font-size: 10px; color: var(--muted); }
-.duelo-cab { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 1.5px; }
 .duelos { display: flex; flex-direction: column; gap: 12px; }
 .duelo { display: grid; grid-template-columns: 40px 1fr 92px 1fr 40px; align-items: center; gap: 6px; font-size: 13px; }
 .duelo > span:nth-child(3) { text-align: center; }
@@ -332,10 +324,29 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .duelo .bar { display: flex; height: 8px; overflow: hidden; border-radius: 4px; background: var(--hover); }
 .duelo .bar.izq { justify-content: flex-end; }
 .duelo .bar i { display: block; height: 100%; background: var(--futuro); }
-.tira { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
-.tira a {
-  padding: 4px 0; text-align: center; line-height: 1.3; font: 11px var(--mono); color: var(--muted);
-  background: var(--surface); border: 1px solid var(--borde); border-radius: 3px;
-}
-.tira b { display: block; margin: 0 4px; font-weight: 400; color: var(--texto); border: 1px solid transparent; border-radius: 2px; }
-.tira b.w { border-color: var(--eq); }
+
+.portada.equipo { height: 240px; }
+.portada.equipo:not(:has(.auto)) { height: 150px; }   /* otra temporada, o el auto no cargó */
+.portada.equipo .portada-texto { top: 18px; bottom: auto; }
+.portada.equipo .portada-texto h2 { font-size: 40px; }
+.portada.equipo .logo-portada { position: absolute; z-index: 1; right: 16px; top: 18px; height: 30px; display: grid; place-items: center; font: 700 18px var(--titulo); }
+.portada.equipo .logo-portada img { max-height: 30px; }
+.portada.equipo .auto { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 14px; width: calc(100% - 24px); }
+.portada.equipo::after { display: none; }
+.cara-a-cara { display: flex; align-items: center; justify-content: space-between; }
+.cara-a-cara .lado { display: flex; align-items: center; gap: 10px; }
+.cara-a-cara .lado.espejo { flex-direction: row-reverse; text-align: right; }
+.cara-a-cara .lado b { display: block; font: 700 20px/1 var(--titulo); }
+.cara-a-cara .lado small { font-size: 12px; color: var(--muted); }
+.marcador { font-size: 34px; font-weight: 700; color: var(--futuro); }
+.marcador b { color: var(--texto2); }
+.marcador b.a { color: var(--eq); }
+.centro { text-align: center; }
+.marcas { display: grid; gap: 3px; }
+.marcas i { height: 22px; border-radius: 3px; background: var(--surface); }
+.marcas i.a { background: var(--eq); }
+.marcas i.b { background: var(--texto2); }
+.filas-cab { display: flex; gap: 10px; padding: 0 4px 6px; font-size: 11px; letter-spacing: 1px; color: var(--muted); border-bottom: 1px solid var(--borde); }
+.filas-cab span:first-child { flex: 1; }
+.filas-cab span:not(:first-child) { width: 38px; text-align: center; }
+.caja.gana { background: var(--eq); color: var(--app); }

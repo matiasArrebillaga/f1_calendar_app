@@ -72,6 +72,7 @@ export async function render(ruta, comun) {
   const [lista, races] = await Promise.all([campeonato(ruta.anio, tipo), calendario(ruta.anio)]);
   const eventos = races.map((race) => aEvento(race, comun));
   let filas = [];
+  let ronda = lista ? Number(lista.round) : null;
   if (lista) {
     filas = ruta.solapa === "pilotos"
       ? normalizarPilotos(lista.DriverStandings, comun)
@@ -79,8 +80,8 @@ export async function render(ruta, comun) {
   } else if (ruta.solapa === "equipos") {
     const deLaTemporada = await temporada(ruta.anio, comun).catch(() => null);
     filas = equiposDeTemporada(deLaTemporada?.equipos ?? [], comun);
+    ronda = deLaTemporada?.ronda ?? null;   // sin campeonato de Jolpica, la del JSON
   }
-  const ronda = lista ? Number(lista.round) : null;
   const gp = eventos.find((ev) => ev.ronda === ronda);
   return armarClasificacion({
     filas,

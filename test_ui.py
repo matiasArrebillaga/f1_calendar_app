@@ -139,6 +139,25 @@ def test_la_sesion_tardia_de_otro_gp_se_descarta():
     assert vista.estado.objectName() == "estadoError"
 
 
+def test_un_gp_viejo_abre_en_la_carrera_y_sin_libres():
+    """Los calendarios de antes de 2018 no traen horarios, y FastF1 sólo tiene
+    Q y R: el GP mostraba "Sin sesiones" y cada botón "Todavía no se corrió"."""
+    evento = pd.Series({
+        "EventName": "Bahrain Grand Prix", "Country": "Bahrain", "Location": "Sakhir",
+        "OfficialEventName": None, "RoundNumber": 1, "EventDate": pd.Timestamp("2010-03-14 12:00"),
+        **{f"Session{i}": nombre for i, nombre in enumerate(
+            ("Practice 1", "Practice 2", "Practice 3", "Qualifying", "Race"), 1)},
+        **{f"Session{i}Date": None for i in range(1, 6)},
+    })
+    vista = EventDetailView()
+    pedidas = []
+    vista.cargar_sesion = lambda year, gp, codigo: pedidas.append((year, gp, codigo))
+    vista._cargar_mapa = lambda location: None
+    vista.mostrar_evento(evento)
+    assert pedidas == [(2010, 1, "R")]
+    assert [b._codigo for b in vista.botones_sesion if b.isEnabled()] == ["Q", "R"]
+
+
 def test_el_mapa_no_se_re_escala_si_el_tamano_no_cambio():
     """resizeEvent entra acá por cada píxel que se arrastra el borde, y los PNG
     de cache_tracks llegan a 2275x2400: re-escalar con SmoothTransformation cada
@@ -867,9 +886,10 @@ def test_la_clasificacion_y_pilotos_se_actualizan_sin_aviso():
         assert vista.estado.text() == "", (Vista, vista.estado.text())
 
 
-def test_la_temporada_en_curso_baja_solo_desde_la_ronda_que_falta():
-    """La guardada llega a la R4: se pide desde la 5. Una ya terminada se baja
-    entera una última vez, por si corrigieron resultados después de guardarla."""
+def test_la_temporada_en_curso_baja_desde_la_ultima_ronda_guardada():
+    """La guardada llega a la R4: se pide desde la 4, por si la corrigieron
+    (una sanción después de la carrera). Una ya terminada se baja entera una
+    última vez, por si corrigieron resultados después de guardarla."""
     llamadas = []
 
     def anotar(con, anio, desde=None):
@@ -877,7 +897,7 @@ def test_la_temporada_en_curso_baja_solo_desde_la_ronda_que_falta():
 
     _correr_pilotos_worker(2025, anotar, anio_actual=2025, actualizada="2025-06-01 12:00:00")
     _correr_pilotos_worker(2025, anotar, anio_actual=2026, actualizada="2025-11-20 10:00:00")
-    assert llamadas == [5, None], llamadas
+    assert llamadas == [4, None], llamadas
 
 
 def test_el_mapa_y_la_ficha_se_abren_con_un_clic():

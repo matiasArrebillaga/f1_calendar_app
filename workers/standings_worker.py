@@ -5,6 +5,10 @@ from core.calendario import obtener_calendario
 from workers.pilotos_worker import cargar_temporada
 
 
+class SinDatos(ValueError):
+    """El año no tiene clasificación: no es un problema de red."""
+
+
 class StandingsWorker(QThread):
     # emite {'pilotos': [dict], 'equipos': [dict], 'ronda', 'total_rondas',
     # 'sprints_restantes', 'actualizando'}; ronda y total_rondas pueden ser
@@ -16,6 +20,7 @@ class StandingsWorker(QThread):
     def __init__(self, year):
         super().__init__()
         self.year = year
+        self.sin_datos = False
 
     def run(self):
         # Sale de la base del historial (la misma de la pestaña Pilotos): las
@@ -28,6 +33,7 @@ class StandingsWorker(QThread):
         try:
             cargar_temporada(con, self.year, self._leer, self.terminado.emit)
         except Exception as e:
+            self.sin_datos = isinstance(e, SinDatos)
             self.error.emit(str(e))
         finally:
             con.close()
@@ -41,7 +47,7 @@ class StandingsWorker(QThread):
             'sprints_restantes': 0,
         }
         if not datos['pilotos']:
-            raise ValueError(f"Sin clasificación para {self.year}")
+            raise SinDatos(f"Sin clasificación para {self.year}")
 
         # Lo que sigue sólo alimenta "puntos en juego": si falla, la tabla se
         # muestra igual.

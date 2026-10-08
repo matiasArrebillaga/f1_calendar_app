@@ -130,11 +130,18 @@ async function mostrar() {
   }
 }
 
+function cerrarAvisos() {
+  const capa = document.querySelector(".capa-avisos");
+  if (!capa) return;
+  capa.remove();
+  document.body.classList.remove("con-capa");
+}
+
 // Hoja con la suscripción para copiar como secreto del repo.
 async function abrirAvisos() {
   const r = await suscribir().catch((error) => ({ error: `No se pudo activar: ${error.message}` }));
   const capa = document.createElement("div");
-  capa.className = "capa";
+  capa.className = "capa capa-avisos";
   capa.innerHTML = html`<div class="velo" data-cerrar-avisos></div><div class="hoja">
     <span class="asa"></span>
     <h3 class="titulo-circuito">Avisos antes de cada sesión</h3>
@@ -146,6 +153,8 @@ async function abrirAvisos() {
   </div>`;
   document.body.append(capa);
   document.body.classList.add("con-capa");
+  // Una entrada en el historial: "atrás" de Android cierra la hoja (popstate).
+  history.pushState({ avisos: true }, "");
   encabezado.querySelector("[data-campana]")?.classList.toggle("activa", !r.error);
 }
 
@@ -165,21 +174,24 @@ document.addEventListener("click", (evento) => {
   }
   if (evento.target.closest("[data-campana]")) { abrirAvisos(); return; }
   if (evento.target.closest("[data-cerrar-avisos]")) {
-    evento.target.closest(".capa").remove();
-    document.body.classList.remove("con-capa");
+    history.back();   // saca la entrada de la hoja; popstate la cierra
     return;
   }
   const copiar = evento.target.closest("[data-copiar]");
   if (copiar) {
-    navigator.clipboard.writeText(copiar.parentElement.querySelector("textarea").value)
-      .then(() => { copiar.textContent = "Copiado ✓"; });
+    const texto = copiar.parentElement.querySelector("textarea");
+    navigator.clipboard.writeText(texto.value)
+      .then(() => { copiar.textContent = "Copiado ✓"; })
+      .catch(() => { texto.select(); copiar.textContent = "Copialo a mano"; });
     return;
   }
   if (evento.target.closest("[data-reintentar]")) mostrar();
 });
 
 window.addEventListener("hashchange", mostrar);
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+window.addEventListener("popstate", cerrarAvisos);
+// Sin service worker la app anda igual, sólo que sin modo offline ni avisos.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(console.error);
 
 // Punto rojo en Calendario mientras se corre una sesión, mire la pestaña que
 // mire. Si falla la red, simplemente no hay punto.
@@ -192,7 +204,7 @@ async function vigilarEnVivo() {
     marcar();
     setInterval(marcar, 30_000);
   } catch {
-    // sin conexión: sin punto
+    setTimeout(vigilarEnVivo, 60_000);   // sin conexión: sin punto, y se reintenta
   }
 }
 vigilarEnVivo();

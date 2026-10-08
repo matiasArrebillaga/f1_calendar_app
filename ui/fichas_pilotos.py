@@ -79,8 +79,8 @@ class FotoPiloto(QWidget):
     """Foto recortada en cuadrado sobre un degradé del color del equipo. Sin
     foto (todavía bajando, o no existe ninguna) muestra la sigla."""
 
-    def __init__(self, lado, parent=None, marco=True):
-        super().__init__(parent)
+    def __init__(self, lado, marco=True):
+        super().__init__()
         self.setFixedSize(lado, lado)
         self._marco = marco   # False: sin degradé, para recortarla sobre CabeceraColor
         self.driver_id = None

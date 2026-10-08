@@ -7,6 +7,7 @@ export const encabezado = () => ({ titulo: "Calendario", campana: true });
 
 const DIA_MS = 86_400_000;
 let proximaEnPantalla = null;   // la que dibujó el último render, para refrescarla
+let eventosEnPantalla = [];
 
 function armarProxima(ev, ahora) {
   const sesiones = estadoSesiones(ev.sesiones, ahora);
@@ -84,6 +85,7 @@ export async function render(ruta, comun) {
     temporada(ruta.anio, comun).catch(() => null),   // sin ganadores, el calendario igual se ve
   ]);
   const eventos = races.map((race) => aEvento(race, comun));
+  eventosEnPantalla = eventos;
   proximaEnPantalla = eventos[indiceProxima(eventos, Date.now())] ?? null;
   return armarCalendario(eventos, Date.now(), ganadoresPorRonda(datos, comun.colores));
 }
@@ -112,8 +114,13 @@ export function montar(main) {
   }
   if (hero && proximaEnPantalla) {
     // Cada 30 s se redibuja la tarjeta: cuenta regresiva y estado en vivo.
+    // Cuando la carrera termina, la próxima es otra: se redibuja todo.
     const ev = proximaEnPantalla;
     const id = setInterval(() => {
+      if (eventosEnPantalla[indiceProxima(eventosEnPantalla, Date.now())] !== ev) {
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+        return;
+      }
       main.querySelector("[data-largada]")?.replaceWith(
         document.createRange().createContextualFragment(String(armarProxima(ev, Date.now()))));
     }, 30_000);

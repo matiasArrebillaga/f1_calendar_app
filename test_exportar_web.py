@@ -114,6 +114,9 @@ def test_el_deploy_reintenta_los_429_de_jolpica():
     historial.pedir_json = pedir_falso
     historial.data_path = lambda nombre: os.path.join(carpeta, nombre)
     exportar_web.DATOS = carpeta
+    # 2025 ya exportada: si no, el deploy la agregaría (el test de abajo).
+    os.makedirs(os.path.join(carpeta, "temporadas"))
+    open(os.path.join(carpeta, "temporadas", "2025.json"), "w").close()
     try:
         exportar_web.exportar_actual(2026)
     finally:
@@ -122,6 +125,32 @@ def test_el_deploy_reintenta_los_429_de_jolpica():
     assert any(ruta.startswith("circuits/") for ruta, _ in llamadas)
     assert {reintentos for _, reintentos in llamadas} == {exportar_web.REINTENTOS}
     assert exportar_web.REINTENTOS > 1
+
+
+
+def test_en_enero_el_deploy_agrega_la_temporada_que_termino():
+    """Si todavía no se corrió --historico, el año que terminó se exporta solo y
+    se suma a carreras_previas: si no, la web lo perdía."""
+    carpeta = tempfile.mkdtemp()
+    previa = {"titulos": 0, "victorias": 5, "podios": 20, "gps": 100, "debut": 2019}
+    with open(os.path.join(carpeta, "carreras_previas.json"), "w", encoding="utf-8") as archivo:
+        json.dump({"norris": previa}, archivo)
+    originales = exportar_web.base_de, exportar_web.DATOS
+    exportar_web.base_de = lambda anio: base_de_prueba()
+    exportar_web.DATOS = carpeta
+    try:
+        exportar_web.exportar_terminada(2025)
+    finally:
+        exportar_web.base_de, exportar_web.DATOS = originales
+    with open(os.path.join(carpeta, "temporadas", "2025.json"), encoding="utf-8") as archivo:
+        assert json.load(archivo)["anio"] == 2025
+    with open(os.path.join(carpeta, "carreras_previas.json"), encoding="utf-8") as archivo:
+        previas = json.load(archivo)
+    nueva = historial.carrera_completa(base_de_prueba(), "norris")
+    assert previas["norris"]["gps"] == 100 + nueva["gps"]
+    assert previas["norris"]["victorias"] == 5 + nueva["victorias"]
+    assert previas["norris"]["debut"] == 2019
+    assert previas["senna"] == historial.carrera_completa(base_de_prueba(), "senna")
 
 
 if __name__ == "__main__":

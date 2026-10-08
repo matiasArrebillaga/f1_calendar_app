@@ -13,7 +13,7 @@ const PUNTOS_SPRINT = { pilotos: 8, equipos: 8 + 7 };
 // Sesiones de un fin de semana con la clave que usa Jolpica en el calendario.
 // `jolpica`: el recurso que trae sus resultados. `openf1`: el nombre de la
 // sesión en OpenF1, que sólo tiene datos desde 2023.
-export const SESIONES = [
+const SESIONES = [
   { clave: "FirstPractice", nombre: "Entrenamiento 1", corto: "EL1", openf1: "Practice 1" },
   { clave: "SecondPractice", nombre: "Entrenamiento 2", corto: "EL2", openf1: "Practice 2" },
   { clave: "ThirdPractice", nombre: "Entrenamiento 3", corto: "EL3", openf1: "Practice 3" },
@@ -25,7 +25,7 @@ export const SESIONES = [
   { clave: "Race", nombre: "Carrera", corto: "Carrera", jolpica: "results" },
 ];
 
-export const dosDigitos = (n) => String(n).padStart(2, "0");
+const dosDigitos = (n) => String(n).padStart(2, "0");
 const mesCorto = (d) => MESES[d.getMonth()].slice(0, 3);
 
 // Jolpica da fecha y hora en UTC. Sin hora publicada (antes de 2005), el día
@@ -45,7 +45,7 @@ export function aEvento(race, comun) {
   const sesiones = SESIONES.filter((s) => s.clave === "Race" || race[s.clave])
     .map((s) => {
       const datos = s.clave === "Race" ? race : race[s.clave];
-      return { ...s, dia: datos.date, fecha: fechaSesion(datos) };
+      return { ...s, dia: datos.date, fecha: fechaSesion(datos), sinHora: !datos.time };
     })
     .sort((a, b) => a.fecha - b.fecha);
   const lugar = race.Circuit.Location;
@@ -88,8 +88,10 @@ const DURACION_MIN = {
 export function estadoSesiones(sesiones, ahora) {
   return sesiones.map((s) => {
     const inicio = s.fecha.getTime();
-    const duracion = DURACION_MIN[s.clave] * 60_000;
-    const estado = ahora >= inicio + duracion ? "hecha" : ahora >= inicio ? "vivo" : "proxima";
+    // Sin hora publicada no se sabe cuándo está en vivo: se da por hecha al
+    // terminar el día.
+    const duracion = s.sinHora ? 86_400_000 : DURACION_MIN[s.clave] * 60_000;
+    const estado = ahora >= inicio + duracion ? "hecha" : ahora >= inicio && !s.sinHora ? "vivo" : "proxima";
     const vivo = estado === "vivo";
     return {
       ...s, estado,
@@ -106,11 +108,12 @@ export const hayEnVivo = (eventos, ahora) =>
 // 35 min y no es la última avisada. Con el workflow cada 10 min (que GitHub
 // atrasa a veces), llega entre ~15 y 35 min antes, una sola vez.
 const VENTANA_AVISO_MS = 35 * 60_000;
-export const idSesion = (ev, s) => `${ev.anio}-${ev.ronda}-${s.clave}`;
+const idSesion = (ev, s) => `${ev.anio}-${ev.ronda}-${s.clave}`;
 
 export function sesionAAvisar(eventos, ahora, ultimaAvisada) {
   for (const ev of eventos) {
     for (const s of ev.sesiones) {
+      if (s.sinHora) continue;   // la medianoche no es la hora real: sería un aviso falso
       const falta = s.fecha.getTime() - ahora;
       const id = idSesion(ev, s);
       if (falta > 0 && falta <= VENTANA_AVISO_MS && id !== ultimaAvisada) {
@@ -198,6 +201,11 @@ export function sumarCarrera(previa, actual) {
     debut: debuts.length ? Math.min(...debuts) : null,
   };
 }
+
+// positionText de Ergast cuando no hay posición: D descalificado, F no
+// clasificó, W no largó; el resto, abandono.
+const TEXTO_SIN_POSICION = { D: "DSQ", F: "DNQ", W: "DNS" };
+export const textoPosicion = (fila) => fila.posicion ?? TEXTO_SIN_POSICION[fila.posicion_texto] ?? "DNF";
 
 // Ergast no tiene siglas antes de los 2000.
 export const sigla = (p) => p.codigo || p.apellido.slice(0, 3).toUpperCase();

@@ -3,6 +3,7 @@ import urllib.request
 from core.paths import ruta_cache, data_path
 
 CACHE_DIR_NOMBRE = "cache_flags"
+_fallidas = set()
 
 CODIGOS_PAIS = {
     "United Kingdom": "gb", "UK": "gb", "Great Britain": "gb",
@@ -16,7 +17,7 @@ CODIGOS_PAIS = {
     "Sweden": "se", "Switzerland": "ch", "South Africa": "za",
     "Argentina": "ar", "Morocco": "ma", "India": "in", "Korea": "kr",
     "Turkey": "tr", "Russia": "ru", "Malaysia": "my",
-    "San Marino": "sm", "Luxembourg": "lu","Abu Dhabi":"ae","UAE": "ae"
+    "San Marino": "sm", "Luxembourg": "lu", "Abu Dhabi": "ae", "UAE": "ae"
 }
 
 
@@ -32,11 +33,19 @@ def obtener_ruta_bandera(pais):
         return ruta  # ya viene empaquetado, ni siquiera hace falta chequear que exista
 
     if not os.path.exists(ruta):
+        if codigo in _fallidas:
+            return None
         os.makedirs(data_path(CACHE_DIR_NOMBRE), exist_ok=True)
         url = f"https://flagcdn.com/32x24/{codigo}.png"
         try:
-            urllib.request.urlretrieve(url, ruta)
+            # Corre en el hilo de la UI: timeout corto, y no se reintenta.
+            with urllib.request.urlopen(url, timeout=5) as respuesta:
+                datos = respuesta.read()
         except Exception:
+            _fallidas.add(codigo)
             return None
+        # Se escribe recién con todo bajado: un corte no deja un PNG a medias.
+        with open(ruta, "wb") as archivo:
+            archivo.write(datos)
 
     return ruta

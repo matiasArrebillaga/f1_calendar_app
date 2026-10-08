@@ -64,11 +64,13 @@ def pedir_openf1(ruta):
 
 def completar_fotos(datos, anio, pedir=pedir_openf1):
     """Foto oficial de los pilotos de la temporada en curso, desde los pilotos
-    de la última sesión de OpenF1 cruzados por sigla. En escritorio la pone
+    del último fin de semana de OpenF1 cruzados por sigla (todo el fin de
+    semana: en un EL1 con novatos, el titular no está en la sesión). En escritorio la pone
     FastF1, que no corre en el deploy. Si OpenF1 falla, se exporta sin fotos:
     la web cae en Wikipedia o la sigla, como antes."""
     try:
-        de_openf1 = {d["name_acronym"]: d.get("headshot_url") for d in pedir("drivers?session_key=latest")}
+        de_openf1 = {d["name_acronym"]: d.get("headshot_url") for d in pedir("drivers?meeting_key=latest")
+                     if d.get("headshot_url")}
     except Exception as error:   # red, JSON roto o una respuesta con otra forma
         print(f"OpenF1 sin fotos: {error!r}")
         return
@@ -189,18 +191,54 @@ def copiar_mapas(origen="cache_tracks"):
 def exportar_historico():
     con = historial.abrir_base()
     terminadas = temporadas_terminadas(con)
+    a_medias = [anio for (anio,) in con.execute("SELECT temporada FROM temporadas")
+                if anio not in terminadas and anio < date.today().year]
+    if a_medias:
+        print(f"Sin exportar, guardadas antes de terminar: {a_medias}. Abrilas en la app "
+              "(o corré precache_historial.py) para bajarlas completas.", file=sys.stderr)
     for anio in terminadas:
         escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), temporada(con, anio))
     escribir_json(os.path.join(DATOS, "carreras_previas.json"), carreras_previas(con))
     print(f"{len(terminadas)} temporadas, {copiar_mapas()} mapas")
 
 
-def exportar_actual(anio):
-    # Base en memoria con sólo la temporada en curso (~10 pedidos a Jolpica):
-    # el deploy no tiene la base completa, y para las fichas del año no hace falta.
+def base_de(anio):
+    """Base en memoria con sólo esa temporada (~10 pedidos a Jolpica): el
+    deploy no tiene la base completa, y para las fichas del año no hace falta."""
     con = sqlite3.connect(":memory:")
     con.executescript(historial.ESQUEMA)
     historial.descargar_temporada(con, anio, pedir=pedir)
+    return con
+
+
+def sumar_a_previas(previas, carrera):
+    """Suma la carrera de una temporada a la acumulada de carreras_previas."""
+    if previas is None:
+        return carrera
+    debuts = [d for d in (previas["debut"], carrera["debut"]) if d is not None]
+    return {**{k: (previas[k] or 0) + (carrera[k] or 0) for k in ("titulos", "victorias", "podios", "gps")},
+            "debut": min(debuts) if debuts else None}
+
+
+def exportar_terminada(anio):
+    """La temporada que terminó y todavía no pasó por --historico (en enero,
+    hasta que se corra en la PC): su JSON y su parte de carreras_previas. Sin
+    esto la web la perdía, porque actual.json ya es del año nuevo."""
+    con = base_de(anio)
+    escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), temporada(con, anio))
+    ruta = os.path.join(DATOS, "carreras_previas.json")
+    with open(ruta, encoding="utf-8") as archivo:
+        previas = json.load(archivo)
+    for (driver_id,) in con.execute("SELECT DISTINCT driver_id FROM resultados"):
+        previas[driver_id] = sumar_a_previas(previas.get(driver_id), historial.carrera_completa(con, driver_id))
+    escribir_json(ruta, previas)
+    print(f"{anio}: agregada a temporadas/ y carreras_previas (falta correr --historico)")
+
+
+def exportar_actual(anio):
+    if not os.path.exists(os.path.join(DATOS, "temporadas", f"{anio - 1}.json")):
+        exportar_terminada(anio - 1)
+    con = base_de(anio)
     datos = temporada(con, anio)
     for p in datos["pilotos"]:
         p["carrera"] = historial.carrera_completa(con, p["driver_id"])

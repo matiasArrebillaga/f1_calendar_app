@@ -26,8 +26,10 @@ def dia_hora(timestamp):
 
 
 def rango_fechas(evento):
-    """'9 – 11 OCT', o '30 OCT – 1 NOV' si el fin de semana cruza de mes."""
-    fin = evento['EventDate']
+    """'9 – 11 OCT', o '30 OCT – 1 NOV' si el fin de semana cruza de mes.
+    Las dos puntas en GMT-3, como la web: Las Vegas larga el sábado allá y el
+    domingo acá."""
+    fin = largada(evento)
     inicio = a_gmt_menos_3(evento.get('Session1Date'))
     if pd.isna(inicio) or inicio.date() >= fin.date():
         return f"{fin.day} {MESES_CORTOS[fin.month - 1]}"

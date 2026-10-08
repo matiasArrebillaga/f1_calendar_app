@@ -25,13 +25,12 @@ PAISES_ES = {
     "United Kingdom": "Reino Unido",
     "Great Britain": "Gran Bretaña",
     "UK": "Reino Unido",
+    "USA": "Estados Unidos",
     "Belgium": "Bélgica",
     "Netherlands": "Países Bajos",
     "Italy": "Italia",
     "Singapore": "Singapur",
-    "Japan": "Japón",
     "Qatar": "Catar",
-    "United States": "Estados Unidos",
     "France": "Francia",
     "Hungary": "Hungría",
     "Azerbaijan": "Azerbaiyán",
@@ -51,10 +50,6 @@ PAISES_ES = {
     "UAE": "EAU",
     "San Marino": "San Marino",
     "Sweden": "Suecia",
-    "Mexico": "México",
-    "Saudi Arabia": "Arabia Saudita",
-    "Bahrain": "Baréin",
-    "Belgium": "Bélgica",
 }
 
 EVENTOS_ES = {
@@ -77,7 +72,6 @@ EVENTOS_ES = {
     "Dutch Grand Prix": "Gran Premio de Países Bajos",
     "Italian Grand Prix": "Gran Premio de Italia",
     "Singapore Grand Prix": "Gran Premio de Singapur",
-    "Japanese Grand Prix": "Gran Premio de Japón",
     "Qatar Grand Prix": "Gran Premio de Catar",
     "Abu Dhabi Grand Prix": "Gran Premio de Abu Dabi",
     "French Grand Prix": "Gran Premio de Francia",
@@ -87,6 +81,16 @@ EVENTOS_ES = {
     "São Paulo Grand Prix": "Gran Premio de São Paulo",
     "Mexico City Grand Prix": "Gran Premio de la Ciudad de México",
     "Barcelona Grand Prix": "Gran Premio de Barcelona",
+    "Emilia Romagna Grand Prix": "Gran Premio de Emilia-Romaña",
+    "Portuguese Grand Prix": "Gran Premio de Portugal",
+    "Styrian Grand Prix": "Gran Premio de Estiria",
+    "70th Anniversary Grand Prix": "Gran Premio del 70.º Aniversario",
+    "Tuscan Grand Prix": "Gran Premio de la Toscana",
+    "Eifel Grand Prix": "Gran Premio de Eifel",
+    "Turkish Grand Prix": "Gran Premio de Turquía",
+    "Sakhir Grand Prix": "Gran Premio de Sakhir",
+    "Russian Grand Prix": "Gran Premio de Rusia",
+    "Madrid Grand Prix": "Gran Premio de Madrid",
 }
 
 

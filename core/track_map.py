@@ -13,6 +13,10 @@ from core.paths import ruta_cache, data_path
 from core.circuits import normalizar_location
 
 CACHE_DIR_NOMBRE = "cache_tracks"
+PRIMER_ANIO_TELEMETRIA = 2018
+
+# Circuitos sin carrera con telemetría: no se vuelven a buscar en esta sesión.
+_sin_referencia = set()
 
 
 def _rotar(x, y, angulo_grados):
@@ -68,11 +72,14 @@ def obtener_ruta_mapa(location):
 
 def buscar_referencia(location, year_actual):
     import pandas as pd
-    from core.calendario import obtener_calendario
+    from core.calendario import anio_actual, obtener_calendario
 
     location_normalizado = normalizar_location(location)
 
-    for year in range(year_actual, year_actual - 6, -1):
+    # Antes de 2018 FastF1 no tiene telemetría: un GP viejo usa el trazado
+    # de la última vez que se corrió ahí.
+    year_actual = max(year_actual, anio_actual())
+    for year in range(year_actual, PRIMER_ANIO_TELEMETRIA - 1, -1):
         try:
             calendario = obtener_calendario(year)
         except Exception:
@@ -99,11 +106,14 @@ def generar_o_obtener_mapa(location, year_actual):
     ruta_existente = obtener_ruta_mapa(location)
     if ruta_existente:
         return ruta_existente
+    if location in _sin_referencia:
+        return None
 
     import fastf1
 
     gp_referencia, year_referencia = buscar_referencia(location, year_actual)
     if gp_referencia is None:
+        _sin_referencia.add(location)
         return None
 
     sesion = fastf1.get_session(year_referencia, gp_referencia, 'R')

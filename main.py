@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(contenedor_central)
 
         self.calendar_view.evento_seleccionado.connect(self.abrir_detalle)
-        self.detail_view.volver.connect(self.volver_a_calendario)
+        self.detail_view.volver.connect(self.ir_a_calendario)
         self.selector.anio_cambiado.connect(self.on_anio_cambiado)
         self.sidebar.logo_clickeado.connect(self.ir_a_calendario)
         self.sidebar.navegar.connect(self.on_navegar_sidebar)
@@ -86,6 +86,7 @@ class MainWindow(QMainWindow):
         self.detail_view.abrir_ficha.connect(self.abrir_ficha)
         self.pilotos_view.volver_origen.connect(self.volver_de_ficha)
         self._origen_ficha = None   # vista desde la que se abrió la ficha
+        self.workers_colgados = False
         # carga inicial
         self.on_anio_cambiado(self.selector.anio_actual)
 
@@ -143,9 +144,6 @@ class MainWindow(QMainWindow):
             self.sidebar.marcar(self._origen_ficha)
             self._origen_ficha = None
 
-    def volver_a_calendario(self):
-        self.ir_a_calendario()
-
     def ir_a_calendario(self):
         self._mostrar_vista(0)
         self.sidebar.marcar_calendario()
@@ -160,6 +158,11 @@ class MainWindow(QMainWindow):
             self._mostrar_vista(3)
 
     def on_anio_cambiado(self, year):
+        # El GP abierto es del año anterior: sus fichas se abrirían con el nuevo.
+        if self.stack.currentWidget() is self.detail_view:
+            self.ir_a_calendario()
+        if self._origen_ficha == 1:
+            self._origen_ficha = 0
         self.calendar_view.cargar_calendario(year)
         # La clasificación se pide recién cuando se la mira: antes, cada año que
         # pasaba con las flechas era una request a Ergast (que limita a 4/s y
@@ -196,7 +199,8 @@ class MainWindow(QMainWindow):
                       self.pilotos_view):
             for worker in list(getattr(vista, '_workers_activos', [])):
                 worker.requestInterruption()   # FotosWorker corta entre foto y foto
-                worker.wait(self.TIMEOUT_CIERRE_MS)
+                if not worker.wait(self.TIMEOUT_CIERRE_MS):
+                    self.workers_colgados = True
         super().closeEvent(evento_cierre)
 
 
@@ -217,4 +221,9 @@ with open(resource_path("style.qss"), "r", encoding="utf-8") as f:
     app.setStyleSheet(f.read())
 ventana = MainWindow()
 ventana.show()
-app.exec()
+codigo = app.exec()
+if ventana.workers_colgados:
+    # Un QThread que sigue bajando (una request sin respuesta) no se puede
+    # cortar: destruirlo aborta el proceso. Se sale sin destructores.
+    os._exit(codigo)
+sys.exit(codigo)

@@ -22,6 +22,7 @@ ARCHIVO = "historial_f1.db"
 USER_AGENT = "F1CalendarApp/2.0"
 PAUSA_S = 0.3              # entre páginas: Jolpica admite 4 consultas por segundo
 ESPERA_429_S = 60
+ESPERA_RED_S = 10
 ANIO_CLASIFICACION = 1994  # Ergast no tiene clasificaciones antes de esto
 
 # positionText de Ergast: F = no clasificó, W = se retiró antes de largar.
@@ -62,7 +63,8 @@ TABLAS_POR_TEMPORADA = ("carreras", "resultados", "clasificacion",
 
 def pedir_json(ruta, offset=0, reintentos=1):
     """Una página de la API (`MRData`). `ruta` es lo que va después de /f1/,
-    sin el .json: "2025/results"."""
+    sin el .json: "2025/results". Con `reintentos` > 1 reintenta los 429 (tras
+    un minuto), los 5xx y los cortes de red (tras unos segundos)."""
     url = f"{API}/{ruta}.json?limit=100&offset={offset}"
     pedido = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     for intento in range(reintentos):
@@ -70,9 +72,13 @@ def pedir_json(ruta, offset=0, reintentos=1):
             with urllib.request.urlopen(pedido, timeout=30) as respuesta:
                 return json.load(respuesta)["MRData"]
         except urllib.error.HTTPError as error:
-            if error.code != 429 or intento == reintentos - 1:
+            if (error.code != 429 and error.code < 500) or intento == reintentos - 1:
                 raise
-            time.sleep(ESPERA_429_S)
+            time.sleep(ESPERA_429_S if error.code == 429 else ESPERA_RED_S)
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if intento == reintentos - 1:
+                raise
+            time.sleep(ESPERA_RED_S)
 
 
 def _paginar(ruta, pedir):
@@ -506,8 +512,11 @@ def ganadores_circuito(circuit_id, pedir=pedir_json):
     ]
     ganadores.sort(key=lambda g: (g["anio"], g["ronda"]), reverse=True)
     os.makedirs(os.path.dirname(ruta), exist_ok=True)
-    with open(ruta, "w", encoding="utf-8") as archivo:
+    # A un temporal y después se reemplaza: cerrar la app a mitad de la
+    # escritura dejaba un JSON roto que tiraba error hasta que venciera.
+    with open(ruta + ".tmp", "w", encoding="utf-8") as archivo:
         json.dump(ganadores, archivo, ensure_ascii=False)
+    os.replace(ruta + ".tmp", ruta)
     return ganadores
 
 

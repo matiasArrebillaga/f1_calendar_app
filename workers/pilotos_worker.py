@@ -25,11 +25,12 @@ def actualizar_temporada(con, year):
         if historial.temporada_completa(con, year) or year in _ACTUALIZADAS:
             return
         guardada = historial.temporada_guardada(con, year)
-        # En curso: sólo las rondas nuevas. Una que ya terminó se baja entera
-        # una última vez, por si corrigieron resultados después de guardarla.
+        # En curso: la última guardada (por si la corrigieron después, p. ej.
+        # una sanción) y las nuevas. Una que ya terminó se baja entera una
+        # última vez, por si corrigieron resultados después de guardarla.
         desde = None
         if guardada and year >= anio_actual():
-            desde = (historial.ultima_ronda(con, year) or 0) + 1
+            desde = historial.ultima_ronda(con, year) or 1
         try:
             historial.descargar_temporada(con, year, desde=desde)
         except Exception:

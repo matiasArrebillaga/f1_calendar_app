@@ -197,13 +197,19 @@ class StandingsView(QWidget):
 
     def on_error(self, mensaje):
         worker = self.sender()
-        # Cacheamos también el fallo: los años sin datos en Ergast (la década
-        # del 50 no tiene constructores) si no, re-pegaban en cada visita.
-        self._cache_por_anio[worker.year] = None
+        # Un año sin datos se cachea: si no, re-pegaba en cada visita. Un
+        # error de red no: la conexión puede volver.
+        if worker.sin_datos:
+            self._cache_por_anio[worker.year] = None
         if worker.year != self.year:
             return
 
         self._mostrar_sin_datos(self.year)
+        if worker.sin_datos:
+            return
+        self._set_estado(f"No se pudo cargar la clasificación de {self.year}. "
+                         "Revisá la conexión y volvé a abrir la pestaña.", "error")
+        self.year = None   # así showEvent lo vuelve a pedir
 
     def _mostrar_sin_datos(self, year):
         self._set_estado(f"No hay clasificación disponible para {year}.", "vacio")
@@ -222,12 +228,12 @@ class StandingsView(QWidget):
         pilotos = [
             (_nombre_piloto(p),
              " / ".join(p['equipos']), color_equipo(p['constructor_id']),
-             int(p['puntos'] or 0), int(p['victorias'] or 0))
+             p['puntos'] or 0, int(p['victorias'] or 0))
             for p in datos['pilotos']
         ]
         equipos = [
             (e['nombre'], None, color_equipo(e['constructor_id']),
-             int(e['puntos'] or 0), int(e['victorias'] or 0))
+             e['puntos'] or 0, int(e['victorias'] or 0))
             for e in datos['equipos']
         ]
         self._llenar_tabla(self.tabla_pilotos, pilotos, ['Pos', 'Piloto', 'Equipo'],
@@ -263,7 +269,7 @@ class StandingsView(QWidget):
             celdas = [str(fila + 1), nombre]
             if con_equipo:
                 celdas.append(equipo)
-            celdas += [str(puntos), "—" if fila == 0 else f"−{filas[0][3] - puntos}", str(victorias)]
+            celdas += [f"{puntos:g}", "—" if fila == 0 else f"−{filas[0][3] - puntos:g}", str(victorias)]
 
             for col, texto in enumerate(celdas):
                 item = QTableWidgetItem(texto)
@@ -317,12 +323,12 @@ class StandingsView(QWidget):
         (_, valor_lider, detalle_lider), (_, valor_ventaja, detalle_ventaja), \
             (_, valor_juego, detalle_juego) = self._kpis
         valor_lider.setText(nombre(lider))
-        detalle_lider.setText(f"{int(lider['puntos'] or 0)} puntos")
+        detalle_lider.setText(f"{lider['puntos'] or 0:g} puntos")
 
         if len(filas) > 1:
             segundo = filas[1]
-            ventaja = int((lider['puntos'] or 0) - (segundo['puntos'] or 0))
-            valor_ventaja.setText(f"<span style='color:{DATO};'>+{ventaja}</span>")
+            ventaja = (lider['puntos'] or 0) - (segundo['puntos'] or 0)
+            valor_ventaja.setText(f"<span style='color:{DATO};'>+{ventaja:g}</span>")
             detalle_ventaja.setText(f"sobre {nombre(segundo)}")
         else:
             valor_ventaja.setText("—")

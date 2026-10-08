@@ -103,7 +103,7 @@ export function armarCircuito(ev, comun) {
     </div>`;
 }
 
-export function armarDetalle(ev, activa, contenido, comun) {
+function armarDetalle(ev, activa, contenido, comun) {
   return html`<div class="cab">
       <span class="badge">R${ev.ronda}</span>
       <h2>${ev.nombre}</h2>
@@ -142,9 +142,9 @@ export function montar(main, ruta, comun) {
     const mio = ++pedido;
     const caja = main.querySelector("#sesion");
     caja.innerHTML = html`<p class="estado">Cargando…</p>`;
-    const ev = await evento(ruta, comun);
-    const sesion = ev.sesiones.find((s) => s.clave === boton.dataset.sesion);
-    const contenido = await armarSesion(ev, sesion, comun).catch(errorSesion);
+    const contenido = await evento(ruta, comun)
+      .then((ev) => armarSesion(ev, ev.sesiones.find((s) => s.clave === boton.dataset.sesion), comun))
+      .catch(errorSesion);
     if (mio === pedido) caja.innerHTML = contenido;
   });
   capa(main, ruta, comun);
@@ -156,7 +156,14 @@ export async function capa(main, ruta, comun) {
   document.body.classList.toggle("con-capa", Boolean(ruta.capa));
   if (!ruta.capa) return;
   const hash = location.hash;
-  const ev = await evento(ruta, comun);
+  let ev;
+  try {
+    ev = await evento(ruta, comun);
+  } catch {
+    // Sin red: la capa no se abre, pero la página no queda trabada sin scroll.
+    document.body.classList.remove("con-capa");
+    return;
+  }
   const contenido = ruta.capa === "mapa"
     ? armarMapa(ev)
     : armarHoja(ev, comun.circuitos[ev.circuitId], (await ganadores().catch(() => ({})))[ev.circuitId]);

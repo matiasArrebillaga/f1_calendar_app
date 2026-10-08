@@ -72,13 +72,20 @@ const resultados = await Promise.allSettled(suscripciones.map((suscripcion) =>
 // Nunca imprimir el error entero: trae el endpoint de la suscripción y los
 // logs de un repo público son públicos. 404/410 = suscripción vencida: en ese
 // celular, volver a tocar la campana y reemplazar su texto en la lista.
-const fallas = resultados.flatMap((r, i) =>
-  (r.status === "rejected" ? [`celular ${i + 1}: ${r.reason.statusCode ?? r.reason.name}`] : []));
-const enviados = resultados.length - fallas.length;
+const VENCIDA = [404, 410];
+const fallas = [], vencidas = [];
+resultados.forEach((r, i) => {
+  if (r.status === "fulfilled") return;
+  (VENCIDA.includes(r.reason.statusCode) ? vencidas : fallas).push(`celular ${i + 1}: ${r.reason.statusCode ?? r.reason.name}`);
+});
+const enviados = resultados.length - fallas.length - vencidas.length;
 if (enviados) console.log(`Avisado: ${id} (${enviados} de ${resultados.length})`);
-// Si a alguno le llegó, la sesión cuenta como avisada: si no, el próximo
-// intento se lo repetiría a los que ya lo recibieron.
-if (enviados && !prueba) {
+// Una vencida no se arregla reintentando: se avisa con una anotación (sin
+// fallar cada 10 min) y en ese celular hay que volver a tocar la campana.
+if (vencidas.length) console.log(`::warning::Suscripción vencida, volvé a copiarla desde la campana: ${vencidas.join(", ")}`);
+// Si a alguno le llegó (o sólo quedan vencidas), la sesión cuenta como
+// avisada: si no, el próximo intento se lo repetiría a los que ya lo recibieron.
+if (enviados + vencidas.length && !prueba) {
   writeFileSync(ULTIMA, id);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `id=${id}
 `);

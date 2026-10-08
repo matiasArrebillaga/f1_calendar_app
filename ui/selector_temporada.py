@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QLineEdit
-from PySide6.QtGui import QIntValidator
-from PySide6.QtCore import Signal, Qt, QSize, QTimer
+from PySide6.QtGui import QRegularExpressionValidator
+from PySide6.QtCore import QRegularExpression, Signal, Qt, QSize, QTimer
 from datetime import datetime
 
 from ui.icons import icono, MUTED
@@ -42,7 +42,10 @@ class SelectorTemporada(QFrame):
         self.campo_anio.setObjectName("campoAnio")
         self.campo_anio.setAlignment(Qt.AlignCenter)
         self.campo_anio.setFixedWidth(72)
-        self.campo_anio.setValidator(QIntValidator(self.ANIO_MIN, self.ANIO_MAX))
+        # Sólo dígitos, sin rango: con QIntValidator(1950, …) un "19" a medio
+        # escribir no dispara editingFinished y el campo quedaba mostrando otro
+        # año que el cargado. El rango lo pone ir_a_anio.
+        self.campo_anio.setValidator(QRegularExpressionValidator(QRegularExpression(r"\d{0,4}")))
         self.campo_anio.setToolTip(f"Año entre {self.ANIO_MIN} y {self.ANIO_MAX}")
 
         fila = QHBoxLayout()

@@ -1,7 +1,9 @@
 name: Avisos de sesiones
 on:
   schedule:
-    # Cada 10 min. GitHub a veces lo atrasa: por eso la ventana es de 35 min.
+    # Respaldo: GitHub lo corre cuando puede (horas de atraso) y lo apaga tras
+    # 60 días sin commits. El disparo confiable es externo: un cron que llama
+    # a workflow_dispatch cada 10 min (ver docs/avisos-cron-externo.md).
     - cron: "*/10 * * * *"
   workflow_dispatch:
     inputs:

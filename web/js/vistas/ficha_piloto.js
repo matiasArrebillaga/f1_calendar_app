@@ -1,5 +1,5 @@
 import { html } from "../html.js";
-import { edadEn, gpCorto, numero, sumarCarrera } from "../formato.js";
+import { edadEn, gpCorto, numero, sumarCarrera, textoPosicion } from "../formato.js";
 import { carrerasPrevias, temporada } from "../api.js";
 import { bandera } from "./filas.js";
 import { armarFoto, armarRetrato, cargarFotos, comprimirAlBajar } from "./pilotos.js";
@@ -8,9 +8,6 @@ export const encabezado = (ruta) => ({ titulo: "Pilotos", volver: `#/pilotos/${r
 
 const GRIS = "#3F4957";
 const promedio = (v) => (v == null ? "—" : v.toFixed(1));
-// positionText de Ergast cuando no hay posición: D descalificado, F no
-// clasificó, W no largó; el resto, abandono.
-const TEXTO_SIN_POSICION = { D: "DSQ", F: "DNQ", W: "NC" };
 
 // ponytail: "sumó puntos" = top 10, como desde 2010; antes puntuaban menos
 // puestos. Si molesta, exportar los puntos de cada carrera en la tira.
@@ -27,7 +24,7 @@ export function filasCarrera(tira, comun) {
       gp: gpCorto(comun.eventos[t.gp] ?? t.gp),
       // W (no largó) y F (no clasificó) traen grilla 0: no es "desde boxes".
       largada: ["W", "F"].includes(t.posicion_texto) ? null : t.largada ?? null,
-      texto: p ?? TEXTO_SIN_POSICION[t.posicion_texto] ?? "DNF",
+      texto: textoPosicion(t),
       clase: claseCaja(p),
       delta: g == null ? "" : g > 0 ? `▲${g}` : g < 0 ? `▼${-g}` : "=",
       claseDelta: g > 0 ? "sube" : g < 0 ? "baja" : "",

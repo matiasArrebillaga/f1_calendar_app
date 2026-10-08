@@ -126,6 +126,6 @@ test("filas: sin texto de largada si no largó (W/F), aunque la grilla diga 0", 
   ];
   const salida = String(armarFichaPiloto({ ...PILOTO_ANT, tira }, null, COMUN, 2026));
   assert.doesNotMatch(salida, /Largó desde boxes/);
-  assert.match(salida, />NC</);
+  assert.match(salida, />DNS</);
   assert.match(salida, />DNQ</);
 });

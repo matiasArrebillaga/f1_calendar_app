@@ -19,7 +19,6 @@ class CalendarView(QWidget):
 
     ANCHO_TARJETA = 200
     ESPACIADO = 10
-    RESERVA_LATERAL = 0
 
     RETARDO_ENTRADA = 18   # ms entre la entrada de una tarjeta y la siguiente
     MAX_ESCALONES = 12     # tope: una temporada de 24 carreras no tarda 2s
@@ -50,7 +49,10 @@ class CalendarView(QWidget):
         self._workers_activos = []  # referencias vivas mientras corren, evita el crash
         self._year_actual = None
         self._recien_cargado = False
-        self._animaciones_entrada = []
+        # Con la app abierta, una carrera que termina pasa la "próxima" a la siguiente.
+        self._reloj = QTimer(self)
+        self._reloj.timeout.connect(self._revisar_proxima)
+        self._reloj.start(60_000)
 
         # --- Fijo arriba: encabezado + próxima carrera ---
         self.eyebrow = QLabel()
@@ -137,11 +139,7 @@ class CalendarView(QWidget):
         # quedan visibles: salen del layout pero siguen pintadas donde estaban,
         # así que se ven dos (o tres) años superpuestos y parece que el
         # calendario no se actualizó.
-        for widget in self._orden:
-            widget.hide()
-        while self.grid.count():
-            self.grid.takeAt(0)
-        self._tarjetas, self._orden, self._encabezados = [], [], []
+        self._desmontar()
 
         if year in self._cache_por_anio:
             self._cache_por_anio.move_to_end(year)
@@ -163,14 +161,23 @@ class CalendarView(QWidget):
         self._workers_activos.append(worker)
         worker.start()
 
+    def _desmontar(self):
+        for widget in self._orden:
+            widget.hide()
+        while self.grid.count():
+            self.grid.takeAt(0)
+        self._tarjetas, self._orden, self._encabezados = [], [], []
+
     def _limpiar_worker(self, worker):
         if worker in self._workers_activos:
             self._workers_activos.remove(worker)
 
     def _on_calendario_cargado(self, calendario):
         worker = self.sender()
-        if worker.year != self._year_actual:
-            return  # llegó tarde: el usuario ya cambió de año
+        # Llegó tarde: el usuario ya cambió de año, o fue A→B→A y el primer
+        # pedido de A ya armó las tarjetas.
+        if worker.year != self._year_actual or worker.year in self._cache_por_anio:
+            return
 
         self.spinner.detener()
         self._set_estado("")
@@ -179,14 +186,32 @@ class CalendarView(QWidget):
         if calendario is None or calendario.empty:
             self._set_estado(f"No hay calendario disponible para {worker.year}.", "vacio")
             return
+        self._construir(worker.year, calendario)
 
-        terminadas = self._terminadas(calendario)
-        pendientes = calendario.index[~terminadas]
-        indice_proxima = pendientes.min() if len(pendientes) else None
+    def _fila_proxima(self, calendario):
+        pendientes = (~self._terminadas(calendario)).to_numpy().nonzero()[0]
+        return int(pendientes[0]) if len(pendientes) else None
+
+    def _revisar_proxima(self):
+        if not self._tarjetas:
+            return
+        actual = next((t.indice_fila for t in self._tarjetas if t.estado == 'proxima'), None)
+        if self._fila_proxima(self.calendario) == actual:
+            return
+        _, orden, _ = self._cache_por_anio.pop(self._year_actual)
+        self._desmontar()
+        for widget in orden:
+            widget.deleteLater()
+        self._construir(self._year_actual, self.calendario)
+
+    def _construir(self, year, calendario):
+        self.calendario = calendario
+        terminadas = self._terminadas(calendario).to_numpy()
+        fila_proxima = self._fila_proxima(calendario)
 
         orden, encabezados = [], []
         meses = calendario['EventDate'].dt.month
-        for fila, (indice_pandas, evento) in enumerate(calendario.iterrows()):
+        for fila, (_, evento) in enumerate(calendario.iterrows()):
             mes = evento['EventDate'].month
             if not encabezados or encabezados[-1][0] != mes:
                 cantidad = int((meses == mes).sum())
@@ -196,9 +221,9 @@ class CalendarView(QWidget):
                 encabezados.append((mes, encabezado))
                 orden.append(encabezado)
 
-            if indice_pandas == indice_proxima:
+            if fila == fila_proxima:
                 estado = 'proxima'
-            elif terminadas[indice_pandas]:
+            elif terminadas[fila]:
                 estado = 'pasado'
             else:
                 estado = 'futuro'
@@ -207,7 +232,7 @@ class CalendarView(QWidget):
             tarjeta.clickeada.connect(self.evento_seleccionado.emit)
             orden.append(tarjeta)
 
-        self._cache_por_anio[worker.year] = (calendario, orden, encabezados)
+        self._cache_por_anio[year] = (calendario, orden, encabezados)
         self._recortar_cache()
         self._montar(orden, encabezados, animar=True)
 
@@ -310,7 +335,7 @@ class CalendarView(QWidget):
 
     def _calcular_columnas(self):
         # La última columna no lleva espaciado a la derecha.
-        ancho_disponible = self.scroll.viewport().width() - self.RESERVA_LATERAL
+        ancho_disponible = self.scroll.viewport().width()
         ancho_por_tarjeta = self.ANCHO_TARJETA + self.ESPACIADO
         return max(1, (ancho_disponible + self.ESPACIADO) // ancho_por_tarjeta)
 
@@ -321,7 +346,7 @@ class CalendarView(QWidget):
         # ANCHO_TARJETA es el mínimo: lo que sobra se reparte entre las
         # columnas, así la grilla llega al mismo borde que la próxima carrera.
         columnas = self._calcular_columnas()
-        ancho_disponible = self.scroll.viewport().width() - self.RESERVA_LATERAL
+        ancho_disponible = self.scroll.viewport().width()
         ancho = max(self.ANCHO_TARJETA,
                     (ancho_disponible - self.ESPACIADO * (columnas - 1)) // columnas)
         for tarjeta in self._tarjetas:
@@ -362,7 +387,6 @@ class CalendarView(QWidget):
     def _animar_entrada(self):
         # ponytail: un efecto de opacidad por tarjeta (~24 en una temporada
         # completa). Si llega a trabar, animar solo las filas visibles.
-        self._animaciones_entrada = []
         for indice, tarjeta in enumerate(self._tarjetas):
             efecto = QGraphicsOpacityEffect(tarjeta)
             efecto.setOpacity(0.0)
@@ -384,7 +408,6 @@ class CalendarView(QWidget):
                     t._interior.setGraphicsEffect(None), a.deleteLater()
                 )
             )
-            self._animaciones_entrada.append(animacion)
 
             retardo = min(indice, self.MAX_ESCALONES) * self.RETARDO_ENTRADA
             QTimer.singleShot(retardo, animacion.start)

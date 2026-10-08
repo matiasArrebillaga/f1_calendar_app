@@ -39,3 +39,9 @@ jobs:
       env:
         QT_QPA_PLATFORM: offscreen
       run: pytest
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Avisos (sintaxis)
+      # enviar.mjs pega a la red y manda pushes: acá sólo se chequea que parsee.
+      run: node --check avisos/enviar.mjs

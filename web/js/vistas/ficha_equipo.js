@@ -1,5 +1,5 @@
 import { html } from "../html.js";
-import { gpCorto, numero, sigla } from "../formato.js";
+import { gpCorto, numero, sigla, textoPosicion } from "../formato.js";
 import { temporada } from "../api.js";
 import { bandera } from "./filas.js";
 import { armarFoto, armarLogo, cargarFotos, comprimirAlBajar } from "./pilotos.js";
@@ -12,15 +12,13 @@ const FILAS_DUELO = [
   ["victorias", "Victorias"], ["podios", "Podios"], ["poles", "Poles"],
 ];
 
-const posicion = (fila) => fila.posicion ?? "DNF";
-
 export function filasCaraACara(cara, comun) {
   return [...cara.por_carrera].reverse().map((c) => ({
     ronda: c.ronda,
     bandera: comun.banderas[c.pais] ?? null,
     gp: gpCorto(comun.eventos[c.gp] ?? c.gp),
-    a: { texto: posicion(c.a), gana: c.adelante === 0 },
-    b: { texto: posicion(c.b), gana: c.adelante === 1 },
+    a: { texto: textoPosicion(c.a), gana: c.adelante === 0 },
+    b: { texto: textoPosicion(c.b), gana: c.adelante === 1 },
   }));
 }
 

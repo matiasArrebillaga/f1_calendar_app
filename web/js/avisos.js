@@ -1,7 +1,7 @@
 // Suscripción a los avisos antes de cada sesión. La manda .github/workflows/
 // avisos.yaml (avisos/enviar.mjs) con la clave privada, que es un secreto del
 // repo. Sin servidor, la suscripción se copia a mano como secreto
-// PUSH_SUBSCRIPTION: es una app personal, un solo celular.
+// PUSH_SUBSCRIPTION: una suscripción, o una lista JSON si son varios celulares.
 export const VAPID_PUBLICA = "BD4OYGytp3yuBh9faHs_Bs22_ttn1FGWzQ7V8P3yibu7lqH6s-nGPH8786mrJUIKWWaEdyR7dCPbOJXxmHZfDck";
 
 export const claveEnBytes = (b64url) =>

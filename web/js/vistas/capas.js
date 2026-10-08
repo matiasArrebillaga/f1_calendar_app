@@ -9,7 +9,7 @@ export const FILAS_CORTAS = [
   ["Récord de vuelta", (d) => d.record_vuelta],
   ["Primer GP", (d) => d.primer_gp],
 ];
-export const FILAS_COMPLETAS = [["Tipo", (d) => d.tipo], ["Sentido de giro", (d) => d.sentido], ...FILAS_CORTAS];
+const FILAS_COMPLETAS = [["Tipo", (d) => d.tipo], ["Sentido de giro", (d) => d.sentido], ...FILAS_CORTAS];
 
 export const armarFicha = (datos, filas) =>
   html`<div class="ficha">${filas.map(([etiqueta, valor]) => html`<span>${etiqueta}</span><span>${valor(datos)}</span>`)}</div>`;

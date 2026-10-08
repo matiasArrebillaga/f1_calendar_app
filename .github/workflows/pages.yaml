@@ -16,7 +16,9 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Cortar un deploy a la mitad puede dejar Pages a medio publicar: el
+  # siguiente espera.
+  cancel-in-progress: false
 
 jobs:
   publicar:
@@ -29,6 +31,10 @@ jobs:
     - uses: actions/setup-python@v5
       with:
         python-version: "3.14"
+    - name: Tests del exportador
+      run: |
+        pip install pytest pandas
+        python -m pytest test_exportar_web.py test_historial.py
     - name: Datos de la temporada en curso
       # Sólo stdlib: no hace falta requirements.txt. Si falla, no se publica
       # y queda en línea la versión anterior.

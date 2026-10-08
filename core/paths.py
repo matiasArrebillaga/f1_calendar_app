@@ -1,11 +1,15 @@
 import sys
 import os
 
+# La carpeta del proyecto, no la de trabajo: correr desde otro lado creaba una
+# base y cachés vacíos ahí.
+PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def resource_path(ruta_relativa):
     """Recursos empaquetados de SOLO LECTURA (siempre presentes, vengan
     del build o del proyecto en desarrollo)."""
-    base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
+    base_path = getattr(sys, '_MEIPASS', PROYECTO)
     return os.path.join(base_path, ruta_relativa)
 
 
@@ -17,7 +21,7 @@ def data_path(nombre_carpeta):
         base = os.path.join(os.environ.get('LOCALAPPDATA') or os.path.expanduser('~'),
                             'F1CalendarApp')
     else:
-        base = os.path.abspath(".")
+        base = PROYECTO
     return os.path.join(base, nombre_carpeta)
 
 

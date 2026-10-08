@@ -35,7 +35,9 @@ class EventDetailView(QWidget):
 
     CODIGOS_SESION = {'Practice 1': 'FP1', 'Practice 2': 'FP2', 'Practice 3': 'FP3',
                       'Qualifying': 'Q', 'Sprint': 'S', 'Sprint Qualifying': 'SQ',
-                      'Race': 'R'}
+                      'Sprint Shootout': 'SS', 'Race': 'R'}
+    # Antes de 2018 FastF1 sólo tiene clasificación y carrera (vía Ergast).
+    PRIMER_ANIO_COMPLETO = 2018
 
     def __init__(self):
         super().__init__()
@@ -218,6 +220,8 @@ class EventDetailView(QWidget):
         self.tabla_resultados.clear()
         self.tabla_resultados.setRowCount(0)
         self._set_estado("")
+        self.spinner.detener()
+        self._sesion_pedida = None   # lo que llegue del GP anterior se descarta
 
         year = int(evento['EventDate'].year)
         gp = int(evento['RoundNumber'])
@@ -233,11 +237,13 @@ class EventDetailView(QWidget):
 
             if nombre_sesion and str(nombre_sesion) != 'nan':
                 fecha_sin_tz = a_gmt_menos_3(fecha_sesion)
+                # Los calendarios viejos no traen horarios: vale el día de la carrera.
+                referencia = fecha_sin_tz if pd.notna(fecha_sin_tz) else evento['EventDate']
                 info_sesiones_ordenada.append({
                     'indice': i,
                     'nombre': nombre_sesion,
                     'fecha': fecha_sin_tz,
-                    'pasada': pd.notna(fecha_sin_tz) and fecha_sin_tz < hoy,
+                    'pasada': referencia < hoy,
                 })
 
         # Buscamos cuál es la próxima sesión sin correr (la más cercana en el tiempo).
@@ -267,6 +273,13 @@ class EventDetailView(QWidget):
 
             codigo = self.CODIGOS_SESION.get(match['nombre'], match['nombre'])
             nombre_es = traducir_sesion(match['nombre'])
+            if year < self.PRIMER_ANIO_COMPLETO and codigo not in ('Q', 'R'):
+                boton.setText(f"{nombre_es}\nsin datos")
+                boton.setToolTip(f"{nombre_es} — no hay resultados de antes de 2018")
+                boton.setEnabled(False)
+                boton.style().unpolish(boton)
+                boton.style().polish(boton)
+                continue
             self.sesiones_info[codigo] = {
                 'nombre': nombre_es, 'fecha': match['fecha'], 'pasada': match['pasada'],
             }
@@ -303,7 +316,8 @@ class EventDetailView(QWidget):
 
         # Abre en la sesión que más interesa: la última que se corrió (sus
         # resultados) o, si no se corrió ninguna, la próxima.
-        pasadas = [s['indice'] for s in info_sesiones_ordenada if s['pasada']]
+        pasadas = [s['indice'] for s in info_sesiones_ordenada
+                   if s['pasada'] and self.botones_sesion[s['indice']].isEnabled()]
         inicial = pasadas[-1] if pasadas else indice_proxima
         if inicial is not None:
             self.botones_sesion[inicial].click()
@@ -317,6 +331,7 @@ class EventDetailView(QWidget):
         else:
             # Una sesión futura no tiene nada que bajar: no hay request que hacer.
             self.codigo_sesion = codigo
+            self._sesion_pedida = None   # si llega la que se pidió antes, no pisa esto
             self.spinner.detener()
             self._set_estado("")
             self._mostrar_pendiente(codigo)
@@ -364,7 +379,7 @@ class EventDetailView(QWidget):
         fuente_datos = QFont("Consolas")
         fuente_datos.setStyleHint(QFont.Monospace)
 
-        es_clasificacion = self.codigo_sesion in ('Q', 'SQ')
+        es_clasificacion = self.codigo_sesion in ('Q', 'SQ', 'SS')
         es_practica_o_clasificacion = es_clasificacion or self.codigo_sesion in (
             'FP1', 'FP2', 'FP3'
         )
@@ -644,7 +659,9 @@ class EventDetailView(QWidget):
         if pd.isna(valor):
             return "—"
 
-        if nombre_col in ('Position', 'GridPosition', 'Points', 'Laps'):
+        if nombre_col == 'Points':
+            return f"{valor:g}"   # 4.5 en las carreras a mitad de puntos
+        if nombre_col in ('Position', 'GridPosition', 'Laps'):
             return str(int(valor))
 
         if nombre_col in ('Time', 'BestLapTime'):

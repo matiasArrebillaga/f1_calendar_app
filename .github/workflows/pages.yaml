@@ -32,9 +32,11 @@ jobs:
       with:
         python-version: "3.14"
     - name: Tests del exportador
+      # Sólo los del exportador: test_historial.py completo necesita fastf1, y
+      # ya corre entero en Calendario_test.
       run: |
         pip install pytest pandas
-        python -m pytest test_exportar_web.py test_historial.py
+        python -m pytest test_exportar_web.py
     - name: Datos de la temporada en curso
       # Sólo stdlib: no hace falta requirements.txt. Si falla, no se publica
       # y queda en línea la versión anterior.

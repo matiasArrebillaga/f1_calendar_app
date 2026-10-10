@@ -42,13 +42,15 @@ export function armarResultadosJolpica(race, recurso, comun) {
 // entre los pilotos de la temporada (idsPorCodigo).
 export function armarResultadosOpenF1({ resultados: filas, pilotos }, comun, idsPorCodigo, anio) {
   const porNumero = new Map(pilotos.map((p) => [p.driver_number, p]));
-  return [...filas].sort((a, b) => (a.position ?? 99) - (b.position ?? 99)).map((r) => {
+  // Sin posición o con texto ("RT", retirado): al final.
+  const orden = (r) => (typeof r.position === "number" ? r.position : 99);
+  return [...filas].sort((a, b) => orden(a) - orden(b)).map((r) => {
     const p = porNumero.get(r.driver_number) ?? {};
     const id = idsPorCodigo.get(p.name_acronym);
     // En las clasificaciones duration y gap vienen por Q: [Q1, Q2, Q3].
     const porQ = Array.isArray(r.duration);
     const mejor = porQ ? r.duration.filter(Boolean).at(-1) : r.duration;
-    let dato = "—";
+    let dato = r.dsq ? "Descalificado" : r.dns ? "No largó" : r.dnf ? "Abandono" : "—";
     if (mejor && (porQ || r.position === 1)) dato = formatoVuelta(mejor);
     else if (mejor) dato = typeof r.gap_to_leader === "number" ? formatoDiferencia(r.gap_to_leader) : r.gap_to_leader;
     return filaResultado({
@@ -57,7 +59,8 @@ export function armarResultadosOpenF1({ resultados: filas, pilotos }, comun, ids
       nombre: p.first_name ? `${p.first_name} ${p.last_name}` : `#${r.driver_number}`,
       sub: p.team_name,
       dato,
-      extra: porQ ? "" : `${r.number_of_laps} vueltas`,
+      // Sprint y carrera traen points; las libres no.
+      extra: porQ ? "" : r.points != null ? puntos(r.points) : `${r.number_of_laps} vueltas`,
       href: id ? `#/piloto/${anio}/${id}` : null,
     });
   });
@@ -68,8 +71,8 @@ export function armarPendiente(sesion, ahora) {
   if (sesion.fecha > ahora) {
     return html`<div class="estado">${etiqueta}<h3>Todavía no se corrió</h3><p>${diaHora(sesion.fecha)} · hora local</p></div>`;
   }
-  return html`<div class="estado">${etiqueta}<h3>Sin resultados</h3><p>${sesion.openf1
-    ? "Los resultados de los entrenamientos y de la clasificación sprint están desde 2023."
+  return html`<div class="estado">${etiqueta}<h3>Sin resultados</h3><p>${!sesion.jolpica
+    ?"Los resultados de los entrenamientos y de la clasificación sprint están desde 2023."
     : "Todavía no hay resultados publicados para esta sesión."}</p></div>`;
 }
 
@@ -84,7 +87,10 @@ async function armarSesion(ev, sesion, comun) {
   if (sesion.jolpica) {
     const race = await resultados(ev.anio, ev.ronda, sesion.jolpica);
     if (race) filas = armarResultadosJolpica(race, sesion.jolpica, comun);
-  } else if (ev.anio >= 2023) {
+  }
+  // Jolpica a veces tarda horas (o hasta el lunes) en cargar la ronda:
+  // mientras tanto, OpenF1.
+  if (!filas.length && ev.anio >= 2023) {
     const datos = await sesionOpenF1(ev.anio, sesion.openf1, sesion.dia);
     if (datos?.resultados.length) {
       const deLaTemporada = await temporada(ev.anio, comun).catch(() => null);

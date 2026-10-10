@@ -12,7 +12,8 @@ const PUNTOS_SPRINT = { pilotos: 8, equipos: 8 + 7 };
 
 // Sesiones de un fin de semana con la clave que usa Jolpica en el calendario.
 // `jolpica`: el recurso que trae sus resultados. `openf1`: el nombre de la
-// sesión en OpenF1, que sólo tiene datos desde 2023.
+// sesión en OpenF1, que sólo tiene datos desde 2023 (en las de Jolpica, el
+// respaldo mientras Jolpica no cargó la ronda).
 const SESIONES = [
   { clave: "FirstPractice", nombre: "Entrenamiento 1", corto: "EL1", openf1: "Practice 1" },
   { clave: "SecondPractice", nombre: "Entrenamiento 2", corto: "EL2", openf1: "Practice 2" },
@@ -20,9 +21,9 @@ const SESIONES = [
   // En 2023 Jolpica la llamaba SprintShootout; OpenF1 usa el mismo nombre siempre.
   { clave: "SprintShootout", nombre: "Clasificación sprint", corto: "Clasif. sprint", openf1: "Sprint Qualifying" },
   { clave: "SprintQualifying", nombre: "Clasificación sprint", corto: "Clasif. sprint", openf1: "Sprint Qualifying" },
-  { clave: "Sprint", nombre: "Sprint", corto: "Sprint", jolpica: "sprint" },
-  { clave: "Qualifying", nombre: "Clasificación", corto: "Clasif.", jolpica: "qualifying" },
-  { clave: "Race", nombre: "Carrera", corto: "Carrera", jolpica: "results" },
+  { clave: "Sprint", nombre: "Sprint", corto: "Sprint", jolpica: "sprint", openf1: "Sprint" },
+  { clave: "Qualifying", nombre: "Clasificación", corto: "Clasif.", jolpica: "qualifying", openf1: "Qualifying" },
+  { clave: "Race", nombre: "Carrera", corto: "Carrera", jolpica: "results", openf1: "Race" },
 ];
 
 const dosDigitos = (n) => String(n).padStart(2, "0");

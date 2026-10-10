@@ -87,12 +87,31 @@ test("libres de OpenF1: ordenados, diferencia, vueltas y link sólo si hay ficha
 
 test("clasificación sprint de OpenF1: duraciones por Q", () => {
   const datos = {
-    resultados: [{ position: 1, driver_number: 12, duration: [95.1, 94.6, null], gap_to_leader: [0, 0, null], number_of_laps: 15 }],
+    resultados: [
+      { position: "RT", driver_number: 6, duration: [null, null, null], gap_to_leader: [null, null, null], number_of_laps: 3 },
+      { position: 1, driver_number: 12, duration: [95.1, 94.6, null], gap_to_leader: [0, 0, null], number_of_laps: 15 },
+    ],
     pilotos: [{ driver_number: 12, first_name: "Andrea Kimi", last_name: "Antonelli", name_acronym: "ANT", team_name: "Mercedes", team_colour: "00D7B6" }],
   };
-  const salida = String(armarResultadosOpenF1(datos, COMUN, new Map(), 2026)[0]);
+  const [salida, retirado] = armarResultadosOpenF1(datos, COMUN, new Map(), 2026).map(String);
   assert.match(salida, /1:34\.600/);
   assert.doesNotMatch(salida, /vueltas/);
+  assert.match(retirado, /#6/);                          // "RT" va al final
+});
+
+test("sprint de OpenF1 (respaldo de Jolpica): puntos y abandonos", () => {
+  const datos = {
+    resultados: [
+      { position: null, driver_number: 18, duration: null, gap_to_leader: null, number_of_laps: 0, points: 0, dnf: true },
+      { position: 1, driver_number: 12, duration: 2388.162, gap_to_leader: 0, number_of_laps: 20, points: 8 },
+    ],
+    pilotos: [],
+  };
+  const [ganador, abandono] = armarResultadosOpenF1(datos, COMUN, new Map(), 2026).map(String);
+  assert.match(ganador, /39:48\.162/);
+  assert.match(ganador, /8 pts/);
+  assert.match(abandono, /Abandono/);
+  assert.match(abandono, /0 pts/);
 });
 
 test("arranca en la última sesión que ya empezó", () => {

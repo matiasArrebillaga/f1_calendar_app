@@ -6,7 +6,8 @@ const CACHE = "f1-v1";
 // web/test/sw.test.js verifica que estén todos los .js.
 const PRECACHE = [
   "./", "index.html", "style.css", "manifest.json", "icon-192.png", "datos/comun.json",
-  "js/api.js", "js/app.js", "js/avisos.js", "js/formato.js", "js/html.js",
+  "datos/indice.json",
+  "js/api.js", "js/app.js", "js/avisos.js", "js/buscador.js", "js/formato.js", "js/html.js", "js/ics.js",
   "js/vistas/calendario.js", "js/vistas/capas.js", "js/vistas/clasificacion.js",
   "js/vistas/detalle.js", "js/vistas/ficha_equipo.js", "js/vistas/ficha_piloto.js",
   "js/vistas/filas.js", "js/vistas/pilotos.js",

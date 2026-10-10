@@ -188,6 +188,25 @@ def copiar_mapas(origen="cache_tracks"):
     return copiados
 
 
+def indice(con, terminadas):
+    """Todos los pilotos y equipos con la última temporada terminada que
+    corrieron: el buscador de la web (Ctrl+K) lleva a esa ficha. Los que más
+    ganaron primero, así "senna" es Ayrton y no Bruno."""
+    marcas = ",".join("?" * len(terminadas))
+
+    def ultimos(sql):
+        return [{"id": i, "nombre": nombre, "anio": anio}
+                for i, nombre, anio in con.execute(sql.format(marcas), terminadas)]
+    return {
+        "pilotos": ultimos("SELECT p.driver_id, p.nombre || ' ' || p.apellido, MAX(r.temporada) "
+                           "FROM pilotos p JOIN resultados r USING (driver_id) WHERE r.temporada IN ({}) "
+                           "GROUP BY p.driver_id ORDER BY SUM(r.posicion = 1) DESC, MAX(r.temporada) DESC, p.apellido"),
+        "equipos": ultimos("SELECT e.constructor_id, e.nombre, MAX(r.temporada) "
+                           "FROM equipos e JOIN resultados r USING (constructor_id) WHERE r.temporada IN ({}) "
+                           "GROUP BY e.constructor_id ORDER BY SUM(r.posicion = 1) DESC, MAX(r.temporada) DESC, e.nombre"),
+    }
+
+
 def exportar_historico():
     con = historial.abrir_base()
     terminadas = temporadas_terminadas(con)
@@ -199,6 +218,7 @@ def exportar_historico():
     for anio in terminadas:
         escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), temporada(con, anio))
     escribir_json(os.path.join(DATOS, "carreras_previas.json"), carreras_previas(con))
+    escribir_json(os.path.join(DATOS, "indice.json"), indice(con, terminadas))
     print(f"{len(terminadas)} temporadas, {copiar_mapas()} mapas")
 
 

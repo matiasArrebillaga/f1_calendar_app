@@ -28,6 +28,7 @@ function pedir(url) {
 export const comun = () => pedir("datos/comun.json");
 export const carrerasPrevias = () => pedir("datos/carreras_previas.json");
 export const ganadores = () => pedir("datos/ganadores.json");
+export const indiceHistorico = () => pedir("datos/indice.json");
 
 export async function calendario(anio) {
   return (await pedir(`${JOLPICA}/${anio}.json?limit=100`)).MRData.RaceTable.Races;

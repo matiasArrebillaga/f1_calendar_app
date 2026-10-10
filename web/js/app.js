@@ -5,6 +5,7 @@ import { html } from "./html.js";
 import { ANIO_MIN, aEvento, hayEnVivo, parsearRuta, pestanaDe, rutaConAnio } from "./formato.js";
 import { calendario as pedirCalendario, comun as pedirComun } from "./api.js";
 import { suscribir } from "./avisos.js";
+import { abrirBuscador, cerrarBuscador } from "./buscador.js";
 import * as calendario from "./vistas/calendario.js";
 import * as detalle from "./vistas/detalle.js";
 import * as clasificacion from "./vistas/clasificacion.js";
@@ -37,6 +38,7 @@ const encabezado = document.getElementById("encabezado");
 const main = document.getElementById("contenido");
 let actual = null;   // { ruta, limpiar }
 let turno = 0;       // si el usuario navega mientras carga, lo viejo se descarta
+let comunActual = null;   // comun.json de la última pantalla, para el buscador y los atajos
 
 function armarEncabezado(ruta, info, anioActual) {
   if (info.volver) {
@@ -52,14 +54,35 @@ function armarEncabezado(ruta, info, anioActual) {
     </div>`;
 }
 
-function marcarPestana(ruta) {
+// La sección de primer nivel de una ruta: la ficha de un equipo vuelve a
+// Pilotos › Equipos, un GP al Calendario.
+const rutaDePestana = (ruta) => ({
+  vista: pestanaDe(ruta.vista),
+  solapa: ruta.vista === "equipo" ? "equipos" : ruta.vista === "piloto" ? "pilotos" : ruta.solapa,
+});
+
+// Año de la ruta pedida corrido `paso` temporadas, o null si se pasa de rango.
+function otroAnio(ruta, paso, anioActual) {
+  const anio = ruta.anio + paso;
+  return anio >= ANIO_MIN && anio <= anioActual ? rutaConAnio(rutaDePestana(ruta), anio) : null;
+}
+
+function marcarPestana(ruta, anioActual) {
   const pestana = pestanaDe(ruta.vista);
-  for (const a of document.querySelectorAll(".tabbar a")) {
+  const pestanas = [...document.querySelectorAll(".tabbar [data-pestana]")];
+  for (const a of pestanas) {
     a.classList.toggle("activa", a.dataset.pestana === pestana);
     a.href = `#/${a.dataset.pestana}/${ruta.anio}`;
   }
-  const pestanas = [...document.querySelectorAll(".tabbar a")];
   document.querySelector(".tabbar").style.setProperty("--i", pestanas.findIndex((a) => a.dataset.pestana === pestana));
+  // Selector de temporada de la barra lateral (sólo se ve en la PC).
+  const anterior = otroAnio(ruta, -1, anioActual);
+  const siguiente = otroAnio(ruta, 1, anioActual);
+  document.getElementById("lat-anio").innerHTML = html`<div class="temporada">
+    <a href="${anterior ?? "#"}" class="${anterior ? "" : "oculto"}" aria-label="Temporada anterior">${ICONO_ANTERIOR}</a>
+    <span>${ruta.anio}</span>
+    <a href="${siguiente ?? "#"}" class="${siguiente ? "" : "oculto"}" aria-label="Temporada siguiente">${ICONO_SIGUIENTE}</a>
+  </div>`;
 }
 
 const mismaPagina = (a, b) => a && a.vista === b.vista && a.anio === b.anio
@@ -84,6 +107,8 @@ async function mostrar() {
     return;
   }
   if (mio !== turno) return;
+  comunActual = datosComunes;
+  cerrarBuscador();
   const ruta = parsearRuta(location.hash, datosComunes.anio_actual);
   const vista = VISTAS[ruta.vista];
 
@@ -97,7 +122,7 @@ async function mostrar() {
 
   actual?.limpiar?.();
   actual = { ruta };
-  marcarPestana(ruta);
+  marcarPestana(ruta, datosComunes.anio_actual);
   const pintarEncabezado = () => {
     encabezado.innerHTML = armarEncabezado(ruta, vista.encabezado(ruta), datosComunes.anio_actual);
     // Campana en cian si este celular ya está suscripto.
@@ -173,6 +198,7 @@ document.addEventListener("click", (evento) => {
     return;
   }
   if (evento.target.closest("[data-campana]")) { abrirAvisos(); return; }
+  if (evento.target.closest("[data-buscar]")) { buscar(); return; }
   if (evento.target.closest("[data-cerrar-avisos]")) {
     history.back();   // saca la entrada de la hoja; popstate la cierra
     return;
@@ -187,6 +213,52 @@ document.addEventListener("click", (evento) => {
   }
   if (evento.target.closest("[data-reintentar]")) mostrar();
 });
+
+function buscar() {
+  if (comunActual && actual) abrirBuscador(actual.ruta.anio, comunActual);
+}
+
+// Atajos de la app de escritorio (main.py): ← → cambian de temporada, Esc
+// vuelve; más Ctrl+K para el buscador. En el celular no hay teclado: no molestan.
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    buscar();
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey || !actual || !comunActual) return;
+  if (e.key === "Escape") {
+    if (document.querySelector(".capa-buscar")) { cerrarBuscador(); return; }
+    // Lo de más arriba primero: la hoja de avisos, una capa, el "volver".
+    const cerrar = document.querySelector("[data-cerrar-avisos], .capa [data-atras], #encabezado [data-atras]");
+    if (cerrar) cerrar.click();
+    else if (actual.ruta.vista !== "calendario") location.hash = `#/calendario/${actual.ruta.anio}`;
+    return;
+  }
+  if (e.target.closest("input, textarea, select") || document.querySelector(".capa")) return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    const destino = otroAnio(actual.ruta, e.key === "ArrowLeft" ? -1 : 1, comunActual.anio_actual);
+    if (destino) location.hash = destino;
+  }
+});
+
+// Carteles al apoyar el mouse sobre algo con data-tip (sólo PC): un único
+// elemento fijo, así no lo recorta el overflow de las tarjetas.
+const cartel = Object.assign(document.createElement("div"), { className: "cartel", hidden: true });
+document.body.append(cartel);
+if (matchMedia("(hover: hover)").matches) {
+  document.addEventListener("mouseover", (e) => {
+    const con = e.target.closest?.("[data-tip]");
+    if (!con || !matchMedia("(min-width: 1024px)").matches) { cartel.hidden = true; return; }
+    cartel.textContent = con.dataset.tip;
+    cartel.hidden = false;
+    const r = con.getBoundingClientRect();
+    const ancho = cartel.offsetWidth;
+    cartel.style.left = `${Math.min(innerWidth - ancho - 8, Math.max(8, r.left + r.width / 2 - ancho / 2))}px`;
+    cartel.style.top = `${r.top - cartel.offsetHeight - 8 < 8 ? r.bottom + 8 : r.top - cartel.offsetHeight - 8}px`;
+  });
+  window.addEventListener("scroll", () => { cartel.hidden = true; }, { passive: true });
+}
 
 window.addEventListener("hashchange", mostrar);
 window.addEventListener("popstate", cerrarAvisos);

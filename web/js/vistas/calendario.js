@@ -2,6 +2,7 @@ import { html } from "../html.js";
 import { MESES, aEvento, cuentaRegresiva, diaHora, estadoSesiones, gpCorto, indiceProxima, sigla } from "../formato.js";
 import { calendario, temporada } from "../api.js";
 import { bandera } from "./filas.js";
+import { descargarIcs, nombreIcs } from "../ics.js";
 
 export const encabezado = () => ({ titulo: "Calendario", campana: true });
 
@@ -39,7 +40,7 @@ function armarFila(ev, estado, ganador, ahora) {
   const derecha = estado === "pasado"
     ? (ganador ? html`<span class="ganador mono"><i style="background:${ganador.color ?? "var(--futuro)"}"></i>${ganador.codigo}</span>` : "")
     : html`<span class="falta mono">en ${Math.max(1, Math.ceil((ev.largada - ahora) / DIA_MS))} d</span>`;
-  return html`<a class="gp-fila ${estado}" href="#/gp/${ev.anio}/${ev.ronda}">
+  return html`<a class="gp-fila ${estado}" href="#/gp/${ev.anio}/${ev.ronda}" data-tip="${ev.circuito} · ${ev.pais}">
     <span class="ronda mono">R${ev.ronda}</span>${bandera(ev.bandera)}
     <span class="nombre"><b>${gpCorto(ev.nombre)}</b><small>${ev.rango}</small></span>${derecha}
   </a>`;
@@ -71,7 +72,15 @@ export function armarCalendario(eventos, ahora, ganadores = new Map()) {
     grupos.at(-1).eventos.push(ev);
   }
   const corridas = i > 0 ? i : 0;
+  const disputadas = i === -1 ? eventos.length : i;
+  const anio = eventos[0].anio;
   return html`<div class="cuerpo calendario">
+    <div class="cal-cab">
+      <div><span class="eti">TEMPORADA ${anio}</span><h2>Calendario</h2></div>
+      <div class="progreso"><span>Carreras disputadas <b class="mono">${disputadas}</b> / ${eventos.length}</span>
+        <i style="--avance:${Math.round((disputadas / eventos.length) * 100)}%"></i></div>
+      <button class="boton" type="button" data-ics>Agregar la temporada a mi calendario</button>
+    </div>
     ${corridas ? html`<button class="pildora oculta" data-subir>↑ ${corridas} ${corridas === 1 ? "carrera corrida" : "carreras corridas"}</button>` : ""}
     ${grupos.map((g) => html`<h3 class="mes">${MESES[g.mes]}</h3>
       <div class="filas">${g.eventos.map((ev) => (estadoDe(ev) === "proxima"
@@ -92,6 +101,9 @@ export async function render(ruta, comun) {
 
 export function montar(main) {
   const limpiezas = [];
+  const eventosIcs = eventosEnPantalla;
+  main.querySelector("[data-ics]")?.addEventListener("click", () =>
+    descargarIcs(eventosIcs, nombreIcs(eventosIcs[0].anio)));
   const hero = main.querySelector("[data-largada]");
   const ultimaCorrida = [...main.querySelectorAll(".gp-fila.pasado")].at(-1);
   const pildora = main.querySelector("[data-subir]");

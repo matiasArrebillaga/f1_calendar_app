@@ -3,6 +3,7 @@ import { aEvento, diaHora, formatoDiferencia, formatoVuelta } from "../formato.j
 import { calendario, ganadores, resultados, sesionOpenF1, temporada } from "../api.js";
 import { FILAS_CORTAS, armarFicha, armarHoja, armarMapa } from "./capas.js";
 import { filaResultado } from "./filas.js";
+import { descargarIcs, nombreIcs } from "../ics.js";
 
 export const encabezado = (ruta) => ({ titulo: "Calendario", volver: `#/calendario/${ruta.anio}` });
 
@@ -15,6 +16,8 @@ export function armarResultadosJolpica(race, recurso, comun) {
     color: comun.colores[r.Constructor.constructorId],
     nombre: `${r.Driver.givenName} ${r.Driver.familyName}`,
     href: `#/piloto/${race.season}/${r.Driver.driverId}`,
+    tip: [r.number && `Nº ${r.number}`, comun.nacionalidades[r.Driver.nationality] ?? r.Driver.nationality]
+      .filter(Boolean).join(" · "),
   });
   if (recurso === "qualifying") {
     return race.QualifyingResults.map((q) => filaResultado({
@@ -103,16 +106,19 @@ export function armarCircuito(ev, comun) {
     </div>`;
 }
 
+// En la PC .detalle es una grilla: resultados a la izquierda y el circuito a
+// la derecha, como la app de escritorio. En el celular no tiene estilos.
 function armarDetalle(ev, activa, contenido, comun) {
-  return html`<div class="cab">
+  return html`<div class="detalle"><div class="cab">
       <span class="badge">R${ev.ronda}</span>
       <h2>${ev.nombre}</h2>
       <p class="lugar">${ev.circuito} · ${ev.pais} · ${ev.rango}</p>
     </div>
     <div class="chips" role="tablist">${ev.sesiones.map((s) => html`<button role="tab" data-sesion="${s.clave}"
       class="${s === activa ? "activa" : ""}" aria-selected="${s === activa}">${s.corto}<small>${diaHora(s.fecha).slice(0, 3)}</small></button>`)}</div>
+    <button class="boton ics" type="button" data-ics>Agregar a mi calendario</button>
     <div id="sesion">${contenido}</div>
-    <div class="cuerpo">${armarCircuito(ev, comun)}</div>`;
+    <div class="cuerpo">${armarCircuito(ev, comun)}</div></div>`;
 }
 
 async function evento(ruta, comun) {
@@ -147,8 +153,76 @@ export function montar(main, ruta, comun) {
       .catch(errorSesion);
     if (mio === pedido) caja.innerHTML = contenido;
   });
+  main.querySelector("[data-ics]")?.addEventListener("click", () => evento(ruta, comun)
+    .then((ev) => descargarIcs([ev], nombreIcs(ev.anio, ev.nombre))).catch(() => {}));
+  const soltarZoom = matchMedia("(min-width: 1024px)").matches ? zoomMapa(main) : null;
   capa(main, ruta, comun);
-  return () => document.body.classList.remove("con-capa");
+  return () => {
+    soltarZoom?.();
+    document.body.classList.remove("con-capa");
+  };
+}
+
+// En la PC el mapa del panel no abre la capa: se amplía ahí mismo con la
+// rueda (hacia el cursor) y se mueve arrastrándolo.
+// ponytail: se decide al montar; si se achica la ventana sigue siendo visor
+// hasta la próxima pantalla.
+const ZOOM_MAX = 6;
+function zoomMapa(main) {
+  const link = main.querySelector(".panel a:has(> .mapa)");
+  if (!link) return null;
+  const visor = document.createElement("div");
+  visor.className = "visor";
+  visor.innerHTML = html`<div class="controles">
+      <button type="button" data-zoom="1.4" aria-label="Acercar">+</button>
+      <button type="button" data-zoom="0.714" aria-label="Alejar">−</button>
+      <button type="button" data-zoom="0" aria-label="Tamaño original">⟲</button>
+    </div><span class="zoom-txt mono">100%</span>`;
+  const img = link.querySelector(".mapa");
+  visor.prepend(img);
+  link.replaceWith(visor);
+  const texto = visor.querySelector(".zoom-txt");
+  let escala = 1, x = 0, y = 0, arrastre = null;
+  const aplicar = () => {
+    if (escala === 1) { x = 0; y = 0; }
+    img.style.transform = `translate(${x}px, ${y}px) scale(${escala})`;
+    texto.textContent = `${Math.round(escala * 100)}%`;
+    visor.classList.toggle("ampliado", escala > 1);
+  };
+  // Zoom manteniendo fijo el punto (cx, cy), medido desde el centro del visor.
+  const zoom = (factor, cx = 0, cy = 0) => {
+    const nueva = Math.min(ZOOM_MAX, Math.max(1, escala * factor));
+    x = cx - (cx - x) * (nueva / escala);
+    y = cy - (cy - y) * (nueva / escala);
+    escala = nueva;
+    aplicar();
+  };
+  visor.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const r = visor.getBoundingClientRect();
+    zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2);
+  }, { passive: false });
+  visor.addEventListener("click", (e) => {
+    const boton = e.target.closest("[data-zoom]");
+    if (!boton) return;
+    if (boton.dataset.zoom === "0") { escala = 1; aplicar(); } else zoom(Number(boton.dataset.zoom));
+  });
+  visor.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button") || escala === 1) return;
+    arrastre = { px: e.clientX, py: e.clientY, x, y };
+    visor.setPointerCapture(e.pointerId);
+    visor.classList.add("arrastrando");
+  });
+  visor.addEventListener("pointermove", (e) => {
+    if (!arrastre) return;
+    x = arrastre.x + e.clientX - arrastre.px;
+    y = arrastre.y + e.clientY - arrastre.py;
+    aplicar();
+  });
+  const soltar = () => { arrastre = null; visor.classList.remove("arrastrando"); };
+  visor.addEventListener("pointerup", soltar);
+  visor.addEventListener("pointercancel", soltar);
+  return soltar;
 }
 
 export async function capa(main, ruta, comun) {

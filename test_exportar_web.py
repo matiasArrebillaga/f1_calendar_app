@@ -42,6 +42,19 @@ def test_temporadas_terminadas():
     assert exportar_web.temporadas_terminadas(con) == [1988, 1990]
 
 
+def test_indice_del_buscador_lleva_a_la_ultima_temporada_terminada():
+    con = base_de_prueba()
+    datos = exportar_web.indice(con, [1988, 1990])   # 2025 todavía en curso
+    pilotos = {p["id"]: p for p in datos["pilotos"]}
+    assert pilotos["senna"] == {"id": "senna", "nombre": "Ayrton Senna", "anio": 1990}
+    assert "norris" not in pilotos          # sólo corrió en 2025
+    assert {e["id"] for e in datos["equipos"]} >= {"mclaren"}
+    victorias = [con.execute("SELECT COUNT(*) FROM resultados WHERE driver_id = ? AND posicion = 1 "
+                             "AND temporada IN (1988, 1990)", (p["id"],)).fetchone()[0] for p in datos["pilotos"]]
+    assert victorias == sorted(victorias, reverse=True)   # los que más ganaron primero
+    json.dumps(datos)
+
+
 def test_datos_comunes_salen_de_core_y_marcan_los_mapas():
     carpeta = tempfile.mkdtemp()
     open(os.path.join(carpeta, "monza.png"), "wb").close()

@@ -1,5 +1,5 @@
 import { html } from "../html.js";
-import { numero, sigla } from "../formato.js";
+import { edadEn, numero, sigla } from "../formato.js";
 import { fotoWikipedia, temporada } from "../api.js";
 
 export const encabezado = () => ({ titulo: "Pilotos" });
@@ -58,7 +58,9 @@ export function armarPilotos(datos, solapa, anio, comun) {
     })
     : lista.map((p) => {
       const color = comun.colores[p.constructor_id];
-      return html`<a class="tpil piloto" href="#/piloto/${anio}/${p.driver_id}" style="--eq:${color ?? GRIS}">
+      const tip = [comun.nacionalidades[p.nacionalidad] ?? p.nacionalidad,
+        p.nacimiento && `${edadEn(p.nacimiento, anio)} años`, p.victorias && `${p.victorias} victorias`].filter(Boolean).join(" · ");
+      return html`<a class="tpil piloto" href="#/piloto/${anio}/${p.driver_id}" style="--eq:${color ?? GRIS}" data-tip="${tip}">
         <span class="num">${p.numero ?? ""}</span>
         ${p.posicion ? html`<span class="pos-chip mono">${p.posicion}º</span>` : ""}
         ${armarRetrato(p, color)}

@@ -385,3 +385,180 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   width: 100%; padding: 10px; resize: none; font-size: 11px; color: var(--texto2);
   background: var(--sunken); border: 1px solid var(--borde); border-radius: 8px;
 }
+
+/* ---------- Escritorio (≥ 1024 px): la web toma la forma de la app de PC ----------
+   Regla: en el celular no cambia nada. Acá arriba, sólo clases nuevas (ocultas o
+   que únicamente arma la PC); en el media query, todo lo que toca lo existente. */
+.tabbar .lat-marca, .lat-anio, .lat-grupo, .lat-buscar, .lat-atajos, .cal-cab, .boton.ics { display: none; }
+kbd {
+  font: 600 11px var(--mono); padding: 1px 5px; color: var(--texto2); background: var(--surface);
+  border: 1px solid var(--borde-fuerte); border-bottom-width: 2px; border-radius: 4px;
+}
+/* Cartel al apoyar el mouse (app.js lo posiciona). */
+.cartel {
+  position: fixed; z-index: 5; max-width: 300px; padding: 6px 10px; pointer-events: none;
+  font-size: 12px; font-weight: 600; color: var(--app); background: var(--texto);
+  border-radius: 5px; box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
+}
+/* Buscador (Ctrl+K). */
+.capa-buscar { z-index: 4; }
+.capa-buscar .paleta {
+  position: absolute; left: 50%; top: 14vh; transform: translateX(-50%);
+  width: min(620px, calc(100% - 32px)); overflow: hidden;
+  background: var(--panel); border: 1px solid var(--borde-fuerte); border-radius: 10px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
+}
+.paleta input {
+  width: 100%; height: 54px; padding: 0 18px; font: 16px system-ui, "Segoe UI", sans-serif; color: var(--texto);
+  background: transparent; border: 0; border-bottom: 1px solid var(--borde); outline: none;
+}
+.paleta input::-webkit-search-cancel-button { display: none; }
+.lista-k { max-height: min(420px, 55vh); overflow-y: auto; padding: 6px 0; }
+.rk { display: flex; align-items: center; gap: 12px; padding: 8px 18px; }
+.rk.sel { background: var(--hover); box-shadow: inset 2px 0 var(--rojo); }
+.rk .nombre b { font-size: 14px; }
+.vacio-k { padding: 14px 18px; color: var(--muted); }
+.pie-k { display: flex; gap: 18px; padding: 9px 18px; font-size: 11px; color: var(--muted); background: var(--sunken); border-top: 1px solid var(--borde); }
+/* Mapa con zoom del detalle (detalle.js lo arma sólo en la PC). */
+.visor { position: relative; height: 260px; overflow: hidden; border-radius: 4px; background: var(--sunken); cursor: zoom-in; touch-action: none; }
+.visor.ampliado { cursor: grab; }
+.visor.arrastrando { cursor: grabbing; }
+.visor .mapa { height: 100%; transform-origin: center; transition: transform .12s ease-out; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.visor.arrastrando .mapa { transition: none; }
+.visor .controles { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 4px; }
+.visor .controles button {
+  width: 30px; height: 30px; display: grid; place-items: center; font: 600 15px var(--mono);
+  background: rgba(18, 22, 28, .9); border: 1px solid var(--borde-fuerte); border-radius: 4px;
+}
+.visor .controles button:hover { background: var(--hover); }
+.zoom-txt { position: absolute; left: 8px; bottom: 8px; padding: 2px 6px; font-size: 11px; color: var(--dato); background: rgba(9, 10, 13, .8); border-radius: 3px; }
+
+@media (min-width: 1024px) {
+  :root { --lateral: 224px; }
+  body { padding-bottom: 0; padding-left: var(--lateral); }
+
+  /* La tabbar pasa a ser la barra lateral de ui/sidebar.py. */
+  .tabbar {
+    top: 0; right: auto; width: var(--lateral); height: auto; flex-direction: column; gap: 2px;
+    padding: 18px 0 16px; border-top: 0; border-right: 1px solid var(--borde);
+  }
+  .tabbar .indicador { display: none; }
+  .tabbar a[data-pestana] {
+    flex: none; flex-direction: row; justify-content: flex-start; gap: 12px; height: 42px; padding: 0 18px;
+    font-size: 14px; color: var(--texto2); border-left: 2px solid transparent; transition: background .12s;
+  }
+  .tabbar a[data-pestana] svg { width: 18px; height: 18px; }
+  .tabbar a[data-pestana]:hover { background: var(--hover); }
+  .tabbar a.activa { color: var(--texto); background: var(--surface); border-left-color: var(--rojo); }
+  .tabbar a.vivo::after { top: 50%; left: auto; right: 18px; margin-top: -5px; }
+  .tabbar .lat-marca {
+    display: flex; flex: none; flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px;
+    padding: 0 18px 16px; font: 700 15px var(--titulo); letter-spacing: .8px; color: var(--texto);
+  }
+  .lat-marca img { border-radius: 6px; }
+  .lat-anio { display: block; padding: 0 14px 18px; }
+  .lat-anio .temporada { justify-content: space-between; }
+  .lat-grupo { display: block; padding: 4px 18px 6px; font-size: 10px; font-weight: 600; letter-spacing: 1.6px; color: var(--muted); }
+  .lat-buscar {
+    display: flex; align-items: center; gap: 10px; height: 38px; margin: 16px 14px 0; padding: 0 10px;
+    font-size: 13px; color: var(--muted); background: var(--sunken); border: 1px solid var(--borde); border-radius: 6px;
+  }
+  .lat-buscar:hover { color: var(--texto); border-color: var(--borde-fuerte); }
+  .lat-buscar kbd { margin-left: auto; }
+  .lat-atajos { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding: 0 18px; font-size: 11px; color: var(--muted); }
+
+  /* Encabezado de vidrio: el contenido se ve pasar por debajo. El año vive en la lateral. */
+  .top {
+    padding: 0 32px; background: color-mix(in srgb, var(--panel) 68%, transparent);
+    backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  }
+  .top .temporada { display: none; }
+  .icono-btn:hover { color: var(--texto); }
+
+  /* Más ancho para todo lo que era una columna de celular. */
+  .cuerpo { max-width: 1180px; padding: 20px 32px; }
+  .res { max-width: 1180px; padding: 0 32px; }
+  .res > a:hover { background: var(--hover); }
+  .segmento { max-width: 1116px; }
+  .pildora { left: calc(50% + var(--lateral) / 2); }
+  .sin-red { left: calc(var(--lateral) + 16px); right: 16px; bottom: 16px; max-width: 520px; }
+  .carrera-fija { bottom: 0; }
+  .banda { left: var(--lateral); }
+  .boton:hover { background: var(--hover); }
+
+  /* Calendario: grilla de tarjetas por mes, como calendar_view.py. */
+  .cal-cab { display: flex; align-items: flex-end; gap: 24px; padding: 4px 0 6px; }
+  .cal-cab > div:first-child { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .cal-cab h2 { font: 700 32px/1 var(--titulo); }
+  .cal-cab .boton { display: flex; }
+  .progreso { width: 240px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+  .progreso b { color: var(--texto); }
+  .progreso i {
+    display: block; height: 4px; border-radius: 2px;
+    background: linear-gradient(var(--rojo), var(--rojo)) 0 / var(--avance) 100% no-repeat, var(--sunken);
+  }
+  .calendario .filas { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding-top: 10px; }
+  .gp-fila {
+    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "ronda bandera" "nombre nombre" "dato dato";
+    align-content: start; gap: 8px; min-height: 118px; padding: 12px 14px;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 6px;
+    transition: transform .18s, box-shadow .18s, border-color .18s, background .12s;
+  }
+  .gp-fila .ronda { grid-area: ronda; }
+  .gp-fila .bandera { grid-area: bandera; }
+  .gp-fila .nombre { grid-area: nombre; }
+  .gp-fila .nombre b { font: 600 16px/1.2 var(--titulo); }
+  .gp-fila .ganador, .gp-fila .falta { grid-area: dato; justify-self: start; }
+  .gp-fila.pasado { background: color-mix(in srgb, var(--panel) 55%, var(--app)); }
+  .gp-fila:hover, .tpil:hover {
+    transform: translateY(-3px); border-color: var(--borde-fuerte); box-shadow: 0 12px 26px rgba(0, 0, 0, .5);
+  }
+  /* La próxima ocupa la fila entera: datos a la izquierda, horarios a la derecha. */
+  .calendario .hero {
+    grid-column: 1 / -1; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px;
+    column-gap: 40px; padding: 22px 26px;
+  }
+  .hero > * { grid-column: 1; }
+  .hero > .eti { grid-column: 2; grid-row: 1; align-self: end; }
+  .hero > .horarios { grid-column: 2; grid-row: 2 / span 5; align-self: start; }
+  .hero h2 { font-size: 32px; }
+
+  /* Detalle del GP: resultados a la izquierda, circuito siempre a la vista. */
+  .detalle {
+    max-width: 1180px; margin: 0 auto; padding: 0 32px 32px; display: grid; column-gap: 28px;
+    grid-template-columns: minmax(0, 1fr) 340px; grid-template-areas: "cab ics" "chips chips" "sesion circuito";
+  }
+  .detalle > .cab { grid-area: cab; max-width: none; margin: 0; padding: 22px 0 4px; }
+  .detalle > .cab h2 { font-size: 32px; }
+  .detalle > .boton.ics { grid-area: ics; display: flex; align-self: end; justify-self: end; }
+  .detalle > .chips {
+    grid-area: chips; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 14px 0 16px;
+  }
+  .chips button { border-radius: 6px; align-items: flex-start; }
+  .chips button:hover { border-color: var(--borde-fuerte); }
+  .detalle > #sesion { grid-area: sesion; min-width: 0; border: 1px solid var(--borde); border-radius: 6px; overflow: hidden; align-self: start; }
+  #sesion .res { padding: 0; }
+  #sesion .res > a, #sesion .res > div { min-height: 52px; }
+  #sesion .res > :last-child { border-bottom: 0; }
+  .detalle > .cuerpo { grid-area: circuito; padding: 0; position: sticky; top: 72px; align-self: start; }
+  .detalle .cuerpo .mes { margin-top: 0; }
+
+  /* Hoja del circuito: diálogo centrado en vez de hoja que sube. */
+  .hoja {
+    left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%);
+    width: min(680px, calc(100vw - 64px)); max-height: 82vh; padding: 16px 22px 22px;
+    border: 1px solid var(--borde-fuerte); border-radius: 10px;
+  }
+  .hoja .asa { display: none; }
+
+  /* Pilotos, equipos y fichas. */
+  .grilla { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .tpil { transition: transform .18s, box-shadow .18s, border-color .18s; }
+  .portada { height: 400px; }
+  .portada .cuerpo-foto { right: 8%; width: 290px; }
+  .portada .avatar.grande { right: 10%; width: 150px; height: 150px; }
+  .portada-texto { left: 32px; right: 32px; }
+  .portada h2 { font-size: 60px; }
+  .portada.equipo { height: 300px; }
+  .portada.equipo .auto { left: auto; right: 6%; width: min(560px, 55%); }
+}

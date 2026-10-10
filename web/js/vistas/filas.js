@@ -5,12 +5,14 @@ const MEDALLA = { 1: "p1", 2: "p2", 3: "p3" };
 // Una fila de resultado o de clasificación: posición (medalla en el podio),
 // color del equipo, nombre con una línea chica debajo y el dato en cian a la
 // derecha. Con `href` es un link a la ficha.
-export function filaResultado({ pos, color, nombre, sub, dato, extra, href }) {
+export function filaResultado({ pos, color, nombre, sub, dato, extra, href, tip }) {
   const contenido = html`<span class="pos ${MEDALLA[pos] ?? ""}">${pos ?? "—"}</span>
     <i class="barra-eq" style="background:${color ?? "transparent"}"></i>
     <span class="nombre"><b>${nombre}</b>${sub ? html`<small>${sub}</small>` : ""}</span>
     <span class="der"><b>${dato}</b>${extra ? html`<small>${extra}</small>` : ""}</span>`;
-  return href ? html`<a href="${href}">${contenido}</a>` : html`<div>${contenido}</div>`;
+  // `tip`: el cartel al apoyar el mouse (sólo en la PC, app.js).
+  const cartel = tip ? html` data-tip="${tip}"` : "";
+  return href ? html`<a href="${href}"${cartel}>${contenido}</a>` : html`<div${cartel}>${contenido}</div>`;
 }
 
 // La bandera chica de un país (flagcdn). Sin código, un hueco del mismo tamaño

@@ -157,6 +157,15 @@ def test_un_gp_viejo_abre_en_la_carrera_y_sin_libres():
     assert pedidas == [(2010, 1, "R")]
     assert [b._codigo for b in vista.botones_sesion if b.isEnabled()] == ["Q", "R"]
 
+    # Antes de 1994 Ergast no tiene clasificaciones: la Q decía que los
+    # resultados "todavía no están publicados" en un GP de hace 40 años.
+    pedidas.clear()
+    viejo = evento.copy()
+    viejo["EventDate"] = pd.Timestamp("1985-04-07 12:00")
+    vista.mostrar_evento(viejo)
+    assert pedidas == [(1985, 1, "R")]
+    assert [b._codigo for b in vista.botones_sesion if b.isEnabled()] == ["R"]
+
 
 def test_el_mapa_no_se_re_escala_si_el_tamano_no_cambio():
     """resizeEvent entra acá por cada píxel que se arrastra el borde, y los PNG

@@ -38,6 +38,8 @@ class EventDetailView(QWidget):
                       'Sprint Shootout': 'SS', 'Race': 'R'}
     # Antes de 2018 FastF1 sólo tiene clasificación y carrera (vía Ergast).
     PRIMER_ANIO_COMPLETO = 2018
+    # Y Ergast no tiene clasificaciones de antes de 1994: sólo la grilla.
+    PRIMER_ANIO_CLASIFICACION = 1994
 
     def __init__(self):
         super().__init__()
@@ -273,9 +275,11 @@ class EventDetailView(QWidget):
 
             codigo = self.CODIGOS_SESION.get(match['nombre'], match['nombre'])
             nombre_es = traducir_sesion(match['nombre'])
-            if year < self.PRIMER_ANIO_COMPLETO and codigo not in ('Q', 'R'):
+            desde = {'R': 0, 'Q': self.PRIMER_ANIO_CLASIFICACION}.get(
+                codigo, self.PRIMER_ANIO_COMPLETO)
+            if year < desde:
                 boton.setText(f"{nombre_es}\nsin datos")
-                boton.setToolTip(f"{nombre_es} — no hay resultados de antes de 2018")
+                boton.setToolTip(f"{nombre_es} — no hay resultados de antes de {desde}")
                 boton.setEnabled(False)
                 boton.style().unpolish(boton)
                 boton.style().polish(boton)

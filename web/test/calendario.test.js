@@ -57,7 +57,7 @@ test("fin de semana en vivo: chip, avance y estado de cada sesión", () => {
   const salida = String(armarCalendario(eventos, Date.parse("2026-10-10T13:38:00Z")));
   assert.match(salida, /class="hero en-vivo"/);
   assert.match(salida, /EN VIVO · CLASIFICACIÓN/);
-  assert.match(salida, /width:63%/);                  // 38 de 60 min
+  assert.match(salida, /--avance:63%/);                  // 38 de 60 min
   assert.match(salida, /Empezó hace 38 min/);
   assert.equal(salida.match(/✓ Resultados/g).length, 3);   // libres, clasif. sprint y sprint
   assert.match(salida, /<dd class="vivo">EN VIVO<\/dd>/);

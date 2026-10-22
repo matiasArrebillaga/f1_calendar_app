@@ -8,6 +8,7 @@ import { suscribir } from "./avisos.js";
 import { abrirBuscador, cerrarBuscador } from "./buscador.js";
 import * as calendario from "./vistas/calendario.js";
 import * as detalle from "./vistas/detalle.js";
+import { sacarCapa } from "./vistas/capas.js";
 import * as clasificacion from "./vistas/clasificacion.js";
 import * as pilotos from "./vistas/pilotos.js";
 import * as fichaPiloto from "./vistas/ficha_piloto.js";
@@ -30,9 +31,21 @@ const ESQUELETO = html`<div class="cuerpo esqueleto" aria-busy="true" aria-label
 // Transición nativa de Chrome: la tarjeta tocada de la grilla se expande hasta
 // la portada de la ficha (comparten view-transition-name). Sin soporte,
 // cambio directo.
-const transicion = (cambio) => (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches
-  ? document.startViewTransition(cambio)
-  : cambio());
+// `tipo` ("adelante"/"atras") elige el deslizamiento de style.css; Chrome
+// anterior a los tipos hace el fundido de siempre.
+const conTipos = "types" in (window.ViewTransition?.prototype ?? {});
+const transicion = (cambio, tipo) => {
+  if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return cambio();
+  return tipo && conTipos
+    ? document.startViewTransition({ update: cambio, types: [tipo] })
+    : document.startViewTransition(cambio);
+};
+
+// Una pestaña es nivel 0; un GP o una ficha, nivel 1. Bajar de nivel es
+// "adelante", subir es "atras"; entre pestañas, fundido.
+const nivel = (vista) => (pestanaDe(vista) === vista ? 0 : 1);
+// Lo que se hace con el teclado (Esc, ← →) no se desliza: tiene que ser inmediato.
+let teclaEn = -Infinity;
 
 const encabezado = document.getElementById("encabezado");
 const main = document.getElementById("contenido");
@@ -85,7 +98,21 @@ function marcarPestana(ruta, anioActual) {
   </div>`;
 }
 
-const mismaPagina = (a, b) => a && a.vista === b.vista && a.anio === b.anio
+// Cascada de entrada (style.css, .entrando): cada lista cuenta desde 0, así en
+// el calendario —que abre a mitad de página— lo visible no espera a lo de arriba.
+// Se saca al terminar: la tarjeta de la próxima se redibuja cada 30 s y no
+// tiene que volver a entrar.
+let finEntrada = 0;
+function entrar() {
+  for (const lista of main.querySelectorAll(".filas, .grilla, .res, .kpis, .grandes")) {
+    [...lista.children].forEach((el, i) => el.style.setProperty("--n", Math.min(i, 12)));
+  }
+  main.classList.add("entrando");
+  clearTimeout(finEntrada);
+  finEntrada = setTimeout(() => main.classList.remove("entrando"), 900);
+}
+
+const mismaPagina =(a, b) => a && a.vista === b.vista && a.anio === b.anio
   && a.ronda === b.ronda && a.id === b.id && a.solapa === b.solapa;
 
 function mostrarError(mio) {
@@ -99,6 +126,7 @@ function mostrarError(mio) {
 
 async function mostrar() {
   const mio = ++turno;
+  const porTeclado = performance.now() - teclaEn < 300;
   let datosComunes;
   try {
     datosComunes = await pedirComun();
@@ -121,6 +149,7 @@ async function mostrar() {
   }
 
   actual?.limpiar?.();
+  const vistaPrevia = actual?.ruta.vista;
   actual = { ruta };
   marcarPestana(ruta, datosComunes.anio_actual);
   const pintarEncabezado = () => {
@@ -144,9 +173,14 @@ async function mostrar() {
       if (mio !== turno) return;
       pintarEncabezado();
       main.innerHTML = contenido;
+      // Cambiar de temporada (← →) o de solapa se hace muchas veces seguidas:
+      // sin cascada, el dato nuevo aparece de una.
+      if (ruta.vista !== vistaPrevia) entrar();
       window.scrollTo(0, 0);
       actual.limpiar = vista.montar?.(main, ruta, datosComunes);
-    });
+    }, vistaPrevia && !porTeclado
+      ? { 1: "adelante", "-1": "atras" }[nivel(ruta.vista) - nivel(vistaPrevia)]
+      : undefined);
   } catch (error) {
     clearTimeout(espera);
     console.error(error);
@@ -156,9 +190,9 @@ async function mostrar() {
 }
 
 function cerrarAvisos() {
-  const capa = document.querySelector(".capa-avisos");
+  const capa = document.querySelector(".capa-avisos:not(.saliendo)");
   if (!capa) return;
-  capa.remove();
+  sacarCapa(capa);
   document.body.classList.remove("con-capa");
 }
 
@@ -189,6 +223,8 @@ document.addEventListener("click", (evento) => {
   // transición dibujaría todas las fotos sin recortar.
   const tarjeta = evento.target.closest(".tpil");
   if (tarjeta) tarjeta.style.viewTransitionName = "portada";
+  // Igual con un GP: su nombre viaja hasta el título del detalle (.cab h2).
+  evento.target.closest(".gp-fila, .hero")?.querySelector(".nombre b, h2")?.style.setProperty("view-transition-name", "gp-titulo");
   const atras = evento.target.closest("[data-atras]");
   if (atras) {
     // Dentro de la app, atrás vuelve a donde estaba (Clasificación, un GP…);
@@ -227,6 +263,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.ctrlKey || e.metaKey || e.altKey || !actual || !comunActual) return;
+  if (e.key === "Escape" || e.key === "ArrowLeft" || e.key === "ArrowRight") teclaEn = performance.now();
   if (e.key === "Escape") {
     if (document.querySelector(".capa-buscar")) { cerrarBuscador(); return; }
     // Lo de más arriba primero: la hoja de avisos, una capa, el "volver".

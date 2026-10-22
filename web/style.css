@@ -19,8 +19,14 @@
   --error: #FF6B57;
   --futuro: #6E7D8F;
   --titulo: "Titillium Web", system-ui, sans-serif;
-  --mono: ui-monospace, "Roboto Mono", Consolas, monospace;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --alto-tabbar: 64px;
+  /* Movimiento: una sola curva de salida para todo lo que responde al toque. */
+  --salida: cubic-bezier(.22, 1, .36, 1);
+  --rapido: .14s;
+  --medio: .24s;
+  /* Sombras teñidas del azul de los paneles, no negro puro. */
+  --sombra: 0 10px 28px rgba(2, 6, 14, .55), 0 2px 6px rgba(2, 6, 14, .4);
 }
 
 * { box-sizing: border-box; }
@@ -29,7 +35,8 @@ body {
   margin: 0;
   background: var(--app);
   color: var(--texto);
-  font: 15px/1.4 system-ui, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.45 var(--titulo);
+  -webkit-font-smoothing: antialiased;
   padding-bottom: calc(var(--alto-tabbar) + env(safe-area-inset-bottom));
 }
 body.con-capa { overflow: hidden; }
@@ -41,7 +48,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .oculto { visibility: hidden; }
 .muted { color: var(--muted); }
 .sec { color: var(--texto2); }
-.mono { font-family: var(--mono); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .eti { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 1.5px; }
 .nota { font-size: 12px; }
 .fila { display: flex; align-items: center; gap: 8px; }
@@ -124,12 +131,17 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .45); transition: opacity .2s, transform .2s;
 }
 .pildora.oculta { opacity: 0; pointer-events: none; transform: translate(-50%, -8px); }
-@keyframes latido { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .7); } 70%, 100% { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); } }
+/* El halo es un ::after que escala: transform y opacity no repintan en cada cuadro. */
+@keyframes latido { from { transform: scale(1); opacity: .7; } 70%, to { transform: scale(2.6); opacity: 0; } }
 .chip.vivo { display: inline-flex; align-items: center; gap: 6px; }
-.punto { display: block; width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: latido 1.6s infinite; }
+.punto { position: relative; display: block; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+.punto::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: latido 1.6s cubic-bezier(.22, 1, .36, 1) infinite; }
 .hero.en-vivo { border-color: var(--rojo); }
 .avance { height: 4px; margin: 12px 0 4px; overflow: hidden; border-radius: 2px; background: var(--sunken); }
-.avance i { display: block; height: 100%; background: var(--rojo); }
+.avance i {
+  display: block; height: 100%; background: var(--rojo);
+  transform: scaleX(var(--avance, 0)); transform-origin: left; transition: transform .6s linear;
+}
 .horarios dd.hecha { color: var(--dato); }
 .horarios dd.vivo { color: var(--rojo); font-weight: 700; }
 .tabbar a { position: relative; }
@@ -169,7 +181,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .nombre b { font-size: 15px; font-weight: 600; }
 .nombre small, .der small { font-size: 12px; color: var(--muted); }
 .der { display: flex; flex-direction: column; text-align: right; }
-.der b { font: 400 14px var(--mono); color: var(--dato); }
+.der b { font: 600 14px var(--mono); color: var(--dato); }
 .panel { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--panel); border: 1px solid var(--borde); border-radius: 4px; }
 .mapa { display: block; width: 100%; height: 190px; object-fit: contain; }
 .titulo-circuito { flex: 1; font: 600 18px var(--titulo); }
@@ -409,7 +421,7 @@ kbd {
   box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
 }
 .paleta input {
-  width: 100%; height: 54px; padding: 0 18px; font: 16px system-ui, "Segoe UI", sans-serif; color: var(--texto);
+  width: 100%; height: 54px; padding: 0 18px; font: 17px var(--titulo); color: var(--texto);
   background: transparent; border: 0; border-bottom: 1px solid var(--borde); outline: none;
 }
 .paleta input::-webkit-search-cancel-button { display: none; }
@@ -510,9 +522,6 @@ kbd {
   .gp-fila .nombre b { font: 600 16px/1.2 var(--titulo); }
   .gp-fila .ganador, .gp-fila .falta { grid-area: dato; justify-self: start; }
   .gp-fila.pasado { background: color-mix(in srgb, var(--panel) 55%, var(--app)); }
-  .gp-fila:hover, .tpil:hover {
-    transform: translateY(-3px); border-color: var(--borde-fuerte); box-shadow: 0 12px 26px rgba(0, 0, 0, .5);
-  }
   /* La próxima ocupa la fila entera: datos a la izquierda, horarios a la derecha. */
   .calendario .hero {
     grid-column: 1 / -1; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px;
@@ -561,4 +570,124 @@ kbd {
   .portada h2 { font-size: 60px; }
   .portada.equipo { height: 300px; }
   .portada.equipo .auto { left: auto; right: 6%; width: min(560px, 55%); }
+}
+
+/* ---------- Identidad y respuesta ----------
+   Luz ambiente roja arriba y grano fijo sobre el fondo; cada cosa tocable
+   tiene hover (sólo con mouse), presión y una sola curva de salida. Nada de
+   esta sección mueve el layout. */
+body {
+  background:
+    radial-gradient(1100px 520px at 90% -12%, rgba(225, 6, 0, .08), transparent 62%),
+    radial-gradient(900px 480px at -12% 112%, rgba(82, 222, 236, .035), transparent 60%),
+    var(--app) fixed;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+html { scrollbar-color: var(--borde-fuerte) transparent; }
+::selection { background: color-mix(in srgb, var(--rojo) 45%, transparent); color: #fff; }
+h1, h2, h3 { text-wrap: balance; }
+.hero h2, .cab h2, .cal-cab h2 { font-weight: 700; letter-spacing: -.015em; }
+.portada h2 { font-weight: 900; letter-spacing: -.01em; }
+.cuenta b, .grandes b, .kpi b { font-weight: 600; letter-spacing: -.02em; }
+/* El trazo rojo de la marca antes de cada mes. */
+.mes::before {
+  content: ""; display: inline-block; width: 12px; height: 2px; margin: 0 8px 3px 0;
+  vertical-align: middle; background: var(--rojo);
+}
+
+/* La próxima carrera: el rojo entra en diagonal y unas líneas de velocidad
+   se pierden hacia la derecha. */
+.hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--rojo) 18%, var(--panel)), var(--rojo-wash) 42%, var(--panel));
+}
+.hero::after {
+  content: ""; position: absolute; z-index: -1; top: 0; right: 0; bottom: 0; width: 55%;
+  background: repeating-linear-gradient(115deg, transparent 0 13px, rgba(255, 255, 255, .03) 13px 14px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 75%); mask-image: linear-gradient(90deg, transparent, #000 75%);
+}
+.cuenta div { background: color-mix(in srgb, var(--sunken) 82%, transparent); }
+
+/* Toque: transiciones y presión. */
+.boton, .chips button, .segmento a, .temporada a, .icono-btn, .lat-buscar, .tabbar a, .rk, .carrera-fila, .gp-fila, .hero {
+  transition: background-color var(--rapido), border-color var(--rapido), color var(--rapido),
+    box-shadow var(--medio) var(--salida), transform var(--medio) var(--salida);
+}
+.boton:active, .chips button:active, .segmento a:active, .temporada a:active, .icono-btn:active,
+.lat-buscar:active, .tabbar a:active { transform: scale(.96); transition-duration: .08s; }
+.hero:active { transform: scale(.99); }
+.tpil .cuerpo-foto { transition: transform .4s var(--salida); transform-origin: 50% 100%; }
+
+@media (hover: hover) and (pointer: fine) {
+  .boton:hover { background: var(--hover); }
+  .chips button:hover, .temporada a:hover, .icono-btn:hover { color: var(--texto); border-color: var(--borde-fuerte); }
+  .segmento a:not(.activa):hover { color: var(--texto2); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+  .tabbar a:not(.activa):hover { color: var(--texto2); }
+  .carrera-fila:hover { background: var(--hover); }
+  .hero:hover { border-color: color-mix(in srgb, var(--rojo) 55%, var(--borde)); }
+  .tpil:hover .cuerpo-foto { transform: scale(1.04); }
+  .rk:hover:not(.sel) { background: color-mix(in srgb, var(--hover) 50%, transparent); }
+}
+
+/* Entrada de cada pantalla: las listas caen en cascada (app.js pone .entrando
+   y el índice --n). Sólo "backwards": al terminar no pisa el hover. */
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+.entrando :is(.filas, .grilla, .res, .kpis, .grandes) > * {
+  animation: entra .3s var(--salida) backwards; animation-delay: calc(var(--n, 0) * 30ms);
+}
+.entrando :is(.cab, .cal-cab, .segmento) { animation: entra .36s var(--salida) backwards; }
+
+/* Capas: la hoja sube y el velo aparece. El buscador no se anima: se abre con
+   Ctrl+K muchas veces al día y tiene que estar ahí al instante. */
+@keyframes aparece { from { opacity: 0; } }
+@keyframes sube { from { transform: translateY(100%); } }
+.capa:not(.capa-buscar) .velo, .capa-mapa { animation: aparece var(--medio) ease-out; }
+.hoja { animation: sube .34s cubic-bezier(.32, .72, 0, 1); }
+.capa-mapa img { animation: entra .32s var(--salida); }
+.sin-red:not([hidden]) { animation: entra .3s var(--salida); }
+
+@media (min-width: 1024px) {
+  @keyframes hoja-pc { from { opacity: 0; transform: translate(-50%, -48%) scale(.97); } }
+  .hoja { animation: hoja-pc .26s var(--salida); }
+  /* Sólo con mouse: en una tablet apaisada el hover quedaba pegado al tocar. */
+  @media (hover: hover) and (pointer: fine) {
+    .gp-fila:hover, .tpil:hover { transform: translateY(-2px); box-shadow: var(--sombra); }
+    .gp-fila:hover { border-color: color-mix(in srgb, var(--rojo) 40%, var(--borde-fuerte)); }
+    .tpil:hover { border-color: var(--eq, var(--borde-fuerte)); }
+  }
+  .gp-fila:active, .tpil:active { transform: scale(.98); transition-duration: .08s; }
+}
+
+/* El nombre del GP tocado viaja hasta el título del detalle (app.js le pone
+   el nombre al hacer click). Sin estirar: cada texto se dibuja a su tamaño,
+   alineado a la izquierda, mientras la caja se mueve. */
+.detalle > .cab h2 { view-transition-name: gp-titulo; }
+::view-transition-group(gp-titulo) { animation-duration: var(--medio); animation-timing-function: var(--salida); }
+::view-transition-old(gp-titulo), ::view-transition-new(gp-titulo) {
+  height: 100%; object-fit: none; object-position: left center;
+}
+
+/* Salida de las capas (capas.js, sacarCapa): por el mismo borde y más rápida. */
+@keyframes baja { to { transform: translateY(100%); } }
+@keyframes desaparece { to { opacity: 0; } }
+.capa.saliendo { pointer-events: none; }
+.capa.saliendo .velo, .capa-mapa.saliendo { animation: desaparece .16s ease-out forwards; }
+.capa.saliendo .hoja { animation: baja .2s cubic-bezier(.32, .72, 0, 1) forwards; }
+@media (min-width: 1024px) {
+  @keyframes hoja-pc-sale { to { opacity: 0; transform: translate(-50%, -50%) scale(.97); } }
+  .capa.saliendo .hoja { animation: hoja-pc-sale .15s ease-out forwards; }
+}
+
+/* Dirección en el celular (app.js, tipos de View Transition): entrar a un GP
+   o una ficha llega desde la derecha; volver, desde la izquierda. 16px
+   alcanzan para contar hacia dónde se fue sin sentirse lento. */
+@keyframes desde-der { from { opacity: 0; transform: translateX(16px); } }
+@keyframes desde-izq { from { opacity: 0; transform: translateX(-16px); } }
+@media (max-width: 1023px) {
+  html:active-view-transition-type(adelante)::view-transition-new(root) { animation: desde-der .22s var(--salida) both; }
+  html:active-view-transition-type(atras)::view-transition-new(root) { animation: desde-izq .22s var(--salida) both; }
+  html:active-view-transition-type(adelante, atras)::view-transition-old(root) { animation: desaparece .14s ease-out both; }
 }

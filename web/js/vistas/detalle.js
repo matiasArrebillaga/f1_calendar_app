@@ -1,7 +1,7 @@
 import { html } from "../html.js";
 import { aEvento, diaHora, formatoDiferencia, formatoVuelta } from "../formato.js";
 import { calendario, ganadores, resultados, sesionOpenF1, temporada } from "../api.js";
-import { FILAS_CORTAS, armarFicha, armarHoja, armarMapa } from "./capas.js";
+import { FILAS_CORTAS, armarFicha, armarHoja, armarMapa, sacarCapa } from "./capas.js";
 import { filaResultado } from "./filas.js";
 import { descargarIcs, nombreIcs } from "../ics.js";
 
@@ -153,11 +153,18 @@ export function montar(main, ruta, comun) {
     }
     const mio = ++pedido;
     const caja = main.querySelector("#sesion");
-    caja.innerHTML = html`<p class="estado">Cargando…</p>`;
+    // Como app.js: "Cargando…" sólo si tarda; si ya estaba en caché, la tabla
+    // nueva aparece con un fundido corto, sin el parpadeo intermedio.
+    const espera = setTimeout(() => {
+      if (mio === pedido) caja.innerHTML = html`<p class="estado">Cargando…</p>`;
+    }, 150);
     const contenido = await evento(ruta, comun)
       .then((ev) => armarSesion(ev, ev.sesiones.find((s) => s.clave === boton.dataset.sesion), comun))
       .catch(errorSesion);
-    if (mio === pedido) caja.innerHTML = contenido;
+    clearTimeout(espera);
+    if (mio !== pedido) return;
+    caja.innerHTML = contenido;
+    caja.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: "ease-out" });
   });
   main.querySelector("[data-ics]")?.addEventListener("click", () => evento(ruta, comun)
     .then((ev) => descargarIcs([ev], nombreIcs(ev.anio, ev.nombre))).catch(() => {}));
@@ -232,7 +239,7 @@ function zoomMapa(main) {
 }
 
 export async function capa(main, ruta, comun) {
-  main.querySelector(".capa")?.remove();
+  sacarCapa(main.querySelector(".capa:not(.saliendo)"));
   document.body.classList.toggle("con-capa", Boolean(ruta.capa));
   if (!ruta.capa) return;
   const hash = location.hash;

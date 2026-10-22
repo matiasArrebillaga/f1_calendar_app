@@ -18,6 +18,16 @@ const CERRAR = html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" 
 
 // Las capas son una pantalla más en el historial (#/gp/…/mapa o /circuito):
 // tocar afuera, la X o "atrás" de Android vuelven al detalle.
+// Una capa sale por donde entró y más rápido (style.css, .saliendo). Sin
+// animaciones (movimiento reducido) no hay nada que esperar: se va de una.
+export function sacarCapa(capa) {
+  if (!capa) return;
+  capa.classList.add("saliendo");
+  const animaciones = capa.getAnimations({ subtree: true });
+  if (!animaciones.length) { capa.remove(); return; }
+  Promise.all(animaciones.map((a) => a.finished)).finally(() => capa.remove());
+}
+
 export function armarMapa(ev) {
   const volver = `#/gp/${ev.anio}/${ev.ronda}`;
   return html`<div class="capa capa-mapa" data-atras="${volver}">

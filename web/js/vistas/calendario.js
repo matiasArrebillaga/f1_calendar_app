@@ -7,6 +7,39 @@ import { descargarIcs, nombreIcs } from "../ics.js";
 export const encabezado = () => ({ titulo: "Calendario", campana: true });
 
 const DIA_MS = 86_400_000;
+const SALIDA = "cubic-bezier(.22, 1, .36, 1)";   // --salida de style.css
+
+// La tarjeta sin lo que cambia minuto a minuto: si esto no cambió, alcanza con
+// tocar los números en el lugar y no se rehace toda la tarjeta.
+function esqueleto(hero) {
+  const copia = hero.cloneNode(true);
+  copia.querySelectorAll(".cuenta b, .avance + .nota").forEach((el) => { el.textContent = ""; });
+  copia.querySelector(".avance i")?.removeAttribute("style");
+  return copia.outerHTML;
+}
+
+// El número que cambió cae en su lugar; con movimiento reducido, sólo aparece.
+function actualizarProxima(vieja, nueva) {
+  if (esqueleto(vieja) !== esqueleto(nueva)) {
+    vieja.replaceWith(nueva);
+    return;
+  }
+  const reducido = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const nuevos = nueva.querySelectorAll(".cuenta b");
+  vieja.querySelectorAll(".cuenta b").forEach((b, i) => {
+    if (b.textContent === nuevos[i].textContent) return;
+    b.textContent = nuevos[i].textContent;
+    b.animate(reducido
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: "translateY(-40%)" }, { opacity: 1, transform: "none" }],
+    { duration: reducido ? 120 : 180, easing: SALIDA });
+  });
+  // En vivo: la barra avanza con su transición (style.css) en vez de saltar.
+  const barra = nueva.querySelector(".avance i");
+  if (barra) vieja.querySelector(".avance i").style.cssText = barra.style.cssText;
+  const nota = nueva.querySelector(".avance + .nota");
+  if (nota) vieja.querySelector(".avance + .nota").textContent = nota.textContent;
+}
 let proximaEnPantalla = null;   // la que dibujó el último render, para refrescarla
 let eventosEnPantalla = [];
 
@@ -22,7 +55,7 @@ function armarProxima(ev, ahora) {
     <h2>${ev.nombre}</h2>
     <p class="lugar">${ev.circuito} · ${ev.pais} · ${ev.rango}</p>
     ${vivo
-      ? html`<div class="avance"><i style="width:${Math.min(100, Math.round(vivo.avance * 100))}%"></i></div>
+      ? html`<div class="avance"><i style="--avance:${Math.min(100, Math.round(vivo.avance * 100))}%"></i></div>
         <p class="muted nota">Empezó hace ${vivo.minutos} min</p>`
       : html`<div class="cuenta">
         <div><b>${c.dias}</b><small>DÍAS</small></div>
@@ -133,8 +166,9 @@ export function montar(main) {
         window.dispatchEvent(new HashChangeEvent("hashchange"));
         return;
       }
-      main.querySelector("[data-largada]")?.replaceWith(
-        document.createRange().createContextualFragment(String(armarProxima(ev, Date.now()))));
+      const vieja = main.querySelector("[data-largada]");
+      const nueva = document.createRange().createContextualFragment(String(armarProxima(ev, Date.now()))).firstElementChild;
+      if (vieja) actualizarProxima(vieja, nueva);
     }, 30_000);
     limpiezas.push(() => clearInterval(id));
   }

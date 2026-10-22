@@ -23,7 +23,7 @@ ORO = PODIO[0][0]
 
 def formato_celda(fila):
     """(texto, delta contra la largada, estado) de una celda de la tira."""
-    posicion, texto = fila["posicion"], fila["posicion_texto"]
+    posicion = fila["posicion"]
     if posicion is not None:
         largada = fila["largada"]
         if not largada:
@@ -35,13 +35,9 @@ def formato_celda(fila):
         else:
             delta = "="
         return f"P{posicion}", delta, "podio" if posicion <= 3 else "normal"
-    if texto in ("D", "E"):
-        return "DSQ", "", "abandono"
-    if texto == "F":
-        return "DNQ", "", "ausente"
-    if texto == "W":
-        return "DNS", "", "ausente"
-    return "DNF", "", "abandono"
+    # El texto lo decide historial.resultado; acá sólo el estilo.
+    texto = fila["resultado"]
+    return texto, "", "ausente" if texto in ("DNQ", "DNS") else "abandono"
 
 
 def sigla(piloto):

@@ -22,8 +22,8 @@ export function filasCarrera(tira, comun) {
       ronda: t.ronda,
       bandera: comun.banderas[t.pais] ?? null,
       gp: gpCorto(comun.eventos[t.gp] ?? t.gp),
-      // W (no largó) y F (no clasificó) traen grilla 0: no es "desde boxes".
-      largada: ["W", "F"].includes(t.posicion_texto) ? null : t.largada ?? null,
+      // Los que no largaron traen grilla 0: no es "desde boxes".
+      largada: ["DNS", "DNQ"].includes(t.resultado) ? null : t.largada ?? null,
       texto: textoPosicion(t),
       clase: claseCaja(p),
       delta: g == null ? "" : g > 0 ? `▲${g}` : g < 0 ? `▼${-g}` : "=",

@@ -91,7 +91,7 @@ test("filas de carrera por carrera: caja según el puesto y puestos ganados", ()
     { ronda: 2, gp: "X Grand Prix", pais: "Nowhere", largada: 19, posicion: 1, posicion_texto: "1" },
     { ronda: 3, gp: "X Grand Prix", pais: "Nowhere", largada: 1, posicion: 15, posicion_texto: "15" },
     { ronda: 4, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: 7, posicion_texto: "7" },
-    { ronda: 5, gp: "X Grand Prix", pais: "Nowhere", largada: 3, posicion: null, posicion_texto: "D" },
+    { ronda: 5, gp: "X Grand Prix", pais: "Nowhere", largada: 3, posicion: null, posicion_texto: "D", resultado: "DSQ" },
   ];
   const [r5, r4, r3, r2, r1] = filasCarrera(tira, COMUN);
   assert.deepEqual(r1, { ronda: 1, bandera: "az", gp: "Azerbaiyán", largada: 2, texto: 2, clase: "podio", delta: "=", claseDelta: "" });
@@ -121,8 +121,8 @@ test("logo que no carga (CDN sin publicar el año): quedan las iniciales", () =>
 
 test("filas: sin texto de largada si no largó (W/F), aunque la grilla diga 0", () => {
   const tira = [
-    { ronda: 1, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: null, posicion_texto: "W" },
-    { ronda: 2, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: null, posicion_texto: "F" },
+    { ronda: 1, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: null, posicion_texto: "W", resultado: "DNS" },
+    { ronda: 2, gp: "X Grand Prix", pais: "Nowhere", largada: 0, posicion: null, posicion_texto: "F", resultado: "DNQ" },
   ];
   const salida = String(armarFichaPiloto({ ...PILOTO_ANT, tira }, null, COMUN, 2026));
   assert.doesNotMatch(salida, /Largó desde boxes/);

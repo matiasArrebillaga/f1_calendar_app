@@ -44,7 +44,7 @@ export const PILOTO_ANT = {
   stats: { victorias: 8, podios: 13, abandonos: 1, prom_llegada: 3.5, prom_largada: 4.25, poles: 6, posicion: 1, puntos: 320 },
   tira: [
     { ronda: 1, gp: "Australian Grand Prix", pais: "Australia", largada: 2, posicion: 2, posicion_texto: "2" },
-    { ronda: 2, gp: "Chinese Grand Prix", pais: "China", largada: 1, posicion: null, posicion_texto: "R" },
+    { ronda: 2, gp: "Chinese Grand Prix", pais: "China", largada: 1, posicion: null, posicion_texto: "R", resultado: "DNF" },
   ],
   carrera: { victorias: 8, podios: 13, gps: 16, debut: 2026, titulos: 0 },
 };
@@ -58,7 +58,7 @@ export const EQUIPO_MER = {
     clasificacion: [9, 7], carrera: [11, 5], puntos: [320, 236], victorias: [8, 3], podios: [13, 8], poles: [6, 5],
     por_carrera: [
       { ronda: 1, gp: "Australian Grand Prix", pais: "Australia", a: { posicion: 2 }, b: { posicion: 1 }, adelante: 1 },
-      { ronda: 2, gp: "Chinese Grand Prix", pais: "China", a: { posicion: 1 }, b: { posicion: null }, adelante: 0 },
+      { ronda: 2, gp: "Chinese Grand Prix", pais: "China", a: { posicion: 1 }, b: { posicion: null, resultado: "DNF" }, adelante: 0 },
     ],
   },
 };

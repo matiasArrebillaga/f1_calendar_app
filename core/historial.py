@@ -25,9 +25,24 @@ ESPERA_429_S = 60
 ESPERA_RED_S = 10
 ANIO_CLASIFICACION = 1994  # Ergast no tiene clasificaciones antes de esto
 
-# positionText de Ergast: F = no clasificó, W = se retiró antes de largar.
-# Ergast los mete en los resultados, pero no largaron.
+# positionText de Ergast cuando no hay posición: D descalificado, E excluido,
+# F no clasificó, W se retiró antes de largar; el resto (R, N...), abandono.
+# Escritorio y web muestran este texto tal cual: no hay otra copia de la tabla.
+SIN_POSICION = {"D": "DSQ", "E": "DSQ", "F": "DNQ", "W": "DNS"}
+# F y W: Ergast los mete en los resultados, pero no largaron.
 LARGO_SQL = "posicion_texto NOT IN ('F', 'W')"
+
+
+def resultado(posicion, posicion_texto):
+    """None si terminó clasificado; si no, "DSQ", "DNQ", "DNS" o "DNF"."""
+    return None if posicion is not None else SIN_POSICION.get(posicion_texto, "DNF")
+
+
+def _con_resultado(filas):
+    for f in filas:
+        f["resultado"] = resultado(f["posicion"], f["posicion_texto"])
+    return filas
+
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS temporadas (
@@ -332,12 +347,12 @@ def stats_temporada(con, anio, driver_id):
 
 
 def tira_resultados(con, anio, driver_id):
-    return _dicts(con.execute("""
+    return _con_resultado(_dicts(con.execute("""
         SELECT r.ronda, c.nombre AS gp, c.pais, r.largada, r.posicion, r.posicion_texto
           FROM resultados r
           JOIN carreras c ON c.temporada = r.temporada AND c.ronda = r.ronda
          WHERE r.temporada = ? AND r.driver_id = ?
-         ORDER BY r.ronda""", (anio, driver_id)))
+         ORDER BY r.ronda""", (anio, driver_id))))
 
 
 def carrera_completa(con, driver_id):
@@ -373,10 +388,10 @@ def stats_equipo(con, anio, constructor_id):
 def cara_a_cara(con, anio, constructor_id):
     """Duelo entre los dos pilotos del equipo que más carreras largaron juntos.
     None si el equipo nunca tuvo dos pilotos en una misma carrera."""
-    filas = _dicts(con.execute(f"""
+    filas = _con_resultado(_dicts(con.execute(f"""
         SELECT ronda, driver_id, largada, posicion, posicion_texto FROM resultados
          WHERE temporada = ? AND constructor_id = ? AND {LARGO_SQL}""",
-        (anio, constructor_id)))
+        (anio, constructor_id))))
     por_ronda = defaultdict(dict)
     for fila in filas:
         # Dos autos el mismo día (años 50): vale el primero.

@@ -287,6 +287,16 @@ def test_tira_de_resultados():
     ]
 
 
+def test_resultado_sin_posicion_segun_ergast():
+    casos = [((1, "1"), None), ((None, "R"), "DNF"), ((None, "N"), "DNF"),
+             ((None, "D"), "DSQ"), ((None, "E"), "DSQ"), ((None, "F"), "DNQ"),
+             ((None, "W"), "DNS")]
+    for (posicion, texto), esperado in casos:
+        assert historial.resultado(posicion, texto) == esperado, texto
+    con = base_de_prueba()
+    assert [f["resultado"] for f in historial.tira_resultados(con, 2025, "norris")] == [None, None, "DNF", None]
+
+
 def test_carrera_completa():
     con = base_de_prueba()
     assert historial.carrera_completa(con, "senna") == {
@@ -313,7 +323,7 @@ def test_cara_a_cara_entre_companeros():
     assert [(c["ronda"], c["gp"], c["pais"], c["adelante"]) for c in duelo["por_carrera"]] == [
         (1, "Australian Grand Prix", "Australia", 0), (2, "Chinese Grand Prix", "China", 1),
         (3, "Japanese Grand Prix", "Japan", None), (4, "Bahrain Grand Prix", "Bahrain", 0)]
-    assert duelo["por_carrera"][2]["a"]["posicion_texto"] == "R"
+    assert duelo["por_carrera"][2]["a"]["resultado"] == "DNF"
 
 
 def test_stats_equipo():

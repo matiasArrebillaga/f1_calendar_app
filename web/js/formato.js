@@ -204,10 +204,9 @@ export function sumarCarrera(previa, actual) {
   };
 }
 
-// positionText de Ergast cuando no hay posición: D descalificado, F no
-// clasificó, W no largó; el resto, abandono.
-const TEXTO_SIN_POSICION = { D: "DSQ", F: "DNQ", W: "DNS" };
-export const textoPosicion = (fila) => fila.posicion ?? TEXTO_SIN_POSICION[fila.posicion_texto] ?? "DNF";
+// Sin posición: "DSQ", "DNQ", "DNS" o "DNF", ya decidido en el exportador
+// (historial.resultado). "—" sólo con un JSON viejo del service worker.
+export const textoPosicion = (fila) => fila.posicion ?? fila.resultado ?? "—";
 
 // Ergast no tiene siglas antes de los 2000.
 export const sigla = (p) => p.codigo || p.apellido.slice(0, 3).toUpperCase();

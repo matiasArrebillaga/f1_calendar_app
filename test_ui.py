@@ -556,17 +556,17 @@ def test_una_temporada_guardada_a_mitad_de_anio_se_completa_cuando_termina():
 
 
 def test_formato_de_las_celdas_de_la_tira():
-    def celda(largada, posicion, texto):
-        return formato_celda({"largada": largada, "posicion": posicion, "posicion_texto": texto})
+    def celda(largada, posicion, resultado=None):
+        return formato_celda({"largada": largada, "posicion": posicion, "resultado": resultado})
 
-    assert celda(1, 1, "1") == ("P1", "=", "podio")
-    assert celda(4, 3, "3") == ("P3", "▲1", "podio")
-    assert celda(2, 7, "7") == ("P7", "▼5", "normal")
-    assert celda(0, 1, "1") == ("P1", "boxes", "podio")
-    assert celda(2, None, "R") == ("DNF", "", "abandono")
-    assert celda(1, None, "D") == ("DSQ", "", "abandono")
-    assert celda(0, None, "F") == ("DNQ", "", "ausente")
-    assert celda(0, None, "W") == ("DNS", "", "ausente")
+    assert celda(1, 1) == ("P1", "=", "podio")
+    assert celda(4, 3) == ("P3", "▲1", "podio")
+    assert celda(2, 7) == ("P7", "▼5", "normal")
+    assert celda(0, 1) == ("P1", "boxes", "podio")
+    assert celda(2, None, "DNF") == ("DNF", "", "abandono")
+    assert celda(1, None, "DSQ") == ("DSQ", "", "abandono")
+    assert celda(0, None, "DNQ") == ("DNQ", "", "ausente")
+    assert celda(0, None, "DNS") == ("DNS", "", "ausente")
 
 
 def test_sigla_de_pilotos_sin_codigo():

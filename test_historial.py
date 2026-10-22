@@ -4,6 +4,7 @@ La base se arma pasando respuestas falsas de Jolpica por descargar_temporada,
 así cada test prueba también el parseo. Corre con `pytest test_historial.py`
 y con `python test_historial.py`.
 """
+import json
 import os
 import sqlite3
 import sys
@@ -295,6 +296,15 @@ def test_resultado_sin_posicion_segun_ergast():
         assert historial.resultado(posicion, texto) == esperado, texto
     con = base_de_prueba()
     assert [f["resultado"] for f in historial.tira_resultados(con, 2025, "norris")] == [None, None, "DNF", None]
+
+
+def test_en_juego_con_los_casos_compartidos_con_la_web():
+    with open(os.path.join("web", "test", "casos_en_juego.json"), encoding="utf-8") as archivo:
+        fijos = json.load(archivo)
+    rondas = [tuple(r) for r in fijos["rondas"]]
+    for c in fijos["casos"]:
+        obtenido = calendario.en_juego(c["ronda"], [] if c.get("sin_calendario") else rondas, c["solapa"])
+        assert obtenido == {"valor": c["valor"], "detalle": c["detalle"]}, c
 
 
 def test_carrera_completa():

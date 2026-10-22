@@ -791,24 +791,21 @@ def test_las_flechas_siguen_cambiando_de_anio_desde_la_pestania_pilotos():
         _restaurar_pilotos()
 
 
-def test_en_juego_cuenta_los_sprints_que_faltan():
+def test_en_juego_muestra_la_cuenta_de_la_solapa():
     from ui.standings_view import StandingsView
     vista = StandingsView()
     pilotos = [{"nombre": "Kimi", "apellido": "Antonelli", "puntos": 320.0}]
     equipos = [{"nombre": "Mercedes", "puntos": 500.0}]
-    vista._datos = {"pilotos": pilotos, "equipos": equipos, "ronda": 20,
-                    "total_rondas": 24, "sprints_restantes": 2}
+    vista._datos = {"pilotos": pilotos, "equipos": equipos, "ronda": 20, "en_juego": {
+        "pilotos": {"valor": 116, "detalle": "4 carreras y 2 sprints restantes"},
+        "equipos": {"valor": None, "detalle": "Temporada terminada"}}}
     _, valor, detalle = vista._kpis[2]
 
     vista._cambiar_tab(0)
-    assert ">116<" in valor.text(), valor.text()          # 4 × 25 + 2 × 8
+    assert ">116<" in valor.text(), valor.text()
     assert detalle.text() == "4 carreras y 2 sprints restantes", detalle.text()
     vista._cambiar_tab(1)
-    assert ">202<" in valor.text(), valor.text()          # 4 × 43 + 2 × 15
-
-    vista._datos["sprints_restantes"] = 0
-    vista._actualizar_kpis()
-    assert detalle.text() == "4 carreras restantes", detalle.text()
+    assert valor.text() == "—" and detalle.text() == "Temporada terminada"
 
 
 def _correr_standings_worker(*args, **kwargs):
@@ -832,7 +829,8 @@ def test_la_clasificacion_sale_de_la_base_sin_pedirle_nada_a_ergast():
     d = datos[0]
     assert [p["driver_id"] for p in d["pilotos"]] == ["norris", "piastri", "leclerc", "lawson"]
     assert [e["constructor_id"] for e in d["equipos"]] == ["mclaren", "ferrari"]
-    assert (d["ronda"], d["total_rondas"], d["sprints_restantes"]) == (4, 6, 1)
+    assert d["ronda"] == 4
+    assert d["en_juego"]["pilotos"] == {"valor": 58, "detalle": "2 carreras y 1 sprint restantes"}
 
 
 def test_la_clasificacion_de_sesion_baja_vueltas_solo_si_ergast_no_la_tiene():

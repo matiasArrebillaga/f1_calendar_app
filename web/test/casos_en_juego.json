@@ -1,0 +1,14 @@
+{
+  "_": "Casos de 'puntos en juego' compartidos: los corren web/test/formato.test.js (formato.enJuego) y test_historial.py (calendario.en_juego), así las dos cuentas no se separan.",
+  "rondas": [[16, false], [17, true], [18, false], [19, false], [20, false], [21, false], [22, false], [23, false]],
+  "casos": [
+    {"ronda": 16, "solapa": "pilotos", "valor": 183, "detalle": "7 carreras y 1 sprint restantes"},
+    {"ronda": 16, "solapa": "equipos", "valor": 316, "detalle": "7 carreras y 1 sprint restantes"},
+    {"ronda": 17, "solapa": "pilotos", "valor": 150, "detalle": "6 carreras restantes"},
+    {"ronda": 22, "solapa": "pilotos", "valor": 25, "detalle": "1 carrera restante"},
+    {"ronda": 22, "solapa": "equipos", "valor": 43, "detalle": "1 carrera restante"},
+    {"ronda": 23, "solapa": "pilotos", "valor": null, "detalle": "Temporada terminada"},
+    {"ronda": null, "solapa": "pilotos", "valor": null, "detalle": "sin datos del calendario"},
+    {"ronda": 16, "solapa": "pilotos", "sin_calendario": true, "valor": null, "detalle": "sin datos del calendario"}
+  ]
+}

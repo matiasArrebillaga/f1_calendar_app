@@ -11,9 +11,6 @@ from ui.icons import franja_equipo, DATO
 from ui.estado import aplicar_estado
 from workers.standings_worker import StandingsWorker
 
-PUNTOS_POR_CARRERA = {0: 25, 1: 25 + 18}   # pilotos / equipos (1º + 2º)
-PUNTOS_POR_SPRINT = {0: 8, 1: 8 + 7}
-
 
 def _nombre_piloto(piloto):
     nombre = f"{piloto['nombre']} {piloto['apellido']}"
@@ -334,20 +331,7 @@ class StandingsView(QWidget):
             valor_ventaja.setText("—")
             detalle_ventaja.setText("")
 
-        if datos['ronda'] is None or datos['total_rondas'] is None:
-            valor_juego.setText("—")
-            detalle_juego.setText("sin datos del calendario")
-        elif datos['total_rondas'] - datos['ronda'] <= 0:
-            valor_juego.setText("—")
-            detalle_juego.setText("Temporada terminada")
-        else:
-            restantes = datos['total_rondas'] - datos['ronda']
-            sprints = datos.get('sprints_restantes', 0)
-            puntos = (restantes * PUNTOS_POR_CARRERA[int(es_equipos)]
-                      + sprints * PUNTOS_POR_SPRINT[int(es_equipos)])
-            valor_juego.setText(f"<span style='color:{DATO};'>{puntos}</span> pts")
-            texto = f"{restantes} {'carrera' if restantes == 1 else 'carreras'}"
-            if sprints:
-                texto += f" y {sprints} {'sprint' if sprints == 1 else 'sprints'}"
-            plural = restantes > 1 or sprints > 0
-            detalle_juego.setText(f"{texto} {'restantes' if plural else 'restante'}")
+        juego = datos['en_juego']['equipos' if es_equipos else 'pilotos']
+        valor_juego.setText("—" if juego['valor'] is None
+                            else f"<span style='color:{DATO};'>{juego['valor']}</span> pts")
+        detalle_juego.setText(juego['detalle'])

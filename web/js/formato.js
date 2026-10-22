@@ -7,7 +7,7 @@ const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
 export const ANIO_MIN = 1950;
 // Sigue siendo "la próxima" un rato después de largar (calendar_view.py).
 const DURACION_CARRERA_MS = 2 * 3600 * 1000;
-const PUNTOS_CARRERA = { pilotos: 25, equipos: 25 + 18 };   // standings_view.py
+const PUNTOS_CARRERA = { pilotos: 25, equipos: 25 + 18 };   // core/calendario.py
 const PUNTOS_SPRINT = { pilotos: 8, equipos: 8 + 7 };
 
 // Sesiones de un fin de semana con la clave que usa Jolpica en el calendario.
@@ -140,18 +140,20 @@ export const formatoDiferencia = (seg) => `+${formatoVuelta(seg)}`;
 // Antes de 1991 había medios puntos: sin redondear, 10.5 - 10.2 da 0.30000000000000027.
 export const numero = (v) => (v == null ? "—" : Math.round(v * 10) / 10);
 
-// "EN JUEGO" de la clasificación, con la cuenta y los textos de standings_view.py.
+// "EN JUEGO" de la clasificación: { valor: número | null, detalle }. La misma
+// cuenta que calendario.en_juego en escritorio; web/test/casos_en_juego.json
+// fija las dos.
 export function enJuego(ronda, eventos, solapa) {
-  if (ronda == null || !eventos.length) return { valor: "—", detalle: "sin datos del calendario" };
+  if (ronda == null || !eventos.length) return { valor: null, detalle: "sin datos del calendario" };
   const faltan = eventos.filter((ev) => ev.ronda > ronda);
-  if (!faltan.length) return { valor: "—", detalle: "Temporada terminada" };
+  if (!faltan.length) return { valor: null, detalle: "Temporada terminada" };
   const restantes = faltan.length;
   const sprints = faltan.filter((ev) => ev.conSprint).length;
   let texto = `${restantes} ${restantes === 1 ? "carrera" : "carreras"}`;
   if (sprints) texto += ` y ${sprints} ${sprints === 1 ? "sprint" : "sprints"}`;
   const plural = restantes > 1 || sprints > 0;
   return {
-    valor: String(restantes * PUNTOS_CARRERA[solapa] + sprints * PUNTOS_SPRINT[solapa]),
+    valor: restantes * PUNTOS_CARRERA[solapa] + sprints * PUNTOS_SPRINT[solapa],
     detalle: `${texto} ${plural ? "restantes" : "restante"}`,
   };
 }

@@ -53,7 +53,7 @@ export function armarClasificacion({ filas, solapa, anio, tras, juego }) {
       <div class="kpis">
         <div class="kpi"><span class="eti">LÍDER</span><b class="txt">${lider.corto}</b><small>${numero(lider.puntos)} puntos</small></div>
         <div class="kpi"><span class="eti">VENTAJA</span><b>${segundo ? `+${numero(lider.puntos - segundo.puntos)}` : "—"}</b><small>${segundo ? `sobre ${segundo.corto}` : ""}</small></div>
-        <div class="kpi"><span class="eti">EN JUEGO</span><b>${juego.valor}</b><small>${juego.detalle}</small></div>
+        <div class="kpi"><span class="eti">EN JUEGO</span><b>${juego.valor ?? "—"}</b><small>${juego.detalle}</small></div>
       </div>
     </div>
     <div class="res">${filas.map((f) => filaResultado({

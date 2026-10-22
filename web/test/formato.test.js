@@ -1,5 +1,6 @@
 process.env.TZ = "America/Argentina/Buenos_Aires";   // las horas de los tests son de GMT-3
 
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -77,14 +78,13 @@ test("puntos con medios no arrastran errores de coma flotante", () => {
   assert.equal(numero(null), "—");
 });
 
-test("puntos en juego, con los textos de standings_view.py", () => {
-  const ev = (ronda, conSprint = false) => ({ ronda, conSprint });
-  const eventos = [ev(16), ev(17, true), ev(18), ev(19), ev(20), ev(21), ev(22), ev(23)];
-  assert.deepEqual(enJuego(16, eventos, "pilotos"), { valor: "183", detalle: "7 carreras y 1 sprint restantes" });
-  assert.deepEqual(enJuego(16, eventos, "equipos"), { valor: String(7 * 43 + 15), detalle: "7 carreras y 1 sprint restantes" });
-  assert.deepEqual(enJuego(22, eventos, "pilotos"), { valor: "25", detalle: "1 carrera restante" });
-  assert.deepEqual(enJuego(23, eventos, "pilotos"), { valor: "—", detalle: "Temporada terminada" });
-  assert.deepEqual(enJuego(null, eventos, "pilotos"), { valor: "—", detalle: "sin datos del calendario" });
+test("puntos en juego: los casos compartidos con escritorio", () => {
+  const { rondas, casos } = JSON.parse(readFileSync(new URL("./casos_en_juego.json", import.meta.url)));
+  const eventos = rondas.map(([ronda, conSprint]) => ({ ronda, conSprint }));
+  for (const c of casos) {
+    assert.deepEqual(enJuego(c.ronda, c.sin_calendario ? [] : eventos, c.solapa),
+      { valor: c.valor, detalle: c.detalle }, JSON.stringify(c));
+  }
 });
 
 test("rutas", () => {

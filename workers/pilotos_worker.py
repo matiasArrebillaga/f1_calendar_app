@@ -61,13 +61,20 @@ def cargar_temporada(con, year, leer, emitir):
     emitir({**leer(con), "actualizando": False})
 
 
+class SinDatos(ValueError):
+    """El año no tiene clasificación: no es un problema de red."""
+
+
 class PilotosWorker(QThread):
-    terminado = Signal(object)   # {'pilotos': [dict], 'equipos': [dict], 'actualizando'}
+    """Emite historial.temporada del año (con la carrera completa de cada
+    piloto) más 'actualizando': las vistas sólo pintan, no tocan la base."""
+    terminado = Signal(object)
     error = Signal(str)
 
     def __init__(self, year):
         super().__init__()
         self.year = year
+        self.sin_datos = False
 
     def run(self):
         try:
@@ -78,13 +85,13 @@ class PilotosWorker(QThread):
         try:
             cargar_temporada(con, self.year, self._leer, self.terminado.emit)
         except Exception as e:
+            self.sin_datos = isinstance(e, SinDatos)
             self.error.emit(str(e))
         finally:
             con.close()
 
     def _leer(self, con):
-        return {"pilotos": historial.pilotos_temporada(con, self.year),
-                "equipos": historial.equipos_temporada(con, self.year)}
+        return historial.temporada(con, self.year, carrera=True)
 
 
 

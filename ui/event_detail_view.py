@@ -7,7 +7,6 @@ from PySide6.QtCore import Signal, Qt, QSize, QEvent
 from PySide6.QtGui import QColor, QFont, QPixmap
 import pandas as pd
 
-from core import historial
 from core.circuits import obtener_datos_circuito
 from core.fechas import a_gmt_menos_3, dia_hora, estado_sesion, rango_fechas
 from core.i18n import traducir_evento, traducir_pais, traducir_sesion
@@ -201,7 +200,6 @@ class EventDetailView(QWidget):
         self._workers_activos = []  # referencias vivas mientras corren, evita el crash
         self.codigo_sesion = None
         self._sesion_pedida = None   # (year, gp, codigo) de la última sesión pedida
-        self._con_historial = None   # se abre con la primera tabla de resultados
         self.evento_actual = None
         self.sesiones_info = {}  # {codigo: {'nombre': str, 'fecha': Timestamp, 'estado': str}}
 
@@ -429,7 +427,7 @@ class EventDetailView(QWidget):
                         if 'BestLapTime' in resultados.columns and not es_clasificacion
                         else None)
         color_dato, color_primario = QColor(DATO), QColor(PRIMARIO)
-        con_ficha = self._ids_con_ficha(worker.year)
+        con_ficha = worker.con_ficha
 
         for fila, (_, row) in enumerate(resultados.iterrows()):
             posicion = row.get('Position')
@@ -480,14 +478,6 @@ class EventDetailView(QWidget):
             self.tabla_resultados.horizontalHeaderItem(col).setTextAlignment(
                 Qt.AlignCenter if nombre_col in ('Position', 'Points', 'Laps', 'GridPosition')
                 else Qt.AlignLeft | Qt.AlignVCenter)
-
-    def _ids_con_ficha(self, anio):
-        """Pilotos y equipos del campeonato de ese año: los únicos que tienen
-        ficha. Un reserva que sólo corrió una FP1 no está."""
-        if self._con_historial is None:
-            self._con_historial = historial.abrir_base()
-        return {"piloto": {p['driver_id'] for p in historial.pilotos_temporada(self._con_historial, anio)},
-                "equipo": {e['constructor_id'] for e in historial.equipos_temporada(self._con_historial, anio)}}
 
     def _activar(self, indice):
         ficha = ficha_de(indice)

@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
 )
 
-from core import historial
 from core.equipos import color_equipo
 from ui.estado import aplicar_estado
 from ui.fichas_pilotos import (
@@ -22,8 +21,8 @@ class PilotosView(QWidget):
     """Pilotos y equipos de la temporada: grillas de tarjetas y sus fichas.
 
     Mismo esquema que StandingsView: el año se anota con pedir_anio y se carga
-    recién cuando la vista se muestra. Las fichas leen la base local desde el
-    hilo de la UI, porque son consultas de milisegundos.
+    recién cuando la vista se muestra. Las fichas salen de lo que trae el
+    worker (historial.temporada): la vista no toca la base.
     """
     # "Volver" desde una ficha que se abrió desde otra vista (Clasificación o
     # un GP): MainWindow vuelve a esa vista en vez de a la grilla.
@@ -39,7 +38,6 @@ class PilotosView(QWidget):
         self._datos = None
         self._fotos = {}            # {driver_id: ruta}; la foto no depende del año
         self._logos = {}            # {constructor_id: ruta}
-        self._con = None            # conexión de la UI, se abre con la primera ficha
         self._workers_activos = []  # referencias vivas mientras corren
         self._worker_fotos = None
         self._ficha_pendiente = None   # (tipo, id) pedida antes de que lleguen los datos
@@ -247,14 +245,13 @@ class PilotosView(QWidget):
         self.grilla_pilotos.set_tarjetas(tarjetas)
 
         tarjetas = []
-        con = self._conexion()
         lider = max((e["puntos"] or 0 for e in datos["equipos"]), default=0)
         for equipo in datos["equipos"]:
             cid = equipo["constructor_id"]
             tarjeta = TarjetaEquipo(
                 equipo, color_equipo(cid),
                 [p for p in datos["pilotos"] if p["constructor_id"] == cid],
-                historial.stats_equipo(con, self.year, cid)["victorias"], lider)
+                equipo["stats"]["victorias"], lider)
             tarjeta.clicked.connect(self.abrir_equipo)
             for foto in tarjeta.fotos:
                 self._poner_foto(foto)
@@ -306,30 +303,20 @@ class PilotosView(QWidget):
 
     # --- Fichas ---
 
-    def _conexion(self):
-        if self._con is None:
-            self._con = historial.abrir_base()
-        return self._con
-
     def abrir_piloto(self, driver_id):
         self._ficha_externa = False   # desde la grilla; _abrir lo marca si vino de afuera
         piloto = next(p for p in self._datos["pilotos"] if p["driver_id"] == driver_id)
-        con = self._conexion()
         self.ficha_piloto.mostrar(
             piloto, color_equipo(piloto["constructor_id"]), self.year,
-            historial.stats_temporada(con, self.year, driver_id),
-            historial.tira_resultados(con, self.year, driver_id),
-            historial.carrera_completa(con, driver_id))
+            piloto["stats"], piloto["tira"], piloto["carrera"])
         self._poner_foto(self.ficha_piloto.foto)
         self.stack_interno.setCurrentIndex(FICHA_PILOTO)
 
     def abrir_equipo(self, constructor_id):
         self._ficha_externa = False
         equipo = next(e for e in self._datos["equipos"] if e["constructor_id"] == constructor_id)
-        con = self._conexion()
         self.ficha_equipo.mostrar(equipo, color_equipo(constructor_id), self.year,
-                                  historial.cara_a_cara(con, self.year, constructor_id),
-                                  historial.stats_equipo(con, self.year, constructor_id))
+                                  equipo["cara_a_cara"], equipo["stats"])
         self._poner_foto(self.ficha_equipo.foto_a)
         self._poner_foto(self.ficha_equipo.foto_b)
         self.stack_interno.setCurrentIndex(FICHA_EQUIPO)

@@ -544,6 +544,10 @@ def test_temporada_terminada_y_guardada_no_toca_la_red():
     assert [p["driver_id"] for p in datos[0]["pilotos"]] == ["norris", "piastri", "leclerc", "lawson"]
     assert [e["constructor_id"] for e in datos[0]["equipos"]] == ["mclaren", "ferrari"]
     assert len(datos) == 1, datos   # terminada: no hay nada que actualizar
+    # Las fichas salen de acá: la vista no vuelve a la base.
+    norris = datos[0]["pilotos"][0]
+    assert len(norris["tira"]) == 4 and norris["stats"]["victorias"] == 1 and norris["carrera"]["gps"] == 4
+    assert datos[0]["equipos"][0]["cara_a_cara"]["a"]["driver_id"] == "norris"
 
 
 def test_temporada_en_curso_sin_red_muestra_lo_guardado():
@@ -613,8 +617,7 @@ class _PilotosWorkerFalso(_WorkerFalso):
 
     def emitir(self):
         _WorkerFalso.vista.sender = lambda: self
-        datos = {"pilotos": historial.pilotos_temporada(self.con, self.year),
-                 "equipos": historial.equipos_temporada(self.con, self.year)}
+        datos = historial.temporada(self.con, self.year, carrera=True)
         for cb in self._terminado:
             cb(datos)
         for cb in self._finished:
@@ -653,7 +656,6 @@ def _vista_pilotos():
     pilotos_view.PilotosWorker = _PilotosWorkerFalso
     pilotos_view.FotosWorker = _FotosWorkerFalso
     vista = pilotos_view.PilotosView()
-    vista._con = con
     _WorkerFalso.vista = vista
     vista.resize(1000, 700)
     return vista
@@ -872,12 +874,15 @@ def test_la_clasificacion_de_sesion_baja_vueltas_solo_si_ergast_no_la_tiene():
 
     def cargas(codigo, posiciones):
         sesion = SesionFalsa(posiciones)
-        original = session_worker.fastf1.get_session
+        originales = session_worker.fastf1.get_session, session_worker.historial.abrir_base
         session_worker.fastf1.get_session = lambda *args: sesion
+        session_worker.historial.abrir_base = base_de_prueba
         try:
-            session_worker.SessionWorker(2026, 1, codigo).run()
+            worker = session_worker.SessionWorker(2025, 1, codigo)
+            worker.run()
+            assert "norris" in worker.con_ficha["piloto"], worker.con_ficha
         finally:
-            session_worker.fastf1.get_session = original
+            session_worker.fastf1.get_session, session_worker.historial.abrir_base = originales
         return sesion.cargas
 
     assert cargas("Q", [1.0, 2.0]) == [(False, False)]

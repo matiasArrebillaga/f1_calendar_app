@@ -1,6 +1,8 @@
 import fastf1
 from PySide6.QtCore import QThread, Signal
 
+from core import historial
+
 class SessionWorker(QThread):
     terminado = Signal(object)  # emite la sesión cargada
     error = Signal(str)         # emite un mensaje si algo falla
@@ -10,6 +12,8 @@ class SessionWorker(QThread):
         self.year = year
         self.gp = gp
         self.codigo_sesion = codigo_sesion
+        # Pilotos y equipos del campeonato de ese año: los únicos con ficha.
+        self.con_ficha = {"piloto": set(), "equipo": set()}
 
     def run(self):
         try:
@@ -28,9 +32,24 @@ class SessionWorker(QThread):
                 self._agregar_datos_practica(sesion)
             elif self.codigo_sesion in ('Q', 'SQ', 'SS'):
                 self._agregar_datos_clasificacion(sesion)
+            self.con_ficha = self._ids_con_ficha(self.year)
             self.terminado.emit(sesion)
         except Exception as e:
             self.error.emit(str(e))
+
+    @staticmethod
+    def _ids_con_ficha(anio):
+        """Un reserva que sólo corrió una FP1 no está en el campeonato: no
+        tiene ficha. Sin base, ninguno (la tabla se muestra igual)."""
+        try:
+            con = historial.abrir_base()
+        except Exception:
+            return {"piloto": set(), "equipo": set()}
+        try:
+            return {"piloto": {p['driver_id'] for p in historial.pilotos_temporada(con, anio)},
+                    "equipo": {e['constructor_id'] for e in historial.equipos_temporada(con, anio)}}
+        finally:
+            con.close()
 
     @staticmethod
     def _agregar_datos_practica(sesion):

@@ -10,7 +10,7 @@ from test_historial import NOR, _pagina_ganadores, _piloto, base_de_prueba
 
 
 def test_temporada_trae_fichas_de_pilotos_y_equipos():
-    datos = exportar_web.temporada(base_de_prueba(), 2025)
+    datos = historial.temporada(base_de_prueba(), 2025)
     assert datos["anio"] == 2025 and datos["ronda"] == 4
     norris = datos["pilotos"][0]
     assert norris["driver_id"] == "norris"

@@ -123,20 +123,6 @@ def datos_comunes(anio_actual):
     }
 
 
-def temporada(con, anio):
-    """Todo lo que muestran la grilla y las fichas de un año."""
-    pilotos = historial.pilotos_temporada(con, anio)
-    for p in pilotos:
-        p["stats"] = historial.stats_temporada(con, anio, p["driver_id"])
-        p["tira"] = historial.tira_resultados(con, anio, p["driver_id"])
-    equipos = historial.equipos_temporada(con, anio)
-    for e in equipos:
-        e["stats"] = historial.stats_equipo(con, anio, e["constructor_id"])
-        e["cara_a_cara"] = historial.cara_a_cara(con, anio, e["constructor_id"])
-    return {"anio": anio, "ronda": historial.ultima_ronda(con, anio),
-            "pilotos": pilotos, "equipos": equipos}
-
-
 def temporadas_terminadas(con):
     return [anio for (anio,) in con.execute("SELECT temporada FROM temporadas ORDER BY temporada")
             if historial.temporada_completa(con, anio)]
@@ -216,7 +202,7 @@ def exportar_historico():
         print(f"Sin exportar, guardadas antes de terminar: {a_medias}. Abrilas en la app "
               "(o corré precache_historial.py) para bajarlas completas.", file=sys.stderr)
     for anio in terminadas:
-        escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), temporada(con, anio))
+        escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), historial.temporada(con, anio))
     escribir_json(os.path.join(DATOS, "carreras_previas.json"), carreras_previas(con))
     escribir_json(os.path.join(DATOS, "indice.json"), indice(con, terminadas))
     print(f"{len(terminadas)} temporadas, {copiar_mapas()} mapas")
@@ -245,7 +231,7 @@ def exportar_terminada(anio):
     hasta que se corra en la PC): su JSON y su parte de carreras_previas. Sin
     esto la web la perdía, porque actual.json ya es del año nuevo."""
     con = base_de(anio)
-    escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), temporada(con, anio))
+    escribir_json(os.path.join(DATOS, "temporadas", f"{anio}.json"), historial.temporada(con, anio))
     ruta = os.path.join(DATOS, "carreras_previas.json")
     with open(ruta, encoding="utf-8") as archivo:
         previas = json.load(archivo)
@@ -259,9 +245,7 @@ def exportar_actual(anio):
     if not os.path.exists(os.path.join(DATOS, "temporadas", f"{anio - 1}.json")):
         exportar_terminada(anio - 1)
     con = base_de(anio)
-    datos = temporada(con, anio)
-    for p in datos["pilotos"]:
-        p["carrera"] = historial.carrera_completa(con, p["driver_id"])
+    datos = historial.temporada(con, anio, carrera=True)
     completar_fotos(datos, anio)
     escribir_json(os.path.join(DATOS, "actual.json"), datos)
     escribir_json(os.path.join(DATOS, "ganadores.json"), ganadores())

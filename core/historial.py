@@ -476,6 +476,25 @@ def cara_a_cara(con, anio, constructor_id):
     }
 
 
+def temporada(con, anio, carrera=False):
+    """Todo lo que muestran la grilla, la clasificación y las fichas de un año:
+    {"anio", "ronda", "pilotos", "equipos"}, cada piloto con "stats" y "tira"
+    y cada equipo con "stats" y "cara_a_cara". Con `carrera`, cada piloto trae
+    también su carrera completa. La usan la app y el exportador de la web."""
+    pilotos = pilotos_temporada(con, anio)
+    for p in pilotos:
+        p["stats"] = stats_temporada(con, anio, p["driver_id"])
+        p["tira"] = tira_resultados(con, anio, p["driver_id"])
+        if carrera:
+            p["carrera"] = carrera_completa(con, p["driver_id"])
+    equipos = equipos_temporada(con, anio)
+    for e in equipos:
+        e["stats"] = stats_equipo(con, anio, e["constructor_id"])
+        e["cara_a_cara"] = cara_a_cara(con, anio, e["constructor_id"])
+    return {"anio": anio, "ronda": ultima_ronda(con, anio),
+            "pilotos": pilotos, "equipos": equipos}
+
+
 def completar_headshots(con, anio):
     """Foto oficial de F1 de los pilotos del año, sacada de la última carrera.
     FastF1 la trae vacía en temporadas viejas (en 2018 ya no viene)."""

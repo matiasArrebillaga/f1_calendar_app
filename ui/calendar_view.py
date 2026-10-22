@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import timedelta
 
 import pandas as pd
 from PySide6.QtWidgets import (
@@ -7,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QTimer, QPropertyAnimation, QEasingCurve, QPoint
 
-from core.fechas import MESES, largada
+from core.fechas import DURACION_MIN, MESES, largada
 from ui.calendar_event_card import CalendarEventCard
 from ui.proxima_carrera import ProximaCarrera
 from ui.spinner_widget import SpinnerWidget
@@ -25,9 +26,9 @@ class CalendarView(QWidget):
 
     MAX_ANIOS_CACHEADOS = 5
 
-    # Una carrera sigue siendo "la próxima" hasta un rato después de largar:
-    # el día de la carrera, a las 9 de la mañana, todavía no terminó.
-    DURACION_CARRERA = pd.Timedelta(hours=2)
+    # Una carrera sigue siendo "la próxima" mientras se corre: el día de la
+    # carrera, a las 9 de la mañana, todavía no terminó.
+    DURACION_CARRERA = timedelta(minutes=DURACION_MIN["Race"])
     # Alto aproximado de un mes con una fila de tarjetas. El scroll deja ese
     # margen libre al final para que hasta el último mes pueda quedar arriba.
     ALTO_FILA_MES = 160

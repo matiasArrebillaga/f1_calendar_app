@@ -1,0 +1,16 @@
+{
+  "_": "Estado de una sesión según la hora, compartido: lo corren web/test/formato.test.js (formato.estadoSesiones, por la clave de Jolpica) y test_historial.py (fechas.estado_sesion, por el nombre de FastF1).",
+  "casos": [
+    {"clave": "FirstPractice", "fastf1": "Practice 1", "inicio": "2026-10-09T08:30:00Z", "ahora": "2026-10-09T08:29:00Z", "estado": "proxima"},
+    {"clave": "FirstPractice", "fastf1": "Practice 1", "inicio": "2026-10-09T08:30:00Z", "ahora": "2026-10-09T08:30:00Z", "estado": "vivo"},
+    {"clave": "FirstPractice", "fastf1": "Practice 1", "inicio": "2026-10-09T08:30:00Z", "ahora": "2026-10-09T09:29:00Z", "estado": "vivo"},
+    {"clave": "FirstPractice", "fastf1": "Practice 1", "inicio": "2026-10-09T08:30:00Z", "ahora": "2026-10-09T09:30:00Z", "estado": "hecha"},
+    {"clave": "SprintQualifying", "fastf1": "Sprint Qualifying", "inicio": "2026-10-09T12:30:00Z", "ahora": "2026-10-09T13:14:00Z", "estado": "vivo"},
+    {"clave": "Sprint", "fastf1": "Sprint", "inicio": "2026-10-10T09:00:00Z", "ahora": "2026-10-10T09:45:00Z", "estado": "hecha"},
+    {"clave": "Qualifying", "fastf1": "Qualifying", "inicio": "2026-10-10T13:00:00Z", "ahora": "2026-10-10T13:59:00Z", "estado": "vivo"},
+    {"clave": "Race", "fastf1": "Race", "inicio": "2026-10-11T12:00:00Z", "ahora": "2026-10-11T13:59:00Z", "estado": "vivo"},
+    {"clave": "Race", "fastf1": "Race", "inicio": "2026-10-11T12:00:00Z", "ahora": "2026-10-11T14:00:00Z", "estado": "hecha"},
+    {"clave": "Race", "fastf1": "Race", "sin_hora": true, "inicio": "1985-04-07T03:00:00Z", "ahora": "1985-04-07T15:00:00Z", "estado": "proxima"},
+    {"clave": "Race", "fastf1": "Race", "sin_hora": true, "inicio": "1985-04-07T03:00:00Z", "ahora": "1985-04-08T03:00:00Z", "estado": "hecha"}
+  ]
+}

@@ -78,6 +78,14 @@ test("puntos con medios no arrastran errores de coma flotante", () => {
   assert.equal(numero(null), "—");
 });
 
+test("estado de una sesión: los casos compartidos con escritorio", () => {
+  const { casos } = JSON.parse(readFileSync(new URL("./casos_sesiones.json", import.meta.url)));
+  for (const c of casos) {
+    const sesion = { clave: c.clave, fecha: new Date(c.inicio), sinHora: Boolean(c.sin_hora) };
+    assert.equal(estadoSesiones([sesion], Date.parse(c.ahora))[0].estado, c.estado, JSON.stringify(c));
+  }
+});
+
 test("puntos en juego: los casos compartidos con escritorio", () => {
   const { rondas, casos } = JSON.parse(readFileSync(new URL("./casos_en_juego.json", import.meta.url)));
   const eventos = rondas.map(([ronda, conSprint]) => ({ ronda, conSprint }));

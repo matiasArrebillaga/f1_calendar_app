@@ -81,7 +81,8 @@ export function cuentaRegresiva(largada, ahora) {
 
 // Duración típica de cada sesión, para el estado "en vivo": no hay datos en
 // vivo gratis dentro de la sesión, así que se calcula con el horario. También
-// es lo que dura cada evento del .ics (ics.js).
+// es lo que dura cada evento del .ics (ics.js). Escritorio usa la misma tabla
+// (fechas.DURACION_MIN) y web/test/casos_sesiones.json fija las dos.
 export const DURACION_MIN = {
   FirstPractice: 60, SecondPractice: 60, ThirdPractice: 60,
   SprintShootout: 45, SprintQualifying: 45, Sprint: 45, Qualifying: 60, Race: 120,

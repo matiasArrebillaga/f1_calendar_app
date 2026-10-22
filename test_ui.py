@@ -4,7 +4,7 @@ Sin frameworks ni fixtures: un QApplication offscreen y asserts. Corre tanto con
 `pytest test_ui.py` como con `python test_ui.py`.
 """
 import os
-from datetime import date
+from datetime import date, timedelta
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -165,6 +165,31 @@ def test_un_gp_viejo_abre_en_la_carrera_y_sin_libres():
     vista.mostrar_evento(viejo)
     assert pedidas == [(1985, 1, "R")]
     assert [b._codigo for b in vista.botones_sesion if b.isEnabled()] == ["R"]
+
+
+def test_la_sesion_que_se_esta_corriendo_queda_en_vivo_sin_pedir_resultados():
+    """Antes una sesión contaba como corrida apenas largaba, y se pedían
+    resultados que todavía no existen (la web ya la mostraba en vivo)."""
+    ahora = pd.Timestamp.now(tz="UTC")
+    evento = pd.Series({
+        "EventName": "Bahrain Grand Prix", "Country": "Bahrain", "Location": "Sakhir",
+        "OfficialEventName": None, "RoundNumber": 1, "EventDate": ahora.tz_localize(None) + timedelta(days=1),
+        "Session1": "Practice 1", "Session1Date": ahora - timedelta(hours=3),
+        "Session2": "Practice 2", "Session2Date": ahora - timedelta(minutes=20),
+        "Session3": "Race", "Session3Date": ahora + timedelta(days=1),
+        "Session4": None, "Session4Date": None, "Session5": None, "Session5Date": None,
+    })
+    vista = EventDetailView()
+    pedidas = []
+    vista.cargar_sesion = lambda year, gp, codigo: pedidas.append(codigo)
+    vista._cargar_mapa = lambda location: None
+    vista.mostrar_evento(evento)
+    assert pedidas == ["FP1"]   # abre en la última terminada
+    assert "EN VIVO" in vista.botones_sesion[1].text()
+    assert "PRÓXIMA" not in vista.botones_sesion[2].text()
+    vista.botones_sesion[1].click()
+    assert pedidas == ["FP1"]   # la que está en vivo no pide nada
+    assert vista.titulo_pendiente.text() == "En vivo"
 
 
 def test_el_mapa_no_se_re_escala_si_el_tamano_no_cambio():

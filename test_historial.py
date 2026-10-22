@@ -10,7 +10,9 @@ import sqlite3
 import sys
 import tempfile
 
-from core import calendario, fotos, historial, paths
+import pandas as pd
+
+from core import calendario, fechas, fotos, historial, paths
 
 historial.PAUSA_S = 0   # las páginas falsas no necesitan esperar
 
@@ -305,6 +307,15 @@ def test_en_juego_con_los_casos_compartidos_con_la_web():
     for c in fijos["casos"]:
         obtenido = calendario.en_juego(c["ronda"], [] if c.get("sin_calendario") else rondas, c["solapa"])
         assert obtenido == {"valor": c["valor"], "detalle": c["detalle"]}, c
+
+
+def test_estado_de_sesion_con_los_casos_compartidos_con_la_web():
+    with open(os.path.join("web", "test", "casos_sesiones.json"), encoding="utf-8") as archivo:
+        casos = json.load(archivo)["casos"]
+    for c in casos:
+        inicio = fechas.a_gmt_menos_3(pd.Timestamp(c["inicio"]))
+        ahora = fechas.a_gmt_menos_3(pd.Timestamp(c["ahora"]))
+        assert fechas.estado_sesion(c["fastf1"], inicio, ahora, c.get("sin_hora", False)) == c["estado"], c
 
 
 def test_carrera_completa():

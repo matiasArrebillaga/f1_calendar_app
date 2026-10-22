@@ -9,7 +9,7 @@ import pandas as pd
 
 from core import historial
 from core.circuits import obtener_datos_circuito
-from core.fechas import a_gmt_menos_3, dia_hora, rango_fechas
+from core.fechas import a_gmt_menos_3, dia_hora, estado_sesion, rango_fechas
 from core.i18n import traducir_evento, traducir_pais, traducir_sesion
 from core.track_map import obtener_ruta_mapa
 from ui.datos_circuito import PanelDatosCircuito, ficha_html, filas_ficha
@@ -203,7 +203,7 @@ class EventDetailView(QWidget):
         self._sesion_pedida = None   # (year, gp, codigo) de la última sesión pedida
         self._con_historial = None   # se abre con la primera tabla de resultados
         self.evento_actual = None
-        self.sesiones_info = {}  # {codigo: {'nombre': str, 'fecha': Timestamp, 'pasada': bool}}
+        self.sesiones_info = {}  # {codigo: {'nombre': str, 'fecha': Timestamp, 'estado': str}}
 
     def mostrar_evento(self, evento):
         self.evento_actual = evento
@@ -239,17 +239,18 @@ class EventDetailView(QWidget):
 
             if nombre_sesion and str(nombre_sesion) != 'nan':
                 fecha_sin_tz = a_gmt_menos_3(fecha_sesion)
+                sin_hora = pd.isna(fecha_sin_tz)
                 # Los calendarios viejos no traen horarios: vale el día de la carrera.
-                referencia = fecha_sin_tz if pd.notna(fecha_sin_tz) else evento['EventDate']
+                inicio = evento['EventDate'].normalize() if sin_hora else fecha_sin_tz
                 info_sesiones_ordenada.append({
                     'indice': i,
                     'nombre': nombre_sesion,
                     'fecha': fecha_sin_tz,
-                    'pasada': referencia < hoy,
+                    'estado': estado_sesion(nombre_sesion, inicio, hoy, sin_hora),
                 })
 
-        # Buscamos cuál es la próxima sesión sin correr (la más cercana en el tiempo).
-        futuras = [s for s in info_sesiones_ordenada if not s['pasada'] and pd.notna(s['fecha'])]
+        # La próxima: la que se está corriendo o la más cercana sin correr.
+        futuras = [s for s in info_sesiones_ordenada if s['estado'] != 'hecha' and pd.notna(s['fecha'])]
         indice_proxima = min(futuras, key=lambda s: s['fecha'])['indice'] if futuras else None
 
         for i, boton in enumerate(self.botones_sesion):
@@ -285,7 +286,7 @@ class EventDetailView(QWidget):
                 boton.style().polish(boton)
                 continue
             self.sesiones_info[codigo] = {
-                'nombre': nombre_es, 'fecha': match['fecha'], 'pasada': match['pasada'],
+                'nombre': nombre_es, 'fecha': match['fecha'], 'estado': match['estado'],
             }
 
             boton.setEnabled(True)
@@ -300,10 +301,14 @@ class EventDetailView(QWidget):
                 match['fecha'].strftime('%d/%m/%Y %H:%M') if pd.notna(match['fecha']) else "sin fecha"
             )
 
-            if match['pasada']:
+            if match['estado'] == 'hecha':
                 boton.setText(f"{nombre_es}\n{fecha_txt}")
                 boton.setProperty("estadoSesion", "pasada")
                 boton.setToolTip(f"{nombre_es} — {fecha_completa} (GMT-3) · ver resultados")
+            elif match['estado'] == 'vivo':
+                boton.setText(f"{nombre_es}\nEN VIVO · {fecha_txt}")
+                boton.setProperty("estadoSesion", "proxima")
+                boton.setToolTip(f"{nombre_es} — en vivo desde {fecha_completa} (GMT-3)")
             elif i == indice_proxima:
                 boton.setText(f"{nombre_es}\nPRÓXIMA · {fecha_txt}")
                 boton.setProperty("estadoSesion", "proxima")
@@ -321,7 +326,7 @@ class EventDetailView(QWidget):
         # Abre en la sesión que más interesa: la última que se corrió (sus
         # resultados) o, si no se corrió ninguna, la próxima.
         pasadas = [s['indice'] for s in info_sesiones_ordenada
-                   if s['pasada'] and self.botones_sesion[s['indice']].isEnabled()]
+                   if s['estado'] == 'hecha' and self.botones_sesion[s['indice']].isEnabled()]
         inicial = pasadas[-1] if pasadas else indice_proxima
         if inicial is not None:
             self.botones_sesion[inicial].click()
@@ -330,10 +335,10 @@ class EventDetailView(QWidget):
 
     def _click_sesion(self, year, gp, codigo, boton):
         boton.setChecked(True)
-        if self.sesiones_info.get(codigo, {}).get('pasada'):
+        if self.sesiones_info.get(codigo, {}).get('estado') == 'hecha':
             self.cargar_sesion(year, gp, codigo)
         else:
-            # Una sesión futura no tiene nada que bajar: no hay request que hacer.
+            # Una sesión futura o en vivo no tiene nada que bajar todavía.
             self.codigo_sesion = codigo
             self._sesion_pedida = None   # si llega la que se pidió antes, no pisa esto
             self.spinner.detener()
@@ -565,7 +570,10 @@ class EventDetailView(QWidget):
         if codigo_sesion is None:
             self.titulo_pendiente.setText("Sin sesiones")
             self.texto_pendiente.setText("Este evento no tiene sesiones publicadas.")
-        elif info.get('pasada'):
+        elif info.get('estado') == 'vivo':
+            self.titulo_pendiente.setText("En vivo")
+            self.texto_pendiente.setText("Los resultados aparecen acá cuando termine la sesión.")
+        elif info.get('estado') == 'hecha':
             self.titulo_pendiente.setText("Sin resultados todavía")
             self.texto_pendiente.setText(
                 f"{nombre} ya se corrió, pero los resultados todavía no están publicados.")

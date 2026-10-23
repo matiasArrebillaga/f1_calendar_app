@@ -55,6 +55,8 @@ PAISES_ES = {
 EVENTOS_ES = {
     "Australian Grand Prix": "Gran Premio de Australia",
     "Bahrain Grand Prix": "Gran Premio de Baréin",
+    # 2026: Baréin se corrió en Sepang.
+    "Bahrain Grand Prix in Malaysia": "Gran Premio de Baréin en Malasia",
     "Saudi Arabian Grand Prix": "Gran Premio de Arabia Saudita",
     "Chinese Grand Prix": "Gran Premio de China",
     "Japanese Grand Prix": "Gran Premio de Japón",

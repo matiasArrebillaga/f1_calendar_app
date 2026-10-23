@@ -85,6 +85,8 @@ function marcarPestana(ruta, anioActual) {
   const pestanas = [...document.querySelectorAll(".tabbar [data-pestana]")];
   for (const a of pestanas) {
     a.classList.toggle("activa", a.dataset.pestana === pestana);
+    if (a.dataset.pestana === pestana) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
     a.href = `#/${a.dataset.pestana}/${ruta.anio}`;
   }
   document.querySelector(".tabbar").style.setProperty("--i", pestanas.findIndex((a) => a.dataset.pestana === pestana));

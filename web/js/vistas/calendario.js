@@ -152,7 +152,8 @@ export function montar(main) {
     // (debajo del encabezado fijo también cuenta como fuera).
     const observador = new IntersectionObserver(([e]) =>
       pildora.classList.toggle("oculta", e.intersectionRatio === 1 || e.boundingClientRect.top > alto),
-    { rootMargin: `-${alto}px 0px 0px 0px`, threshold: 1 });
+    // Con el 0 también avisa al saltar de golpe (Inicio, scrollTo) sin pasar por "entera".
+    { rootMargin: `-${alto}px 0px 0px 0px`, threshold: [0, 1] });
     observador.observe(ultimaCorrida);
     pildora.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
     limpiezas.push(() => observador.disconnect());

@@ -39,8 +39,8 @@ export function armarLogo(e, comun, clase = "logo-eq") {
 export function armarPilotos(datos, solapa, anio, comun) {
   const base = `#/pilotos/${anio}`;
   const segmento = html`<div class="segmento">
-    <a href="${base}" class="${solapa === "pilotos" ? "activa" : ""}">Pilotos</a>
-    <a href="${base}/equipos" class="${solapa === "equipos" ? "activa" : ""}">Equipos</a>
+    <a href="${base}" class="${solapa === "pilotos" ? "activa" : ""}" aria-current="${solapa === "pilotos" ? "page" : "false"}">Pilotos</a>
+    <a href="${base}/equipos" class="${solapa === "equipos" ? "activa" : ""}" aria-current="${solapa === "equipos" ? "page" : "false"}">Equipos</a>
   </div>`;
   const lista = solapa === "equipos" ? datos?.equipos : datos?.pilotos;
   if (!lista?.length) {

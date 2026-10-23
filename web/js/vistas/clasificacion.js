@@ -39,8 +39,8 @@ const victorias = (n) => (n ? `${n} ${n === 1 ? "victoria" : "victorias"}` : "")
 export function armarClasificacion({ filas, solapa, anio, tras, juego }) {
   const base = `#/clasificacion/${anio}`;
   const segmento = html`<div class="segmento">
-    <a href="${base}" class="${solapa === "pilotos" ? "activa" : ""}">Pilotos</a>
-    <a href="${base}/equipos" class="${solapa === "equipos" ? "activa" : ""}">Equipos</a>
+    <a href="${base}" class="${solapa === "pilotos" ? "activa" : ""}" aria-current="${solapa === "pilotos" ? "page" : "false"}">Pilotos</a>
+    <a href="${base}/equipos" class="${solapa === "equipos" ? "activa" : ""}" aria-current="${solapa === "equipos" ? "page" : "false"}">Equipos</a>
   </div>`;
   if (!filas.length) {
     return html`${segmento}<div class="estado"><h3>Sin clasificación</h3><p>No hay clasificación disponible para ${anio}.</p></div>`;
